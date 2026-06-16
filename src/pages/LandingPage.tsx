@@ -6,7 +6,7 @@ import logoBlancoImg from '../assets/logoBLANCO.png';
 import logoNegroImg from '../assets/logoNEGRO.png';
 import monoPatriciaImg from '../assets/monoPATRICIA.png';
 import lp1 from '../assets/landingpage1.jpg';
-import lp2 from '../assets/landingpage2.jpg';
+import lp2 from '../assets/landingpage2.png';
 import lp3 from '../assets/landingpage3.jpg';
 import lp4 from '../assets/landingpage4.jpg';
 import { motion, AnimatePresence } from 'motion/react';
@@ -26,28 +26,28 @@ const SLIDES = [
 ];
 
 const FEATURES = [
-  { emoji: '🎪', icon: Users,    color: '#6C63FF', title: 'Parches Virtuales',    desc: 'Grupos por intereses con chat, voz, lienzo colaborativo y juegos como Parqués integrados.' },
-  { emoji: '💜', icon: Heart,    color: '#FF6B9D', title: 'Matching Inteligente', desc: 'Encuentra estudiantes con tu misma vibra académica. Algoritmo basado en intereses y carrera.' },
-  { emoji: '🎉', icon: Calendar, color: '#7FE7C4', title: 'Eventos del Campus',   desc: 'Hackathones, charlas empresariales, torneos y actividades con geolocalización en tiempo real.' },
-  { emoji: '🧘', icon: Smile,    color: '#FFB347', title: 'Bienestar 24/7',       desc: 'Chatbot de apoyo, diario emocional con IA, respiración guiada y sonidos de relajación.' },
-  { emoji: '🎴', icon: Zap,      color: '#A78BFA', title: 'Álbum de Monas',       desc: '12 personajes coleccionables con 4 rarezas. Gana XP participando y sube en el ranking.' },
-  { emoji: '⚡', icon: Shield,   color: '#00D9FF', title: 'Solo para la ECI',     desc: 'Verificación con correo institucional. Tu comunidad privada y segura.' },
+  { emoji: '🎪', icon: Users, color: '#6C63FF', title: 'Parches Virtuales', desc: 'Grupos por intereses con chat, voz, lienzo colaborativo y juegos como Parqués integrados.' },
+  { emoji: '💜', icon: Heart, color: '#FF6B9D', title: 'Matching Inteligente', desc: 'Encuentra estudiantes con tu misma vibra académica. Algoritmo basado en intereses y carrera.' },
+  { emoji: '🎉', icon: Calendar, color: '#7FE7C4', title: 'Eventos del Campus', desc: 'Hackathones, charlas empresariales, torneos y actividades con geolocalización en tiempo real.' },
+  { emoji: '🧘', icon: Smile, color: '#FFB347', title: 'Bienestar 24/7', desc: 'Chatbot de apoyo, diario emocional con IA, respiración guiada y sonidos de relajación.' },
+  { emoji: '🎴', icon: Zap, color: '#A78BFA', title: 'Álbum de Monas', desc: '12 personajes coleccionables con 4 rarezas. Gana XP participando y sube en el ranking.' },
+  { emoji: '⚡', icon: Shield, color: '#00D9FF', title: 'Solo para la ECI', desc: 'Verificación con correo institucional. Tu comunidad privada y segura.' },
 ];
 
 const STEPS = [
-  { n: '01', color: '#6C63FF', icon: '✉️', title: 'Regístrate con tu correo ECI',   desc: 'Solo @mail.escuelaing.edu.co. Verificación automática e instantánea.' },
-  { n: '02', color: '#7FE7C4', icon: '🏷️', title: 'Elige tus intereses',            desc: 'Selecciona de 11 categorías y más de 70 intereses para personalizar todo.' },
-  { n: '03', color: '#FFB347', icon: '🎪', title: 'Únete a parches y eventos',       desc: 'Conecta con compañeros afines, asiste a eventos y sube tu XP.' },
+  { n: '01', color: '#6C63FF', icon: '✉️', title: 'Regístrate con tu correo ECI', desc: 'Solo @mail.escuelaing.edu.co. Verificación automática e instantánea.' },
+  { n: '02', color: '#7FE7C4', icon: '🏷️', title: 'Elige tus intereses', desc: 'Selecciona de 11 categorías y más de 70 intereses para personalizar todo.' },
+  { n: '03', color: '#FFB347', icon: '🎪', title: 'Únete a parches y eventos', desc: 'Conecta con compañeros afines, asiste a eventos y sube tu XP.' },
 ];
 
 export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: LandingPageProps) {
-  const [slide, setSlide]       = useState(0);
+  const [slide, setSlide] = useState(0);
   const [autoplay, setAutoplay] = useState(true);
   const [hoveredF, setHoveredF] = useState<number | null>(null);
 
-  const dark  = darkMode;
-  const card  = dark ? 'rgba(26,24,41,0.90)' : 'rgba(255,255,255,0.95)';
-  const bord  = dark ? 'rgba(108,99,255,0.22)' : 'rgba(108,99,255,0.16)';
+  const dark = darkMode;
+  const card = dark ? 'rgba(26,24,41,0.90)' : 'rgba(255,255,255,0.95)';
+  const bord = dark ? 'rgba(108,99,255,0.22)' : 'rgba(108,99,255,0.16)';
   const textH = dark ? '#F0EEFF' : '#1A1829';
   const textS = dark ? '#8B85B0' : '#6B6490';
   const textB = dark ? '#C0BAE0' : '#4A4468';
@@ -110,7 +110,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                 initial={{ opacity: 0, scale: 1.06 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.9, ease: [0.4,0,0.2,1] }}
+                transition={{ duration: 0.9, ease: [0.4, 0, 0.2, 1] }}
                 className="absolute inset-0">
                 <ImageWithFallback src={SLIDES[slide].img} alt={SLIDES[slide].headline}
                   className="w-full h-full object-cover" />
@@ -205,10 +205,10 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
           <div className="max-w-5xl mx-auto flex flex-wrap justify-center gap-3 sm:gap-4">
             {[
               { icon: '🔒', label: 'Solo correos @escuelaing.edu.co', color: '#6C63FF' },
-              { icon: '⚡', label: 'Comunicación en tiempo real',      color: '#7FE7C4' },
+              { icon: '⚡', label: 'Comunicación en tiempo real', color: '#7FE7C4' },
               { icon: '🤖', label: 'IA integrada en toda la plataforma', color: '#FFB347' },
-              { icon: '🎮', label: 'Gamificación y coleccionables',    color: '#FF6B9D' },
-              { icon: '💜', label: 'Bienestar estudiantil 24/7',       color: '#A78BFA' },
+              { icon: '🎮', label: 'Gamificación y coleccionables', color: '#FF6B9D' },
+              { icon: '💜', label: 'Bienestar estudiantil 24/7', color: '#A78BFA' },
             ].map((item, i) => (
               <motion.div key={item.label}
                 initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }}
@@ -289,7 +289,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                     Verificación institucional, datos protegidos con JWT, moderación activa, matching inteligente basado en tus intereses académicos y soporte de bienestar disponible 24/7.
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {['🔒 Verificación ECI','⚡ Tiempo real','🤖 IA integrada','💜 Bienestar 24/7','🎮 Gamificado'].map(tag => (
+                    {['🔒 Verificación ECI', '⚡ Tiempo real', '🤖 IA integrada', '💜 Bienestar 24/7', '🎮 Gamificado'].map(tag => (
                       <span key={tag} className="px-3 py-1.5 rounded-full text-sm"
                         style={{ background: 'rgba(108,99,255,0.1)', color: '#6C63FF', border: '1px solid rgba(108,99,255,0.2)', fontWeight: 500 }}>
                         {tag}
@@ -432,7 +432,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                   </p>
                   {/* Checklist */}
                   <div className="flex flex-col gap-2 mb-8">
-                    {['Totalmente gratuito para estudiantes ECI','Verificación segura con correo institucional','Soporte de bienestar disponible 24/7'].map(item => (
+                    {['Totalmente gratuito para estudiantes ECI', 'Verificación segura con correo institucional', 'Soporte de bienestar disponible 24/7'].map(item => (
                       <div key={item} className="flex items-center gap-2.5">
                         <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
                           style={{ background: 'rgba(127,231,196,0.25)' }}>
