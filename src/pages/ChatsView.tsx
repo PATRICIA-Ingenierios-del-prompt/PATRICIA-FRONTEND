@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Send, Smile, Paperclip, Phone, Video, MoreHorizontal, Check, CheckCheck } from 'lucide-react';
+import { Search, Send, Smile, Paperclip, MoreHorizontal, Check, CheckCheck } from 'lucide-react';
 import { useTheme } from '../store/ThemeContext';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -183,14 +183,6 @@ export function ChatsView() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button className="w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-70 transition-all"
-              style={{ background: t.inputBg }}>
-              <Phone size={16} style={{ color: '#7FE7C4' }} />
-            </button>
-            <button className="w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-70 transition-all"
-              style={{ background: t.inputBg }}>
-              <Video size={16} style={{ color: '#6C63FF' }} />
-            </button>
             <button className="w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-70 transition-all"
               style={{ background: t.inputBg }}>
               <MoreHorizontal size={16} style={{ color: t.textMuted }} />

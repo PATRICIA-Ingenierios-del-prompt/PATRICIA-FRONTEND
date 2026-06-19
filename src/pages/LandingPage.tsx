@@ -72,8 +72,14 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
           className="object-contain" style={{ height: 28 }} />
         {/* Nav links */}
         <div className="hidden md:flex items-center gap-6">
-          {['Funcionalidades', '¿Cómo funciona?', 'Comunidad'].map(l => (
-            <button key={l} className="text-sm transition-colors hover:opacity-80" style={{ color: textS }}>{l}</button>
+          {[
+            { label: 'Funcionalidades', id: 'funcionalidades' },
+            { label: '¿Cómo funciona?', id: 'como-funciona' },
+            { label: 'Comunidad', id: 'comunidad' },
+          ].map(({ label, id }) => (
+            <button key={id}
+              onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })}
+              className="text-sm transition-colors hover:opacity-80" style={{ color: textS }}>{label}</button>
           ))}
         </div>
         <div className="flex items-center gap-2">
@@ -225,7 +231,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
         {/* ══════════════════════════════════════
             FEATURES — "Todo en un lugar"
         ══════════════════════════════════════ */}
-        <section className="py-16 sm:py-24 px-4 sm:px-8">
+        <section id="funcionalidades" className="py-16 sm:py-24 px-4 sm:px-8">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
               <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
@@ -329,7 +335,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
         {/* ══════════════════════════════════════
             HOW IT WORKS
         ══════════════════════════════════════ */}
-        <section className="py-12 sm:py-16 px-4 sm:px-8">
+        <section id="como-funciona" className="py-12 sm:py-16 px-4 sm:px-8">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-12">
               <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-4 text-sm font-semibold"
@@ -363,37 +369,42 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
           </div>
         </section>
 
-        {/* Testimonials */}
-        <section className="py-12 sm:py-16 px-4 sm:px-8">
+        {/* ══════════════════════════════════════
+            COMUNIDAD
+        ══════════════════════════════════════ */}
+        <section id="comunidad" className="py-12 sm:py-16 px-4 sm:px-8">
           <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-10">
-              <h2 style={{ fontWeight: 800, fontSize: 'clamp(1.5rem, 3vw, 2rem)', color: textH }}>
-                Lo que dicen los estudiantes 💬
-              </h2>
+            <div className="text-center mb-12">
+              <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
+                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-5 text-sm font-semibold"
+                  style={{ background: 'rgba(255,107,157,0.1)', color: '#FF6B9D', border: '1px solid rgba(255,107,157,0.25)' }}>
+                  👥 Comunidad ECI
+                </span>
+                <h2 style={{ fontWeight: 900, fontSize: 'clamp(1.8rem,4vw,2.6rem)', color: textH, lineHeight: 1.15, marginBottom: '14px' }}>
+                  Conecta con tu comunidad<br />
+                  <span style={{ background: 'linear-gradient(135deg,#FF6B9D,#6C63FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    en la Escuela Colombiana de Ingeniería
+                  </span>
+                </h2>
+                <p style={{ fontSize: '1.05rem', color: textB, maxWidth: 520, margin: '0 auto', lineHeight: 1.75 }}>
+                  Parches de estudio, gaming, arte, ciencia y mucho más. La comunidad que siempre quisiste tener en tu universidad.
+                </p>
+              </motion.div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
               {[
-                { text: '¡Encontré mi grupo de estudio para Cálculo III en menos de 24 horas! Ahora somos un parche de 8 personas.', name: 'María P.', program: 'Ing. Sistemas · 5to sem.', avatar: 'MP', color: '#6C63FF' },
-                { text: 'El matching es increíble. Conecté con estudiantes que también aman la robótica y ya vamos al Hackathon ECI juntos.', name: 'Andrés T.', program: 'Ing. Eléctrica · 9no sem.', avatar: 'AT', color: '#7FE7C4' },
-                { text: 'Bienestar 24/7 me ayudó en una semana de parciales muy difícil. El chatbot Mono es super empático 💜', name: 'Sofía M.', program: 'Ing. Civil · 6to sem.', avatar: 'SM', color: '#FFB347' },
-              ].map((testimonial, i) => (
-                <motion.div key={testimonial.name}
+                { emoji: '🎮', label: 'Gaming', color: '#6C63FF' },
+                { emoji: '📚', label: 'Estudio', color: '#7FE7C4' },
+                { emoji: '🎨', label: 'Arte y diseño', color: '#FF6B9D' },
+                { emoji: '🔬', label: 'Ciencia & Tech', color: '#FFB347' },
+              ].map((item, i) => (
+                <motion.div key={item.label}
                   initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-                  className="rounded-3xl border p-6 relative"
-                  style={{ background: card, borderColor: bord, backdropFilter: 'blur(12px)' }}>
-                  <div className="text-2xl mb-4" style={{ color: testimonial.color, opacity: 0.4 }}>"</div>
-                  <p style={{ fontSize: '0.88rem', color: textB, lineHeight: 1.75, marginBottom: '20px' }}>{testimonial.text}</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm text-white"
-                      style={{ background: `linear-gradient(135deg, ${testimonial.color}, ${testimonial.color}88)` }}>
-                      {testimonial.avatar}
-                    </div>
-                    <div>
-                      <p style={{ fontWeight: 700, fontSize: '0.85rem', color: textH }}>{testimonial.name}</p>
-                      <p style={{ fontSize: '0.72rem', color: textS }}>{testimonial.program}</p>
-                    </div>
-                  </div>
+                  viewport={{ once: true }} transition={{ delay: i * 0.08 }}
+                  className="rounded-2xl border p-5 text-center"
+                  style={{ background: card, borderColor: `${item.color}30`, backdropFilter: 'blur(12px)' }}>
+                  <div className="text-3xl mb-3">{item.emoji}</div>
+                  <p style={{ fontWeight: 700, fontSize: '0.95rem', color: textH }}>{item.label}</p>
                 </motion.div>
               ))}
             </div>

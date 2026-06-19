@@ -100,6 +100,7 @@ export function ParquesBoard() {
   const [hasDiced, setHasDiced] = useState(false);
   const [winner, setWinner] = useState<number | null>(null);
   const [log, setLog] = useState<string[]>([`Turno de ${P_NAMES[0]} — tira los dados`]);
+  const [showRules, setShowRules] = useState(false);
   const [pieces, setPieces] = useState<Piece[]>(
     Array.from({ length: 16 }, (_, i) => ({ id: i, player: Math.floor(i / 4), trackPos: -1 }))
   );
@@ -195,8 +196,8 @@ export function ParquesBoard() {
         onClick={() => movable && movePiece(piece)}
         className="rounded-full relative flex items-center justify-center"
         style={{
-          width: '84%',
-          height: '84%',
+          width: '65%',
+          height: '65%',
           background: `radial-gradient(circle at 35% 30%, #FFF 0%, ${P_COLORS[piece.player]} 35%, rgba(0,0,0,0.85) 100%)`,
           border: `1.5px solid ${isDark ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.95)'}`,
           cursor: movable ? 'pointer' : 'default',
@@ -227,8 +228,8 @@ export function ParquesBoard() {
     return (
       <div
         style={{
-          width: '84%',
-          height: '84%',
+          width: '65%',
+          height: '65%',
           aspectRatio: '1 / 1',
           borderRadius: '50%',
           background: 'rgba(0,0,0,0.28)',
@@ -254,7 +255,7 @@ export function ParquesBoard() {
     for (let i = 0; i < 4; i++) {
       const piece = playerJailedPieces[i];
       slots.push(
-        <div key={i} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div key={i} style={{ width: '100%', aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {piece ? renderSlotPiece(piece) : renderEmptySlot(th.col)}
         </div>
       );
@@ -323,8 +324,8 @@ export function ParquesBoard() {
         
         {/* slots cluster */}
         <div style={{
-          position: 'absolute', ...th.slots, width: '33%',
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18%'
+          position: 'absolute', ...th.slots, width: '36%',
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8%'
         }}>
           {slots}
         </div>
@@ -334,8 +335,7 @@ export function ParquesBoard() {
 
   const renderPathCell = (r: number, c: number, arm: string) => {
     const key = `${r},${c}`;
-    const line = isDark ? 'rgba(255,255,255,0.065)' : 'rgba(0,0,0,0.08)';
-    const trackBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+    const trackBg = 'transparent';
     const safeBg = isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.08)';
     const homeColor = { top: '#7c6cff', bottom: '#f4b13e', left: '#2bd4bd', right: '#f25fb0' };
 
@@ -386,7 +386,6 @@ export function ParquesBoard() {
 
     const style: React.CSSProperties = {
       boxSizing: 'border-box',
-      border: '1px solid ' + line,
       gridRow: String(r + 1),
       gridColumn: String(c + 1),
       background: bg,
@@ -402,7 +401,7 @@ export function ParquesBoard() {
         {kids}
         <div className="absolute inset-0 flex items-center justify-center gap-0.5 flex-wrap p-0.5" style={{ zIndex: 10 }}>
           {cellPieces.slice(0, 4).map(piece => {
-            const sz = cellPieces.length > 2 ? 8 : 12;
+            const sz = cellPieces.length > 2 ? 8 : 13;
             const dotSz = Math.max(2.5, Math.round(sz * 0.28));
             const movable = isMovable(piece);
             return (
@@ -600,13 +599,52 @@ export function ParquesBoard() {
           {winner !== null ? '🎮 Nueva partida' : '🔄 Reiniciar'}
         </button>
 
-        {/* Legend */}
-        <div className="rounded-xl p-2.5 border" style={{ background: 'var(--p-card)', borderColor: 'rgba(108,99,255,0.1)' }}>
-          {['Tira los dados', 'Click en ficha para mover', '5 o dobles = salir de casa', '⭐ = casilla segura'].map(t => (
-            <p key={t} style={{ fontSize: '0.6rem', color: 'var(--p-muted)', marginBottom: 2 }}>• {t}</p>
-          ))}
-        </div>
+        <button onClick={() => setShowRules(true)} className="py-2 rounded-xl text-sm font-medium"
+          style={{ background: 'rgba(127,231,196,0.12)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.25)' }}>
+          📖 Ver reglas
+        </button>
       </div>
+
+      {/* Rules overlay */}
+      <AnimatePresence>
+        {showRules && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="absolute inset-0 flex items-center justify-center"
+            style={{ background: 'rgba(0,0,0,0.72)', zIndex: 60, borderRadius: 16 }}
+            onClick={() => setShowRules(false)}>
+            <motion.div initial={{ scale: 0.92, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92 }}
+              onClick={e => e.stopPropagation()}
+              className="rounded-3xl border overflow-y-auto"
+              style={{ background: isDark ? 'rgba(20,18,38,0.98)' : '#fff', borderColor: 'rgba(108,99,255,0.35)', width: 340, maxHeight: '80%', padding: '24px' }}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 style={{ fontWeight: 800, fontSize: '1.1rem', color: isDark ? '#F0EEFF' : '#1A1829' }}>📖 Reglas del Parqués</h3>
+                <button onClick={() => setShowRules(false)} style={{ color: isDark ? '#8B85B0' : '#9490B5', fontSize: '1.2rem', lineHeight: 1 }}>✕</button>
+              </div>
+              {[
+                { emoji: '🏠', title: 'Salir de casa (cárcel)', body: 'Necesitas sacar 5 exactos o dobles (igual número en ambos dados) para sacar una de tus fichas de casa al tablero.' },
+                { emoji: '🎲', title: 'Dobles = turno extra', body: 'Si ambos dados muestran el mismo número, mueves tu ficha y tiras de nuevo. ¡Pero si sacas 3 dobles seguidos tu ficha vuelve a casa!' },
+                { emoji: '🔄', title: 'Movimiento', body: 'Las fichas avanzan en sentido de las manecillas del reloj por el borde exterior, luego suben por el camino de tu color hacia el centro.' },
+                { emoji: '⭐', title: 'Casillas seguras', body: 'Las casillas con estrella son seguras. Tu ficha no puede ser comida estando en ellas. También los puntos de salida de cada jugador son seguros.' },
+                { emoji: '🍽️', title: 'Comer una ficha', body: 'Si caes en una casilla ocupada por una ficha rival (y NO es casilla segura), la comes: esa ficha vuelve a casa del rival. Ganas 20 pasos de premio.' },
+                { emoji: '🏆', title: 'Ganar el juego', body: 'El primero en llevar sus 4 fichas hasta el centro del tablero (cruzando todo el recorrido) gana la partida.' },
+                { emoji: '🔢', title: 'Cómo mover', body: 'Haz click en "Tirar dados" y luego click sobre la ficha que quieras mover con el valor del dado. Si no puedes mover ninguna, usa "Pasar turno".' },
+              ].map(rule => (
+                <div key={rule.title} className="mb-4 flex gap-3">
+                  <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>{rule.emoji}</span>
+                  <div>
+                    <p style={{ fontWeight: 700, fontSize: '0.85rem', color: isDark ? '#C0BAE0' : '#2A2448', marginBottom: '3px' }}>{rule.title}</p>
+                    <p style={{ fontSize: '0.78rem', color: isDark ? '#8B85B0' : '#6B6490', lineHeight: 1.6 }}>{rule.body}</p>
+                  </div>
+                </div>
+              ))}
+              <button onClick={() => setShowRules(false)} className="w-full py-2.5 rounded-xl text-sm font-semibold mt-2"
+                style={{ background: 'linear-gradient(135deg,#6C63FF,#8B7FFF)', color: 'white' }}>
+                ¡Entendido, a jugar!
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Win overlay */}
       <AnimatePresence>
