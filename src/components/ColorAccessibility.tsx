@@ -237,7 +237,7 @@ export function AccessibilityPanel({ mode, setMode, dyslexia, setDyslexia }: Acc
             <span style={{ fontSize: '0.65rem', color: 'var(--p-muted)' }}>Brettel et al. 1997</span>
           </div>
           <p style={{ fontSize: '0.78rem', color: 'var(--p-muted)', marginBottom: '10px', lineHeight: 1.5 }}>
-            Simula cómo personas con daltonismo perciben la interfaz. Los modos son acumulables con el de dislexia.
+            Simula cómo personas con daltonismo perciben la interfaz.
           </p>
           <div className="grid grid-cols-2 gap-2">
             {VISION_MODES.map(vm => (

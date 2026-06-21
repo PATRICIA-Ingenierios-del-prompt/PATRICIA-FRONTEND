@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Heart, MessageCircle, Flame, Check, Send, ArrowLeft } from 'lucide-react';
+import { X, Heart, MessageCircle, Flame, Check, Send, ArrowLeft, RotateCcw, Star, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
 import { addToast } from '../components/ToastSystem';
@@ -51,6 +51,20 @@ const INIT_REQUESTS = [
 type TabId = 'discover' | 'requests' | 'matches';
 type ChatMsg = { id: number; from: 'me' | 'them'; text: string; time: string };
 
+const SCHEDULE_DAYS = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+const SCHEDULE_SLOTS = ['8-10', '10-12', '12-14', '14-16', '16-18', '18-20'];
+
+function buildSchedule(seed: number): Set<string> {
+  const s = new Set<string>();
+  const patterns = [
+    ['0-1','0-2','1-0','1-1','2-0','3-2','4-1','4-2'],
+    ['0-0','1-1','2-2','3-0','3-1','4-0','4-3'],
+    ['0-2','0-3','1-2','2-1','2-3','4-2','4-3'],
+  ];
+  patterns[seed % patterns.length].forEach(k => s.add(k));
+  return s;
+}
+
 // Profile modal for viewing a user's profile before accepting/rejecting
 function ProfileModal({ person, onClose, onAccept, onReject, showActions }: {
   person: typeof INIT_REQUESTS[0];
@@ -60,6 +74,7 @@ function ProfileModal({ person, onClose, onAccept, onReject, showActions }: {
   showActions: boolean;
 }) {
   const t = useTheme();
+  const schedule = buildSchedule(person.id);
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -79,19 +94,56 @@ function ProfileModal({ person, onClose, onAccept, onReject, showActions }: {
           </div>
           <div className="absolute bottom-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-full" style={{ background: 'rgba(0,0,0,0.4)' }}>
             <Flame size={12} style={{ color: '#FF6B9D' }} />
-            <span style={{ color: 'white', fontWeight: 700, fontSize: '0.8rem' }}>{person.match}%</span>
+            <span style={{ color: 'white', fontWeight: 700, fontSize: '0.8rem' }}>{person.program}</span>
           </div>
         </div>
         <div className="p-5">
           <h3 style={{ fontWeight: 800, fontSize: '1.2rem', color: t.text }}>{person.name}, {person.age}</h3>
           <p style={{ fontSize: '0.8rem', color: t.textMuted, marginBottom: '10px' }}>{person.program} · {person.semester} sem.</p>
           <p style={{ fontSize: '0.85rem', color: t.textSub, lineHeight: 1.6, marginBottom: '12px' }}>{person.bio}</p>
-          <div className="flex flex-wrap gap-1.5 mb-5">
+          <div className="flex flex-wrap gap-1.5 mb-4">
             {person.interests.map(i => (
               <span key={i} className="px-2.5 py-1 rounded-full text-sm"
                 style={{ background: 'var(--p-divider)', color: '#6C63FF' }}>{i}</span>
             ))}
           </div>
+
+          {/* Availability schedule — shown only for friends (matches) */}
+          {!showActions && (
+            <div className="mb-5">
+              <p style={{ fontWeight: 700, fontSize: '0.82rem', color: t.text, marginBottom: '8px' }}>
+                Disponibilidad semanal
+              </p>
+              <div style={{ overflowX: 'auto' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '36px repeat(6, 1fr)', gap: 2, minWidth: 280 }}>
+                  {/* Header row */}
+                  <div />
+                  {SCHEDULE_DAYS.map(d => (
+                    <div key={d} style={{ textAlign: 'center', fontSize: '0.6rem', fontWeight: 700, color: t.textMuted, paddingBottom: 2 }}>{d}</div>
+                  ))}
+                  {/* Slot rows */}
+                  {SCHEDULE_SLOTS.map((slot, si) => (
+                    <>
+                      <div key={`label-${si}`} style={{ fontSize: '0.55rem', color: t.textMuted, display: 'flex', alignItems: 'center', paddingRight: 2 }}>{slot}</div>
+                      {SCHEDULE_DAYS.map((_, di) => {
+                        const active = schedule.has(`${di}-${si}`);
+                        return (
+                          <div key={`${di}-${si}`}
+                            style={{
+                              height: 18,
+                              borderRadius: 4,
+                              background: active ? 'linear-gradient(135deg,#6C63FF,#A78BFA)' : t.inputBg,
+                              border: `1px solid ${active ? 'transparent' : t.cardBorder}`,
+                            }} />
+                        );
+                      })}
+                    </>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {showActions && onAccept && onReject && (
             <div className="flex gap-3">
               <button onClick={onReject}
@@ -189,6 +241,7 @@ export function MatchingView() {
   const [requests, setRequests] = useState(INIT_REQUESTS);
   const [tab, setTab] = useState<TabId>('discover');
   const [viewProfile, setViewProfile] = useState<typeof INIT_REQUESTS[0] | null>(null);
+  const [viewProfileIsMatch, setViewProfileIsMatch] = useState(false);
   const [chatWith, setChatWith] = useState<{ name: string; avatar: string; gradient: string } | null>(null);
 
   const current = PROFILES[currentIdx % PROFILES.length];
@@ -232,7 +285,7 @@ export function MatchingView() {
             onClose={() => setViewProfile(null)}
             onAccept={() => acceptRequest(viewProfile)}
             onReject={() => rejectRequest(viewProfile.id)}
-            showActions={true}
+            showActions={!viewProfileIsMatch}
           />
         )}
         {chatWith && <ChatModal person={chatWith} onClose={() => setChatWith(null)} />}
@@ -265,299 +318,245 @@ export function MatchingView() {
 
       {/* ── DISCOVER ── */}
       {tab === 'discover' && (
-        <div className="flex flex-col lg:flex-row gap-6 h-full overflow-y-auto lg:overflow-hidden">
+        <div className="flex flex-col items-center pb-6">
 
-          {/* ── Card stack column ── */}
-          <div className="flex flex-col items-center w-full lg:w-[480px] lg:flex-shrink-0">
-            {/* Stack */}
-            <div className="relative w-full" style={{ height: 'clamp(500px, 68vh, 700px)' }}>
-              {/* Ghost card behind (next profile) */}
-              <div className="absolute inset-0 rounded-3xl overflow-hidden border"
-                style={{ background: next.gradient, transform: 'scale(0.94) translateY(16px)', zIndex: 1, opacity: 0.35, filter: 'blur(1px)' }}>
-                <div className="flex items-end justify-center h-full pb-10">
-                  <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-lg font-bold text-white">{next.avatar}</div>
+          {/* Card stack — centered, full gradient Tinder style */}
+          <div className="relative w-full max-w-sm" style={{ height: 'clamp(560px, 72vh, 660px)' }}>
+
+            {/* Ghost card (next) */}
+            <div className="absolute inset-0 rounded-3xl overflow-hidden"
+              style={{ background: next.gradient, transform: 'scale(0.94) translateY(14px)', zIndex: 1, opacity: 0.3, filter: 'blur(2px)' }} />
+
+            {/* Main card */}
+            <AnimatePresence mode="wait">
+              <motion.div key={currentIdx}
+                initial={{ scale: 0.93, opacity: 0, y: 16 }}
+                animate={{ scale: 1, opacity: 1, y: 0, rotate: swipeDir === 'left' ? -22 : swipeDir === 'right' ? 22 : 0, x: swipeDir === 'left' ? -500 : swipeDir === 'right' ? 500 : 0 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+                className="absolute inset-0 rounded-3xl overflow-hidden cursor-grab active:cursor-grabbing"
+                style={{ zIndex: 3, boxShadow: '0 28px 64px rgba(0,0,0,0.4), 0 6px 20px rgba(108,99,255,0.2)' }}>
+
+                {/* Full-screen gradient background */}
+                <div className="absolute inset-0" style={{ background: current.gradient }} />
+
+                {/* Bottom dark overlay for text */}
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.5) 45%, rgba(0,0,0,0.1) 70%, transparent 100%)' }} />
+
+                {/* Avatar — centered in upper portion */}
+                <div className="absolute inset-0 flex items-center justify-center" style={{ paddingBottom: '38%' }}>
+                  <div className="w-32 h-32 rounded-full flex items-center justify-center font-black text-white border-4 border-white/20"
+                    style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', fontSize: '3.2rem', boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
+                    {current.avatar}
+                  </div>
                 </div>
-              </div>
 
-              {/* Main card */}
-              <AnimatePresence mode="wait">
-                <motion.div key={currentIdx}
-                  initial={{ scale: 0.92, opacity: 0, y: 20 }}
-                  animate={{ scale: 1, opacity: 1, y: 0, rotate: swipeDir === 'left' ? -20 : swipeDir === 'right' ? 20 : 0, x: swipeDir === 'left' ? -480 : swipeDir === 'right' ? 480 : 0 }}
-                  transition={{ type: 'spring', stiffness: 260, damping: 22 }}
-                  className="absolute inset-0 rounded-3xl overflow-hidden"
-                  style={{ zIndex: 3, boxShadow: '0 24px 60px rgba(0,0,0,0.35), 0 4px 16px rgba(108,99,255,0.15)' }}>
+                {/* Top badges */}
+                <div className="absolute top-4 left-4 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full z-10"
+                  style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>⭐ Nv. {current.level}</span>
+                </div>
+                <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full z-10"
+                  style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)' }}>
+                  <div className="w-2 h-2 rounded-full" style={{ background: '#7FE7C4' }} />
+                  <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>Activo hoy</span>
+                </div>
 
-                  {/* Full gradient hero */}
-                  <div className="relative flex flex-col items-center justify-end pb-6" style={{ height: '62%', background: current.gradient }}>
-                    {/* Overlay for text readability */}
-                    <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 50%)' }} />
-
-                    {/* Avatar */}
-                    <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full border-4 border-white/25 flex items-center justify-center mb-4 relative z-10"
-                      style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', fontSize: '3rem', fontWeight: 900, color: 'white', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
-                      {current.avatar}
+                {/* Bottom info overlay */}
+                <div className="absolute bottom-0 left-0 right-0 p-5 z-10">
+                  {hasSentTo(current.id) && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3"
+                      style={{ background: 'rgba(127,231,196,0.2)', border: '1px solid rgba(127,231,196,0.4)' }}>
+                      <Check size={13} style={{ color: '#7FE7C4' }} />
+                      <span style={{ fontSize: '0.75rem', color: '#7FE7C4', fontWeight: 600 }}>Solicitud enviada · esperando respuesta</span>
                     </div>
+                  )}
 
-                    {/* Name + program on hero */}
-                    <div className="relative z-10 text-center px-6">
-                      <h3 style={{ fontWeight: 900, fontSize: '1.5rem', color: 'white', marginBottom: '4px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
-                        {current.name}, {current.age}
-                      </h3>
-                      <p style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.8)', fontWeight: 500 }}>
-                        {current.program} · {current.semester} sem.
-                      </p>
-                    </div>
-
-                    {/* Badges */}
-                    <div className="absolute top-4 left-4 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full z-10"
-                      style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)' }}>
-                      <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>⭐ Nv. {current.level}</span>
-                    </div>
-                    <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full z-10"
-                      style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)' }}>
-                      <Flame size={13} style={{ color: '#FF6B9D' }} />
-                      <span style={{ color: 'white', fontWeight: 800, fontSize: '0.85rem' }}>{current.match}%</span>
-                    </div>
-
-                    {/* Swipe feedback overlays */}
-                    <AnimatePresence>
-                      {swipeDir === 'right' && (
-                        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-                          className="absolute inset-0 flex items-center justify-center z-20"
-                          style={{ background: 'rgba(127,231,196,0.25)' }}>
-                          <div className="px-6 py-3 rounded-2xl border-4 -rotate-12 text-xl font-black"
-                            style={{ borderColor: '#7FE7C4', color: '#7FE7C4', background: 'rgba(0,0,0,0.3)' }}>
-                            SOLICITUD ✓
-                          </div>
-                        </motion.div>
-                      )}
-                      {swipeDir === 'left' && (
-                        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-                          className="absolute inset-0 flex items-center justify-center z-20"
-                          style={{ background: 'rgba(255,71,87,0.25)' }}>
-                          <div className="px-6 py-3 rounded-2xl border-4 rotate-12 text-xl font-black"
-                            style={{ borderColor: '#FF4757', color: '#FF4757', background: 'rgba(0,0,0,0.3)' }}>
-                            NOPE ✕
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                  {/* Name + age */}
+                  <div className="flex items-end gap-3 mb-1">
+                    <h3 style={{ fontWeight: 900, fontSize: '2rem', color: 'white', lineHeight: 1, textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>
+                      {current.name.split(' ')[0]}
+                    </h3>
+                    <span style={{ fontWeight: 700, fontSize: '1.6rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1 }}>{current.age}</span>
                   </div>
 
-                  {/* Info card bottom */}
-                  <div className="p-5 sm:p-6 flex flex-col gap-3" style={{ background: t.cardBg }}>
-                    {hasSentTo(current.id) && (
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                        style={{ background: 'rgba(127,231,196,0.1)', border: '1px solid rgba(127,231,196,0.25)' }}>
-                        <Check size={14} style={{ color: '#7FE7C4' }} />
-                        <span style={{ fontSize: '0.78rem', color: '#7FE7C4', fontWeight: 600 }}>Solicitud enviada — esperando respuesta</span>
+                  {/* Program */}
+                  <p style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.75)', marginBottom: '10px', fontWeight: 500 }}>
+                    {current.program} · {current.semester} sem.
+                  </p>
+
+                  {/* Bio snippet */}
+                  <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.55, marginBottom: '12px' }}>
+                    {current.bio}
+                  </p>
+
+                  {/* Interest tags */}
+                  <div className="flex gap-2 flex-wrap">
+                    {current.interests.slice(0, 3).map(interest => (
+                      <span key={interest} className="px-2.5 py-1 rounded-full text-xs font-medium"
+                        style={{ background: 'rgba(255,255,255,0.18)', color: 'white', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                        {interest}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Swipe feedback overlays */}
+                <AnimatePresence>
+                  {swipeDir === 'right' && (
+                    <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                      className="absolute inset-0 flex items-center justify-start pl-8 z-20"
+                      style={{ background: 'rgba(127,231,196,0.15)' }}>
+                      <div className="px-5 py-2.5 rounded-2xl border-4 -rotate-12"
+                        style={{ borderColor: '#7FE7C4', color: '#7FE7C4', background: 'rgba(0,0,0,0.25)', fontSize: '1.5rem', fontWeight: 900, backdropFilter: 'blur(4px)' }}>
+                        SOLICITUD ❤️
                       </div>
-                    )}
-                    <p style={{ fontSize: '0.85rem', color: t.textSub, lineHeight: 1.65 }}>{current.bio}</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {current.interests.map(interest => (
-                        <span key={interest} className="px-2.5 py-1 rounded-full text-xs font-medium"
-                          style={{ background: 'rgba(108,99,255,0.12)', color: '#6C63FF', border: '1px solid rgba(108,99,255,0.2)' }}>
-                          {interest}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex items-center gap-8 mt-5">
-              <motion.button onClick={() => swipe('left')}
-                whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.93 }}
-                className="w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all"
-                style={{ background: 'rgba(255,71,87,0.08)', borderColor: 'rgba(255,71,87,0.4)', boxShadow: '0 6px 24px rgba(255,71,87,0.18)' }}>
-                <X size={28} style={{ color: '#FF4757' }} />
-              </motion.button>
-
-              <motion.button onClick={() => swipe('right')} disabled={hasSentTo(current.id)}
-                whileHover={!hasSentTo(current.id) ? { scale: 1.1, boxShadow: '0 12px 36px rgba(127,231,196,0.55)' } : {}}
-                whileTap={!hasSentTo(current.id) ? { scale: 0.95 } : {}}
-                className="w-24 h-24 rounded-full flex items-center justify-center transition-all disabled:cursor-not-allowed"
-                style={{
-                  background: hasSentTo(current.id) ? 'rgba(127,231,196,0.2)' : 'linear-gradient(135deg, #7FE7C4, #6C63FF)',
-                  boxShadow: hasSentTo(current.id) ? 'none' : '0 10px 32px rgba(127,231,196,0.45)',
-                  opacity: hasSentTo(current.id) ? 0.7 : 1,
-                }}>
-                {hasSentTo(current.id)
-                  ? <Check size={32} style={{ color: '#7FE7C4' }} />
-                  : <Heart size={34} color="white" fill="white" />}
-              </motion.button>
-
-              <motion.button onClick={() => setCurrentIdx(i => i + 1)}
-                whileHover={{ scale: 1.12 }} whileTap={{ scale: 0.93 }}
-                className="w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all"
-                style={{ background: 'rgba(108,99,255,0.08)', borderColor: 'rgba(108,99,255,0.3)', boxShadow: '0 6px 24px rgba(108,99,255,0.12)' }}>
-                <MessageCircle size={24} style={{ color: '#6C63FF' }} />
-              </motion.button>
-            </div>
-
-            <p style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '8px', textAlign: 'center' }}>
-              {hasSentTo(current.id) ? '💜 Solicitud enviada — esperando respuesta' : '✕ Pasar  ·  ❤️ Enviar solicitud  ·  💬 Siguiente'}
-            </p>
+                    </motion.div>
+                  )}
+                  {swipeDir === 'left' && (
+                    <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                      className="absolute inset-0 flex items-center justify-end pr-8 z-20"
+                      style={{ background: 'rgba(255,71,87,0.15)' }}>
+                      <div className="px-5 py-2.5 rounded-2xl border-4 rotate-12"
+                        style={{ borderColor: '#FF4757', color: '#FF4757', background: 'rgba(0,0,0,0.25)', fontSize: '1.5rem', fontWeight: 900, backdropFilter: 'blur(4px)' }}>
+                        NOPE ✕
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </AnimatePresence>
           </div>
 
-          {/* ── Right panel ── */}
-          <div className="flex-1 flex flex-col gap-4 pb-4">
+          {/* 3 Tinder-style action buttons */}
+          <div className="flex items-center justify-center gap-5 mt-5">
 
-            {/* Match score hero */}
-            <div className="rounded-3xl p-5 border relative overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, rgba(108,99,255,0.12), rgba(127,231,196,0.06))', borderColor: 'rgba(108,99,255,0.22)' }}>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p style={{ fontWeight: 800, fontSize: '1.05rem', color: t.text }}>
-                    {current.match}% compatible
-                  </p>
-                  <p style={{ fontSize: '0.78rem', color: t.textMuted, marginTop: '2px' }}>
-                    con {current.name.split(' ')[0]}
-                  </p>
-                </div>
-                {/* Circular progress */}
-                <div className="relative w-16 h-16">
-                  <svg className="w-full h-full -rotate-90" viewBox="0 0 56 56">
-                    <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(108,99,255,0.15)" strokeWidth="5" />
-                    <motion.circle cx="28" cy="28" r="22" fill="none" stroke="#6C63FF" strokeWidth="5"
-                      strokeLinecap="round"
-                      strokeDasharray={`${2 * Math.PI * 22}`}
-                      initial={{ strokeDashoffset: 2 * Math.PI * 22 }}
-                      animate={{ strokeDashoffset: 2 * Math.PI * 22 * (1 - current.match / 100) }}
-                      transition={{ duration: 1.2, ease: 'easeOut' }} />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span style={{ fontWeight: 900, fontSize: '0.8rem', color: '#6C63FF' }}>{current.match}%</span>
-                  </div>
-                </div>
-              </div>
+            {/* Rewind — small yellow */}
+            <motion.button onClick={() => setCurrentIdx(i => Math.max(0, i - 1))}
+              whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
+              className="w-14 h-14 rounded-full flex items-center justify-center border-2 transition-all"
+              style={{ background: 'rgba(255,179,71,0.1)', borderColor: 'rgba(255,179,71,0.45)', boxShadow: '0 4px 14px rgba(255,179,71,0.15)' }}>
+              <RotateCcw size={20} style={{ color: '#FFB347' }} />
+            </motion.button>
 
-              {/* Compatibility bars */}
-              <div className="space-y-2.5">
-                {[
-                  { label: 'Programa académico', pct: 95, color: '#6C63FF' },
-                  { label: 'Intereses comunes',  pct: current.match - 8, color: '#7FE7C4' },
-                  { label: 'Vibra académica',    pct: current.match - 5, color: '#FF6B9D' },
-                  { label: 'Nivel de actividad', pct: current.match - 12, color: '#FFB347' },
-                ].map(item => (
-                  <div key={item.label}>
-                    <div className="flex justify-between mb-1">
-                      <span style={{ fontSize: '0.73rem', color: t.textSub }}>{item.label}</span>
-                      <span style={{ fontSize: '0.73rem', fontWeight: 700, color: item.color }}>{item.pct}%</span>
-                    </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: t.inputBg }}>
-                      <motion.div key={currentIdx} initial={{ width: 0 }} animate={{ width: `${item.pct}%` }}
-                        transition={{ duration: 0.9, delay: 0.1, ease: 'easeOut' }}
-                        className="h-full rounded-full" style={{ background: item.color }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Like — large green checkmark (middle) */}
+            <motion.button onClick={() => swipe('right')} disabled={hasSentTo(current.id)}
+              whileHover={!hasSentTo(current.id) ? { scale: 1.1, boxShadow: '0 12px 36px rgba(127,231,196,0.55)' } : {}}
+              whileTap={!hasSentTo(current.id) ? { scale: 0.93 } : {}}
+              className="rounded-full flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                width: 68, height: 68,
+                background: hasSentTo(current.id) ? 'rgba(127,231,196,0.2)' : 'linear-gradient(135deg, #7FE7C4, #5BC8FF)',
+                boxShadow: hasSentTo(current.id) ? 'none' : '0 8px 28px rgba(127,231,196,0.45)',
+              }}>
+              <Check size={30} color="white" strokeWidth={3} />
+            </motion.button>
 
-            {/* Intereses en común */}
-            <div className="rounded-2xl p-4 border" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
-              <p style={{ fontWeight: 700, fontSize: '0.88rem', color: t.text, marginBottom: '10px' }}>
-                🎯 Intereses en común
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {['Python', 'IA'].map(i => (
-                  <span key={i} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm"
-                    style={{ background: 'rgba(127,231,196,0.12)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.25)', fontWeight: 600 }}>
-                    ✓ {i}
-                  </span>
-                ))}
-                {current.interests.slice(0, 2).map(i => (
-                  <span key={i} className="px-3 py-1.5 rounded-full text-sm"
-                    style={{ background: 'rgba(108,99,255,0.08)', color: '#8B85B0', border: `1px solid ${t.cardBorder}` }}>
-                    {i}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Pending sent requests */}
-            {sentRequests.length > 0 && (
-              <div className="rounded-2xl p-4 border" style={{ background: 'rgba(127,231,196,0.06)', borderColor: 'rgba(127,231,196,0.2)' }}>
-                <p style={{ fontWeight: 600, fontSize: '0.85rem', color: '#7FE7C4', marginBottom: '4px' }}>
-                  ⏳ Solicitudes enviadas
-                </p>
-                <p style={{ fontSize: '0.78rem', color: t.textMuted, lineHeight: 1.6 }}>
-                  {sentRequests.length} solicitud{sentRequests.length > 1 ? 'es' : ''} pendiente{sentRequests.length > 1 ? 's' : ''}. El match ocurre cuando ellos también digan ❤️
-                </p>
-              </div>
-            )}
-
-            {/* Profile stats */}
-            <div className="rounded-2xl border p-4" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
-              <p style={{ fontWeight: 700, fontSize: '0.88rem', color: t.text, marginBottom: '10px' }}>👤 Sobre {current.name.split(' ')[0]}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[
-                  { label: 'Nivel ECI',       value: `Nv. ${current.level}`,        icon: '⭐' },
-                  { label: 'Monas',            value: `${current.monas} Monas`,      icon: '🎴' },
-                  { label: 'Likes recibidos',  value: `${current.likes}`,            icon: '💜' },
-                  { label: 'Semestre',         value: current.semester,              icon: '📚' },
-                ].map(s => (
-                  <div key={s.label} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl"
-                    style={{ background: t.inputBg }}>
-                    <span style={{ fontSize: '1rem' }}>{s.icon}</span>
-                    <div>
-                      <p style={{ fontSize: '0.62rem', color: t.textMuted }}>{s.label}</p>
-                      <p style={{ fontSize: '0.82rem', fontWeight: 700, color: t.text }}>{s.value}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Nope — large red */}
+            <motion.button onClick={() => swipe('left')}
+              whileHover={{ scale: 1.1, boxShadow: '0 8px 28px rgba(255,71,87,0.35)' }} whileTap={{ scale: 0.92 }}
+              className="w-18 h-18 rounded-full flex items-center justify-center border-2 transition-all"
+              style={{ width: 68, height: 68, background: 'rgba(255,71,87,0.1)', borderColor: 'rgba(255,71,87,0.45)', boxShadow: '0 6px 20px rgba(255,71,87,0.18)' }}>
+              <X size={30} style={{ color: '#FF4757' }} />
+            </motion.button>
           </div>
+
+          <p style={{ fontSize: '0.7rem', color: t.textMuted, marginTop: '10px', textAlign: 'center' }}>
+            {hasSentTo(current.id) ? '💜 Solicitud enviada · esperando respuesta' : '↩ Anterior  ·  ✕ Pasar  ·  ✓ Solicitud'}
+          </p>
+
+          {sentRequests.length > 0 && (
+            <div className="mt-4 flex items-center gap-2 px-4 py-2.5 rounded-xl"
+              style={{ background: 'rgba(127,231,196,0.06)', border: '1px solid rgba(127,231,196,0.2)' }}>
+              <span style={{ fontSize: '0.8rem', color: '#7FE7C4' }}>⏳</span>
+              <span style={{ fontSize: '0.78rem', color: t.textMuted }}>
+                {sentRequests.length} solicitud{sentRequests.length > 1 ? 'es' : ''} pendiente{sentRequests.length > 1 ? 's' : ''} · el match ocurre cuando ellos también digan ❤️
+              </span>
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── REQUESTS (incoming) ── */}
+      {/* ── REQUESTS (incoming) — Tinder Gold grid ── */}
       {tab === 'requests' && (
-        <div className="max-w-2xl space-y-3">
+        <div className="max-w-2xl">
+          {/* Header count */}
+          {requests.length > 0 && (
+            <div className="flex items-center gap-3 mb-5 px-1">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+                style={{ background: 'linear-gradient(135deg, rgba(255,107,157,0.15), rgba(108,99,255,0.15))', border: '1px solid rgba(255,107,157,0.3)' }}>
+                <Heart size={14} fill="#FF6B9D" style={{ color: '#FF6B9D' }} />
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#FF6B9D' }}>
+                  {requests.length} {requests.length === 1 ? 'persona' : 'personas'} te dieron solicitud
+                </span>
+              </div>
+            </div>
+          )}
+
           {requests.length === 0 ? (
             <div className="text-center py-16 rounded-2xl border" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
               <Check size={40} style={{ color: '#7FE7C4', margin: '0 auto 12px' }} />
               <p style={{ fontWeight: 600, color: t.text }}>¡Todas las solicitudes revisadas!</p>
               <p style={{ fontSize: '0.82rem', color: t.textMuted, marginTop: '6px' }}>Sigue explorando en Descubrir</p>
             </div>
-          ) : requests.map(req => (
-            <motion.div key={req.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-4 p-4 rounded-2xl border"
-              style={{ background: t.cardBg, borderColor: t.cardBorder }}>
-              <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-white text-sm cursor-pointer hover:scale-105 transition-all"
-                style={{ background: req.gradient }} onClick={() => setViewProfile(req)}>
-                {req.avatar}
-              </div>
-              <div className="flex-1 cursor-pointer" onClick={() => setViewProfile(req)}>
-                <p style={{ fontWeight: 600, fontSize: '0.9rem', color: t.text }}>{req.name}</p>
-                <p style={{ fontSize: '0.75rem', color: t.textMuted }}>{req.program} · hace {req.sent}</p>
-              </div>
-              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#7FE7C4' }}>{req.match}%</span>
-              <div className="flex gap-2">
-                <button onClick={() => rejectRequest(req.id)}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center border transition-all hover:scale-105"
-                  style={{ background: 'rgba(255,71,87,0.08)', borderColor: 'rgba(255,71,87,0.25)' }}>
-                  <X size={15} style={{ color: '#FF4757' }} />
-                </button>
-                <button onClick={() => setViewProfile(req)}
-                  className="px-3 py-2 rounded-xl text-sm border transition-all hover:opacity-80"
-                  style={{ background: t.inputBg, color: t.textMuted, borderColor: t.cardBorder }}>
-                  Ver perfil
-                </button>
-                <button onClick={() => acceptRequest(req)}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
-                  style={{ background: '#7FE7C4', color: '#0F0E1A' }}>
-                  <Check size={14} /> ✓ ¡Match!
-                </button>
-              </div>
-            </motion.div>
-          ))}
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {requests.map((req, i) => (
+                <motion.div key={req.id} layout
+                  initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.07 }}
+                  className="relative rounded-2xl overflow-hidden cursor-pointer group"
+                  style={{ aspectRatio: '3/4', boxShadow: '0 4px 20px rgba(0,0,0,0.25)' }}
+                  onClick={() => { setViewProfile(req); setViewProfileIsMatch(false); }}>
+
+                  {/* Full gradient background */}
+                  <div className="absolute inset-0" style={{ background: req.gradient }} />
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 50%, transparent 75%)' }} />
+
+                  {/* Avatar */}
+                  <div className="absolute inset-0 flex items-center justify-center" style={{ paddingBottom: '32%' }}>
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-white text-xl border-2 border-white/25"
+                      style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)' }}>
+                      {req.avatar}
+                    </div>
+                  </div>
+
+                  {/* Time badge */}
+                  <div className="absolute top-2.5 right-2.5 px-2 py-1 rounded-full"
+                    style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)' }}>
+                    <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.8)', fontWeight: 500 }}>hace {req.sent}</span>
+                  </div>
+
+                  {/* Info overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <p style={{ fontWeight: 800, fontSize: '0.88rem', color: 'white', lineHeight: 1.2 }}>
+                      {req.name.split(' ')[0]}, {req.age}
+                    </p>
+                    <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', marginTop: '2px', marginBottom: '8px' }}>
+                      {req.program}
+                    </p>
+
+                    {/* Accept / Reject buttons */}
+                    <div className="flex gap-2">
+                      <button onClick={e => { e.stopPropagation(); rejectRequest(req.id); }}
+                        className="flex-1 py-1.5 rounded-xl flex items-center justify-center transition-all hover:scale-105"
+                        style={{ background: 'rgba(255,71,87,0.25)', border: '1px solid rgba(255,71,87,0.5)' }}>
+                        <X size={14} style={{ color: '#FF6B6B' }} />
+                      </button>
+                      <button onClick={e => { e.stopPropagation(); acceptRequest(req); }}
+                        className="flex-1 py-1.5 rounded-xl flex items-center justify-center transition-all hover:scale-105"
+                        style={{ background: 'rgba(127,231,196,0.3)', border: '1px solid rgba(127,231,196,0.6)' }}>
+                        <Heart size={14} fill="#7FE7C4" style={{ color: '#7FE7C4' }} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"
+                    style={{ background: 'rgba(108,99,255,0.12)', border: '2px solid rgba(108,99,255,0.5)' }} />
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -584,11 +583,16 @@ export function MatchingView() {
                 </div>
                 <div className="p-4 text-center">
                   <p style={{ fontWeight: 700, color: t.text }}>{req.name}</p>
-                  <p style={{ fontSize: '0.75rem', color: t.textMuted }}>{req.match}% match</p>
+                  <p style={{ fontSize: '0.75rem', color: t.textMuted }}>{req.program} · {req.semester} sem.</p>
                   <button onClick={() => openChat({ name: req.name, avatar: req.avatar, gradient: req.gradient })}
                     className="mt-3 w-full py-2 rounded-xl text-sm flex items-center justify-center gap-1.5 transition-all hover:opacity-80"
                     style={{ background: '#6C63FF', color: 'white' }}>
                     <MessageCircle size={14} /> Enviar mensaje
+                  </button>
+                  <button onClick={() => { setViewProfile(req); setViewProfileIsMatch(true); }}
+                    className="mt-2 w-full py-2 rounded-xl text-sm flex items-center justify-center gap-1.5 transition-all hover:opacity-80 border"
+                    style={{ color: t.text, borderColor: t.cardBorder, background: 'transparent' }}>
+                    Ver perfil
                   </button>
                 </div>
               </motion.div>

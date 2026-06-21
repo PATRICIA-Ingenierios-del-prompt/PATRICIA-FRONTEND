@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Plus, Users, Lock, Globe, Mic, MicOff, Paperclip, Send, Smile,
   Settings, Search, Crown, Shield, X, MessageCircle, FileText,
   Layers, Gamepad2, Volume2, VolumeX, MoreHorizontal,
-  Phone, PhoneOff, Download, Video, VideoOff, Monitor, MonitorOff,
+  Phone, PhoneOff, Download, Video, VideoOff, Monitor, MonitorOff, ArrowLeft,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ParquesBoard } from '../components/ParquesBoard';
@@ -156,6 +157,20 @@ function ReportModal({ memberName, onClose }: { memberName:string; onClose:()=>v
   );
 }
 
+const M_DAYS  = ['LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+const M_SLOTS = ['8-10','10-12','12-14','14-16','16-18','18-20'];
+function memberSched(name: string): Set<string> {
+  const seed = name.charCodeAt(0) % 3;
+  const patterns = [
+    ['0-1','0-2','1-0','2-1','3-0','4-2'],
+    ['0-0','1-2','2-0','3-1','4-0','4-2'],
+    ['1-1','2-2','3-0','3-2','4-1','4-3'],
+  ];
+  const s = new Set<string>();
+  patterns[seed].forEach(k => s.add(k));
+  return s;
+}
+
 export function ParchesView() {
   const [selectedParche, setSelectedParche] = useState(PARCHES_LIST[0]);
   const [activeTab, setActiveTab] = useState<InteriorTab>('chat');
@@ -163,6 +178,7 @@ export function ParchesView() {
   const [showCreate, setShowCreate] = useState(false);
   const [sidebarFilter, setSidebarFilter] = useState<'all'|'public'|'private'>('all');
   const [reportMember, setReportMember] = useState<string|null>(null);
+  const [viewMemberProfile, setViewMemberProfile] = useState<typeof MEMBERS_DATA[0] | null>(null);
   const [messages, setMessages] = useState(INIT_MESSAGES);
   const [msgInput, setMsgInput] = useState('');
   const [hoveredMsg, setHoveredMsg] = useState<number|null>(null);
@@ -800,7 +816,11 @@ export function ParchesView() {
                                 {label:'Reportar',   icon:'🚩', danger:true},
                               ].map(opt=>(
                                 <button key={opt.label}
-                                  onClick={()=>{ if(opt.danger) setReportMember(m.name); setMemberMenuOpen(null); }}
+                                  onClick={()=>{
+                                    if(opt.label==='Ver perfil') setViewMemberProfile(m);
+                                    if(opt.danger) setReportMember(m.name);
+                                    setMemberMenuOpen(null);
+                                  }}
                                   className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs hover:bg-white/5 transition-all"
                                   style={{ color:opt.danger ? '#FF4D6A' : 'rgba(255,255,255,0.7)' }}>
                                   <span>{opt.icon}</span>{opt.label}
@@ -873,6 +893,98 @@ export function ParchesView() {
       </AnimatePresence>
 
       {reportMember && <ReportModal memberName={reportMember} onClose={()=>setReportMember(null)} />}
+
+      {/* Member profile modal */}
+      {viewMemberProfile && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+          style={{ background:'rgba(0,0,0,0.8)' }}
+          onClick={() => setViewMemberProfile(null)}>
+          <motion.div initial={{ scale:0.92, y:20 }} animate={{ scale:1, y:0 }} exit={{ scale:0.92 }}
+            className="rounded-3xl w-full max-w-sm overflow-hidden"
+            style={{ background:'#1A1829', border:'1px solid rgba(108,99,255,0.3)', boxShadow:'0 32px 80px rgba(0,0,0,0.7)' }}
+            onClick={e => e.stopPropagation()}>
+
+            {/* Hero with gradient + mono image */}
+            <div className="relative h-44 flex items-end justify-center overflow-hidden"
+              style={{ background: viewMemberProfile.gradient }}>
+              <div className="absolute inset-0" style={{ background:'linear-gradient(to top, rgba(26,24,41,0.6) 0%, transparent 60%)' }} />
+              <button onClick={() => setViewMemberProfile(null)}
+                className="absolute top-4 left-4 w-8 h-8 rounded-full flex items-center justify-center"
+                style={{ background:'rgba(0,0,0,0.35)', border:'1px solid rgba(255,255,255,0.2)' }}>
+                <ArrowLeft size={16} color="white" />
+              </button>
+              {/* Mono image */}
+              <img src={viewMemberProfile.mono} alt={viewMemberProfile.name}
+                style={{ height:140, objectFit:'contain', position:'relative', zIndex:1, filter:'drop-shadow(0 8px 24px rgba(0,0,0,0.4))' }} />
+              {/* Role badge */}
+              {viewMemberProfile.role !== 'member' && (
+                <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-1 rounded-full"
+                  style={{ background:'rgba(0,0,0,0.45)', border:'1px solid rgba(255,255,255,0.2)' }}>
+                  {viewMemberProfile.role === 'admin'
+                    ? <Crown size={11} style={{ color:'#FFB347' }} />
+                    : <Shield size={11} style={{ color:'#7FE7C4' }} />}
+                  <span style={{ fontSize:'0.62rem', color:'white', fontWeight:700 }}>
+                    {viewMemberProfile.role === 'admin' ? 'Admin' : 'Moderador'}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="p-5">
+              {/* Name + status */}
+              <div className="flex items-center gap-2 mb-1">
+                <h3 style={{ fontWeight:800, fontSize:'1.15rem', color:'white' }}>{viewMemberProfile.name}</h3>
+                <div className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ background: viewMemberProfile.status==='online' ? '#7FE7C4' : viewMemberProfile.status==='away' ? '#FFB347' : '#4A4468' }} />
+              </div>
+              <p style={{ fontSize:'0.78rem', color:'rgba(255,255,255,0.45)', marginBottom:'16px' }}>
+                {viewMemberProfile.status==='online' ? 'En línea' : viewMemberProfile.status==='away' ? 'Ausente' : 'Desconectado'} · Miembro del parche
+              </p>
+
+              {/* Schedule */}
+              <p style={{ fontWeight:700, fontSize:'0.8rem', color:'white', marginBottom:'10px' }}>Disponibilidad semanal</p>
+              <div style={{ overflowX:'auto' }}>
+                <div style={{ display:'grid', gridTemplateColumns:'38px repeat(6,1fr)', gap:2, minWidth:260 }}>
+                  <div />
+                  {M_DAYS.map(d => (
+                    <div key={d} style={{ textAlign:'center', fontSize:'0.58rem', fontWeight:700, color:'rgba(255,255,255,0.4)', paddingBottom:2 }}>{d}</div>
+                  ))}
+                  {M_SLOTS.map((slot, si) => {
+                    const sched = memberSched(viewMemberProfile.name);
+                    return (
+                      <>
+                        <div key={`l${si}`} style={{ fontSize:'0.53rem', color:'rgba(255,255,255,0.35)', display:'flex', alignItems:'center' }}>{slot}</div>
+                        {M_DAYS.map((_,di) => {
+                          const active = sched.has(`${di}-${si}`);
+                          return (
+                            <div key={`${di}-${si}`} style={{ height:17, borderRadius:4,
+                              background: active ? 'linear-gradient(135deg,#6C63FF,#A78BFA)' : 'rgba(255,255,255,0.06)',
+                              border:`1px solid ${active ? 'transparent' : 'rgba(255,255,255,0.08)'}` }} />
+                          );
+                        })}
+                      </>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 mt-5">
+                <button className="flex-1 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 transition-all hover:opacity-85"
+                  style={{ background:'linear-gradient(135deg,#6C63FF,#8B7FFF)', color:'white' }}>
+                  <MessageCircle size={14} /> Mensaje
+                </button>
+                <button onClick={() => setViewMemberProfile(null)}
+                  className="w-11 h-10 rounded-xl flex items-center justify-center transition-all hover:opacity-70"
+                  style={{ background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.12)' }}>
+                  <X size={16} color="rgba(255,255,255,0.6)" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

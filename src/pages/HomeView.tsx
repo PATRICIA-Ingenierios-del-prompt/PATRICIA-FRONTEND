@@ -1,8 +1,5 @@
 import { useState } from 'react';
-import {
-  Heart, MessageCircle, Share2, Bookmark, ChevronRight,
-  Users, Zap, Trophy, Star, TrendingUp, ArrowRight
-} from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { ImageWithFallback } from '../components/ImageWithFallback';
 import monoImg       from '../assets/monoSINFONDO.png';
 import monoMusica    from '../assets/monoMUSICA.png';
@@ -54,6 +51,39 @@ const HERO_STATS = [
   { label: 'XP Total',  value: '2.3K+' },
   { label: 'Parches',   value: '7' },
   { label: 'Monas',     value: '4/12' },
+];
+
+const STORIES = [
+  { avatar: 'CR', name: 'Camila',  gradient: 'linear-gradient(135deg,#6C63FF,#FF6B9D)', active: true  },
+  { avatar: 'FA', name: 'Felipe',  gradient: 'linear-gradient(135deg,#7FE7C4,#6C63FF)', active: true  },
+  { avatar: 'AT', name: 'Andrés',  gradient: 'linear-gradient(135deg,#A78BFA,#5BC8FF)', active: true  },
+  { avatar: 'LG', name: 'Laura',   gradient: 'linear-gradient(135deg,#5BC8FF,#7FE7C4)', active: false },
+  { avatar: 'SM', name: 'Sofía',   gradient: 'linear-gradient(135deg,#FFB347,#FF6B9D)', active: false },
+  { avatar: 'DT', name: 'David',   gradient: 'linear-gradient(135deg,#FFB347,#5BC8FF)', active: false },
+  { avatar: 'JP', name: 'Juan P.', gradient: 'linear-gradient(135deg,#FF6B9D,#6C63FF)', active: true  },
+];
+
+const FEED = [
+  {
+    user: 'Camila R.', avatar: 'CR', gradient: 'linear-gradient(135deg,#6C63FF,#FF6B9D)',
+    action: 'se inscribió al', target: 'Hackathon ECI 2026', emoji: '💻',
+    time: '5 min', likes: 12, liked: false, color: '#6C63FF',
+  },
+  {
+    user: 'Andrés T.', avatar: 'AT', gradient: 'linear-gradient(135deg,#A78BFA,#5BC8FF)',
+    action: 'se unió al parche', target: 'IEEE Student Branch', emoji: '⚡',
+    time: '18 min', likes: 7, liked: false, color: '#5BC8FF',
+  },
+  {
+    user: 'Sofía M.', avatar: 'SM', gradient: 'linear-gradient(135deg,#FFB347,#FF6B9D)',
+    action: 'compartió', target: 'Taller Bienestar: Mindfulness 🧘', emoji: '🌿',
+    time: '34 min', likes: 23, liked: false, color: '#7FE7C4',
+  },
+  {
+    user: 'Felipe A.', avatar: 'FA', gradient: 'linear-gradient(135deg,#7FE7C4,#6C63FF)',
+    action: 'alcanzó el', target: 'Nivel 12 en la ECI ⭐', emoji: '🏆',
+    time: '1h', likes: 41, liked: false, color: '#FFB347',
+  },
 ];
 
 const DASH_NOTIFS = [
@@ -168,6 +198,56 @@ function ParcheCard({ p, onJoin }: { p: typeof PARCHES_GRID[0]; onJoin: () => vo
   );
 }
 
+function FeedSection() {
+  const t = useTheme();
+
+  return (
+    <section>
+      <div className="flex items-end justify-between mb-4">
+        <div>
+          <p style={{ fontSize: '0.75rem', color: '#FF6B9D', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>
+            En vivo
+          </p>
+          <h2 style={{ fontWeight: 800, fontSize: '1.4rem', color: t.text }}>
+            Lo que pasa ahora 🔥
+          </h2>
+        </div>
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full" style={{ background: 'rgba(255,77,106,0.1)' }}>
+          <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#FF4D6A' }} />
+          <span style={{ fontSize: '0.7rem', color: '#FF4D6A', fontWeight: 600 }}>Campus</span>
+        </div>
+      </div>
+      <div className="space-y-3">
+        {FEED.map((item, i) => (
+          <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
+            className="flex items-center gap-3 p-4 rounded-2xl border"
+            style={{ background: t.cardBg, borderColor: t.cardBorder }}>
+            {/* Avatar */}
+            <div className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
+              style={{ background: item.gradient }}>
+              {item.avatar}
+            </div>
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <p style={{ fontSize: '0.85rem', color: t.text, lineHeight: 1.5 }}>
+                <span style={{ fontWeight: 700 }}>{item.user}</span>
+                <span style={{ color: t.textMuted }}> {item.action} </span>
+                <span style={{ fontWeight: 600, color: item.color }}>{item.target}</span>
+              </p>
+              <p style={{ fontSize: '0.68rem', color: t.textMuted, marginTop: '2px' }}>Hace {item.time}</p>
+            </div>
+            {/* Emoji badge */}
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-lg"
+              style={{ background: `${item.color}15` }}>
+              {item.emoji}
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function HomeView({ onNavigate }: HomeViewProps) {
   const t = useTheme();
   const greeting = getGreeting();
@@ -263,7 +343,10 @@ export function HomeView({ onNavigate }: HomeViewProps) {
           </div>
         </section>
 
-        {/* ── 2. EXPLORA VIBRAS ─────────────────────────────────────────── */}
+        {/* ── 2. FEED ──────────────────────────────────────────────────── */}
+        <FeedSection />
+
+        {/* ── 4. EXPLORA VIBRAS ─────────────────────────────────────────── */}
         <section>
           <div className="flex items-end justify-between mb-5">
             <div>
@@ -281,31 +364,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
           </div>
         </section>
 
-        {/* ── 4. ENTRA AL PARCHE ───────────────────────────────────────── */}
-        <section>
-          <div className="flex items-end justify-between mb-1">
-            <div>
-              <p style={{ fontSize: '0.75rem', color: '#6C63FF', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>
-                Comunidad
-              </p>
-              <h2 style={{ fontWeight: 800, fontSize: '1.5rem', color: t.text }}>
-                Entra Al Parche
-              </h2>
-            </div>
-            <button onClick={() => onNavigate('parches')} className="flex items-center gap-1.5 text-sm hover:underline" style={{ color: '#7FE7C4' }}>
-              Ver todos <ArrowRight size={14} />
-            </button>
-          </div>
-          {/* Divider */}
-          <div className="h-px mb-5" style={{ background: 'linear-gradient(90deg, #6C63FF40, transparent)' }} />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {PARCHES_GRID.map(p => (
-              <ParcheCard key={p.id} p={p}
-                onJoin={() => setJoinedParches(prev => prev.includes(p.id) ? prev.filter(x => x !== p.id) : [...prev, p.id])} />
-            ))}
-          </div>
-        </section>
 
       </div>
     </div>

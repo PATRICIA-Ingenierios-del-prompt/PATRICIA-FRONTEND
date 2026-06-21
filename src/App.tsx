@@ -311,45 +311,10 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
 
   return (
     <div className="h-full overflow-y-auto pb-6">
-      {/* ── Profile hero row — full width ── */}
-      <div className="rounded-3xl border mb-6 overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, rgba(108,99,255,0.1), rgba(127,231,196,0.05))', borderColor: 'rgba(108,99,255,0.2)' }}>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-6">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg,#6C63FF,#7FE7C4)', fontSize: '1.4rem', fontWeight: 800, color: 'white' }}>
-            JL
-          </div>
-          <div className="flex-1">
-            <p style={{ fontWeight: 800, fontSize: '1.1rem', color: t.text }}>Juan Carlos Leal Cruz</p>
-            <p style={{ fontSize: '0.78rem', color: t.textMuted }}>usuario@mail.escuelaing.edu.co</p>
-            <span className="px-2 py-0.5 rounded-full text-xs inline-block mt-1"
-              style={{ background: 'rgba(127,231,196,0.12)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.25)' }}>
-              ✓ Cuenta verificada
-            </span>
-          </div>
-          {/* Stats inline — hidden on mobile */}
-          <div className="hidden sm:flex flex-wrap gap-2 sm:gap-3">
-            {[{ label: 'Nivel', value: '12', color: '#6C63FF' }, { label: 'XP Total', value: '2,340', color: '#FFB347' }, { label: 'Ranking', value: '#12', color: '#7FE7C4' }].map(s => (
-              <div key={s.label} className="text-center px-5 py-3 rounded-2xl"
-                style={{ background: `${s.color}12`, border: `1px solid ${s.color}25` }}>
-                <p style={{ fontWeight: 800, fontSize: '1.2rem', color: s.color }}>{s.value}</p>
-                <p style={{ fontSize: '0.68rem', color: t.textMuted }}>{s.label}</p>
-              </div>
-            ))}
-          </div>
-          <button onClick={onEditProfile}
-            className="sm:ml-2 flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-semibold transition-all hover:opacity-90 flex-shrink-0"
-            style={{ background: '#7FE7C4', color: '#0F0E1A' }}>
-            ✏️ Editar perfil
-          </button>
-        </div>
-      </div>
-
       {/* Section nav */}
       <div className="flex gap-1 mb-5 p-1 rounded-2xl border xl:hidden overflow-x-auto"
         style={{ background: t.cardBg, borderColor: t.cardBorder }}>
         {[
-          { id: 'cuenta', label: '👤 Cuenta' },
           { id: 'privacidad', label: '🔒 Privacidad' },
           { id: 'notificaciones', label: '🔔 Notifs' },
           { id: 'mas', label: '⚙️ Más' },
@@ -366,23 +331,50 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
         {/* Left — main settings */}
         <div className="col-span-1 xl:col-span-2 space-y-4">
 
-          {/* Cuenta */}
+          {/* Accesibilidad — primero */}
+          <AccessibilityPanel mode={visionMode} setMode={setVisionMode} dyslexia={dyslexiaMode}
+            setDyslexia={(v) => { setDyslexiaMode(v); applyDyslexiaMode(v); }} />
+
+
+        </div>
+
+        {/* Right column */}
+        <div className="space-y-4">
+
+          {/* Cerrar sesión / Eliminar cuenta */}
+          <div className="rounded-2xl p-5 border" style={{ background: 'rgba(255,77,106,0.04)', borderColor: 'rgba(255,77,106,0.2)' }}>
+            <p style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '12px', color: '#FF4D6A' }}>Sesión y cuenta</p>
+            <div className="space-y-2">
+              <button onClick={onLogout}
+                className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+                style={{ background: '#FF4D6A', color: 'white' }}>
+                Cerrar sesión
+              </button>
+              <button className="w-full py-2.5 rounded-xl text-sm font-medium border transition-all hover:bg-red-500/10"
+                style={{ color: '#FF4D6A', borderColor: 'rgba(255,77,106,0.25)' }}>
+                Eliminar cuenta
+              </button>
+            </div>
+          </div>
+
+          {/* Notificaciones */}
           <div className="rounded-2xl border overflow-hidden" style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
             <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: 'rgba(108,99,255,0.1)', background: 'rgba(108,99,255,0.05)' }}>
-              <span style={{ fontSize: '1rem' }}>👤</span>
-              <span style={{ fontWeight: 700, color: '#6C63FF', fontSize: '0.9rem' }}>Cuenta</span>
+              <span style={{ fontSize: '1rem' }}>🔔</span>
+              <span style={{ fontWeight: 700, color: '#6C63FF', fontSize: '0.9rem' }}>Notificaciones</span>
             </div>
-            {[
-              { label: 'Correo institucional', desc: 'usuario@mail.escuelaing.edu.co', badge: '✓ Cuenta verificada', action: null },
-            ].map((item, i) => (
-              <div key={i} className="flex items-center justify-between px-5 py-4 border-b last:border-0 transition-all hover:bg-white/[0.03]"
+            {([
+              { key: 'matches' as const, label: 'Nuevos matches',     desc: 'Alertas cuando alguien te da match' },
+              { key: 'parches' as const, label: 'Mensajes de parches', desc: 'Avisos de chats no leídos' },
+              { key: 'eventos' as const, label: 'Eventos cercanos',    desc: 'Recordatorios de eventos próximos' },
+            ]).map((item, i) => (
+              <div key={i} className="flex items-center justify-between px-5 py-4 border-b last:border-0"
                 style={{ borderColor: 'var(--p-input)' }}>
                 <div>
                   <p style={{ fontSize: '0.9rem', fontWeight: 500 }}>{item.label}</p>
                   <p style={{ fontSize: '0.75rem', color: 'var(--p-muted)', marginTop: '2px' }}>{item.desc}</p>
                 </div>
-                {item.badge && <span className="px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(127,231,196,0.1)', color: '#7FE7C4' }}>{item.badge}</span>}
-                {item.action && <button className="px-3 py-1.5 rounded-xl text-sm font-medium" style={{ background: 'var(--p-divider)', color: '#6C63FF' }}>{item.action}</button>}
+                <Toggle on={notifToggles[item.key]} onToggle={() => setNotifToggles(prev => ({ ...prev, [item.key]: !prev[item.key] }))} />
               </div>
             ))}
           </div>
@@ -414,33 +406,7 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
             </div>
           </div>
 
-          {/* Notificaciones */}
-          <div className="rounded-2xl border overflow-hidden" style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
-            <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: 'rgba(108,99,255,0.1)', background: 'rgba(108,99,255,0.05)' }}>
-              <span style={{ fontSize: '1rem' }}>🔔</span>
-              <span style={{ fontWeight: 700, color: '#6C63FF', fontSize: '0.9rem' }}>Notificaciones</span>
-            </div>
-            {([
-              { key: 'matches' as const, label: 'Nuevos matches',       desc: 'Alertas cuando alguien te da match' },
-              { key: 'parches' as const, label: 'Mensajes de parches',   desc: 'Avisos de chats no leídos' },
-              { key: 'eventos' as const, label: 'Eventos cercanos',       desc: 'Recordatorios de eventos próximos' },
-            ]).map((item, i) => (
-              <div key={i} className="flex items-center justify-between px-5 py-4 border-b last:border-0"
-                style={{ borderColor: 'var(--p-input)' }}>
-                <div>
-                  <p style={{ fontSize: '0.9rem', fontWeight: 500 }}>{item.label}</p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--p-muted)', marginTop: '2px' }}>{item.desc}</p>
-                </div>
-                <Toggle on={notifToggles[item.key]} onToggle={() => setNotifToggles(prev => ({ ...prev, [item.key]: !prev[item.key] }))} />
-              </div>
-            ))}
-          </div>
-
-        </div>
-
-        {/* Right column */}
-        <div className="space-y-4">
-          {/* App info */}
+          {/* Sobre PATRICI.A — al final */}
           <div className="rounded-2xl p-5 border" style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
             <p style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '16px', color: '#6C63FF' }}>Sobre PATRICI.A</p>
             <div className="space-y-3">
@@ -455,26 +421,6 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
               {['Términos de uso', 'Política de privacidad', 'Centro de ayuda'].map(link => (
                 <button key={link} className="w-full text-left text-sm hover:underline" style={{ color: '#6C63FF' }}>{link}</button>
               ))}
-            </div>
-          </div>
-
-          {/* Full Accessibility panel — colorblind filters + dyslexia mode */}
-          <AccessibilityPanel mode={visionMode} setMode={setVisionMode} dyslexia={dyslexiaMode}
-            setDyslexia={(v) => { setDyslexiaMode(v); applyDyslexiaMode(v); }} />
-
-          {/* Danger zone */}
-          <div className="rounded-2xl p-5 border" style={{ background: 'rgba(255,77,106,0.04)', borderColor: 'rgba(255,77,106,0.2)' }}>
-            <p style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '12px', color: '#FF4D6A' }}>Zona de peligro</p>
-            <div className="space-y-2">
-              <button className="w-full py-2.5 rounded-xl text-sm font-medium border transition-all hover:bg-red-500/10"
-                style={{ color: '#FF4D6A', borderColor: 'rgba(255,77,106,0.25)' }}>
-                Desactivar cuenta
-              </button>
-              <button onClick={onLogout}
-                className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
-                style={{ background: '#FF4D6A', color: 'white' }}>
-                Cerrar sesión
-              </button>
             </div>
           </div>
         </div>
@@ -518,7 +464,7 @@ export default function App() {
     switch (activeView) {
       case 'home':           return <HomeView onNavigate={setActiveView} />;
       case 'parches':        return <ParchesView />;
-      case 'chats':          return <ChatsView />;
+      case 'chats':          return <ChatsView onNavigate={setActiveView} />;
       case 'eventos':        return <EventosView />;
       case 'matching':       return <MatchingView />;
       case 'bienestar':      return <BienestarView />;
@@ -688,7 +634,7 @@ export default function App() {
             <div className="relative">
               <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: theme.textMuted }} />
               <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Busca estudiantes, parches, eventos..."
+                placeholder=""
                 className="w-full rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none"
                 style={{ background: theme.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: theme.text }} />
             </div>

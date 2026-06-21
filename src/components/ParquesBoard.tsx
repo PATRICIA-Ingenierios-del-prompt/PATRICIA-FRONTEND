@@ -240,10 +240,10 @@ export function ParquesBoard() {
   };
 
   const cornerThemes = [
-    { key: 'violet', col: '#7c6cff', name: 'Gamers', emoji: '🎮', img: monoJuegos, dur: 4.2, origin: '12% 12%', mascot: { top: '7%', left: '1%' }, label: { top: '6%', right: '6%' }, turn: { bottom: '6%', right: '6%' }, slots: { bottom: '8%', right: '7%' } },
-    { key: 'pink', col: '#f25fb0', name: 'Arte', emoji: '🎨', img: monoArte, dur: 4.8, origin: '88% 12%', mascot: { top: '7%', right: '1%' }, label: { top: '6%', left: '6%' }, turn: { bottom: '6%', left: '6%' }, slots: { bottom: '8%', left: '7%' } },
-    { key: 'teal', col: '#2bd4bd', name: 'Ciencia', emoji: '🔬', img: monoCientifico, dur: 4.5, origin: '12% 88%', mascot: { bottom: '7%', left: '1%' }, label: { bottom: '6%', right: '6%' }, turn: { top: '6%', right: '6%' }, slots: { top: '8%', right: '7%' } },
-    { key: 'gold', col: '#f4b13e', name: 'Música', emoji: '🎧', img: monoDj, dur: 5.1, origin: '88% 88%', mascot: { bottom: '7%', right: '1%' }, label: { bottom: '6%', left: '6%' }, turn: { top: '6%', left: '6%' }, slots: { top: '8%', left: '7%' } }
+    { key: 'violet', col: '#7c6cff', name: P_NAMES[0], emoji: '🎮', img: monoJuegos, dur: 4.2, origin: '12% 12%', mascot: { top: '7%', left: '1%' }, label: { top: '6%', right: '6%' }, turn: { bottom: '6%', right: '6%' }, slots: { bottom: '8%', left: '7%' } },
+    { key: 'pink', col: '#f25fb0', name: P_NAMES[1], emoji: '🎨', img: monoArte, dur: 4.8, origin: '88% 12%', mascot: { top: '7%', right: '1%' }, label: { top: '6%', left: '6%' }, turn: { bottom: '6%', left: '6%' }, slots: { bottom: '8%', right: '7%' } },
+    { key: 'teal', col: '#2bd4bd', name: P_NAMES[2], emoji: '🔬', img: monoCientifico, dur: 4.5, origin: '12% 88%', mascot: { bottom: '7%', left: '1%' }, label: { bottom: '6%', right: '6%' }, turn: { top: '6%', right: '6%' }, slots: { top: '8%', left: '7%' } },
+    { key: 'gold', col: '#f4b13e', name: P_NAMES[3], emoji: '🎧', img: monoDj, dur: 5.1, origin: '88% 88%', mascot: { bottom: '7%', right: '1%' }, label: { bottom: '6%', left: '6%' }, turn: { top: '6%', left: '6%' }, slots: { top: '8%', right: '7%' } }
   ];
 
   const renderCorner = (pi: number) => {

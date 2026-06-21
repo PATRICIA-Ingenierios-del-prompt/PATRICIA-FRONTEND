@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { ArrowRight, ChevronLeft, ChevronRight, Sun, Moon, Check, Users, Heart, Calendar, Smile, Zap, Shield } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowRight, Sun, Moon, Check, Users, Heart, Calendar, Smile, Zap, Shield } from 'lucide-react';
 import { ImageWithFallback } from '../components/ImageWithFallback';
 import { AnimatedBackground } from '../components/AnimatedBackground';
 import logoBlancoImg from '../assets/logoBLANCO.png';
@@ -9,6 +9,8 @@ import lp1 from '../assets/landingpage1.jpg';
 import lp2 from '../assets/landingpage2.png';
 import lp3 from '../assets/landingpage3.jpg';
 import lp4 from '../assets/landingpage4.jpg';
+import concurso1Img from '../assets/concurso1.png';
+import concurso2Img from '../assets/concurso2.jpg';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface LandingPageProps {
@@ -18,68 +20,59 @@ interface LandingPageProps {
   setDarkMode: (v: boolean) => void;
 }
 
-const SLIDES = [
-  { img: lp1, tag: 'Comunidad', headline: 'Conecta con estudiantes que comparten tu vibra', sub: 'Parches de estudio, deporte, gaming y mucho más' },
-  { img: lp2, tag: 'Campus ECI', headline: 'Tu universidad, ahora en digital', sub: 'Eventos, mapas, cafeterías y todo el campus en un solo lugar' },
-  { img: lp3, tag: 'Innovación', headline: 'Hackathones, proyectos y tecnología', sub: 'Encuentra tu equipo ideal para la próxima gran idea' },
-  { img: lp4, tag: 'Pertenencia', headline: 'Somos la Escuela Colombiana de Ingeniería', sub: 'Orgullosos de nuestra comunidad desde 1972' },
-];
-
 const FEATURES = [
-  { emoji: '🎪', icon: Users, color: '#6C63FF', title: 'Parches Virtuales', desc: 'Grupos por intereses con chat, voz, lienzo colaborativo y juegos como Parqués integrados.' },
-  { emoji: '💜', icon: Heart, color: '#FF6B9D', title: 'Matching Inteligente', desc: 'Encuentra estudiantes con tu misma vibra académica. Algoritmo basado en intereses y carrera.' },
-  { emoji: '🎉', icon: Calendar, color: '#7FE7C4', title: 'Eventos del Campus', desc: 'Hackathones, charlas empresariales, torneos y actividades con geolocalización en tiempo real.' },
-  { emoji: '🧘', icon: Smile, color: '#FFB347', title: 'Bienestar 24/7', desc: 'Chatbot de apoyo, diario emocional con IA, respiración guiada y sonidos de relajación.' },
-  { emoji: '🎴', icon: Zap, color: '#A78BFA', title: 'Álbum de Monas', desc: '12 personajes coleccionables con 4 rarezas. Gana XP participando y sube en el ranking.' },
-  { emoji: '⚡', icon: Shield, color: '#00D9FF', title: 'Solo para la ECI', desc: 'Verificación con correo institucional. Tu comunidad privada y segura.' },
+  { emoji: '🎪', icon: Users,    color: '#6C63FF', title: 'Parches Virtuales',    desc: 'Grupos por intereses con chat, voz, lienzo colaborativo y juegos como Parqués integrados.' },
+  { emoji: '💜', icon: Heart,    color: '#FF6B9D', title: 'Matching Inteligente', desc: 'Encuentra estudiantes con tu misma vibra académica. Algoritmo basado en intereses y carrera.' },
+  { emoji: '🎉', icon: Calendar, color: '#7FE7C4', title: 'Eventos del Campus',   desc: 'Hackathones, charlas empresariales, torneos y actividades con geolocalización en tiempo real.' },
+  { emoji: '🧘', icon: Smile,    color: '#FFB347', title: 'Bienestar 24/7',       desc: 'Chatbot de apoyo, diario emocional con IA, respiración guiada y sonidos de relajación.' },
+  { emoji: '🎴', icon: Zap,      color: '#A78BFA', title: 'Álbum de Monas',       desc: '12 personajes coleccionables con 4 rarezas. Gana XP participando y sube en el ranking.' },
+  { emoji: '⚡', icon: Shield,   color: '#00D9FF', title: 'Solo para la ECI',     desc: 'Verificación con correo institucional. Tu comunidad privada y segura.' },
 ];
 
 const STEPS = [
-  { n: '01', color: '#6C63FF', icon: '✉️', title: 'Regístrate con tu correo ECI', desc: 'Solo @mail.escuelaing.edu.co. Verificación automática e instantánea.' },
-  { n: '02', color: '#7FE7C4', icon: '🏷️', title: 'Elige tus intereses', desc: 'Selecciona de 11 categorías y más de 70 intereses para personalizar todo.' },
-  { n: '03', color: '#FFB347', icon: '🎪', title: 'Únete a parches y eventos', desc: 'Conecta con compañeros afines, asiste a eventos y sube tu XP.' },
+  { color: '#6C63FF', icon: '✉️', title: 'Regístrate con tu correo ECI', desc: 'Solo @mail.escuelaing.edu.co. Verificación automática e instantánea.' },
+  { color: '#7FE7C4', icon: '🏷️', title: 'Elige tus intereses',          desc: 'Selecciona de 11 categorías y más de 70 intereses para personalizar todo.' },
+  { color: '#FFB347', icon: '🎪', title: 'Únete a parches y eventos',    desc: 'Conecta con compañeros afines, asiste a eventos y sube tu XP en la comunidad.' },
+];
+
+const GALLERY = [
+  { img: lp1,         label: 'Comunidad',  desc: 'Parches y grupos de interés',   color: '#6C63FF' },
+  { img: lp3,         label: 'Innovación', desc: 'Hackathones y proyectos',        color: '#FFB347' },
+  { img: concurso1Img,label: 'Concursos',  desc: 'Talento y competencias ECI',    color: '#FF6B9D' },
+  { img: lp2,         label: 'Campus',     desc: 'Tu ECI en digital',              color: '#7FE7C4' },
+  { img: lp4,         label: 'Identidad',  desc: 'Orgullosamente ECI',             color: '#A78BFA' },
+  { img: concurso2Img,label: 'Vida ECI',   desc: 'Eventos y vida universitaria',   color: '#5BC8FF' },
 ];
 
 export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: LandingPageProps) {
-  const [slide, setSlide] = useState(0);
-  const [autoplay, setAutoplay] = useState(true);
-  const [hoveredF, setHoveredF] = useState<number | null>(null);
+  const [featureIdx, setFeatureIdx] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setFeatureIdx(i => (i + 1) % FEATURES.length), 3800);
+    return () => clearInterval(t);
+  }, []);
 
   const dark = darkMode;
-  const card = dark ? 'rgba(26,24,41,0.90)' : 'rgba(255,255,255,0.95)';
-  const bord = dark ? 'rgba(108,99,255,0.22)' : 'rgba(108,99,255,0.16)';
+  const card  = dark ? 'rgba(26,24,41,0.90)' : 'rgba(255,255,255,0.95)';
+  const bord  = dark ? 'rgba(108,99,255,0.22)' : 'rgba(108,99,255,0.16)';
   const textH = dark ? '#F0EEFF' : '#1A1829';
   const textS = dark ? '#8B85B0' : '#6B6490';
   const textB = dark ? '#C0BAE0' : '#4A4468';
-  const pageBg = dark ? 'transparent' : 'transparent';
-
-  const next = useCallback(() => setSlide(s => (s + 1) % SLIDES.length), []);
-  const prev = () => setSlide(s => (s - 1 + SLIDES.length) % SLIDES.length);
-  useEffect(() => {
-    if (!autoplay) return;
-    const t = setInterval(next, 5500);
-    return () => clearInterval(t);
-  }, [autoplay, next]);
 
   return (
-    <div className="min-h-screen relative overflow-x-hidden" style={{ fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+    <div className="min-h-screen relative overflow-x-hidden" style={{ fontFamily: "'Outfit','Inter',sans-serif" }}>
       <AnimatedBackground light={!dark} />
 
-      {/* ── Navbar ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-8 py-3.5"
-        style={{ background: dark ? 'rgba(13,11,30,0.88)' : 'rgba(255,255,255,0.92)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${bord}` }}>
-        <ImageWithFallback src={dark ? logoBlancoImg : logoNegroImg} alt="PATRICI.A"
-          className="object-contain" style={{ height: 28 }} />
-        {/* Nav links */}
-        <div className="hidden md:flex items-center gap-6">
-          {[
-            { label: 'Funcionalidades', id: 'funcionalidades' },
-            { label: '¿Cómo funciona?', id: 'como-funciona' },
-            { label: 'Comunidad', id: 'comunidad' },
-          ].map(({ label, id }) => (
-            <button key={id}
-              onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })}
-              className="text-sm transition-colors hover:opacity-80" style={{ color: textS }}>{label}</button>
+      {/* ── NAVBAR ── */}
+      <nav className="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-8 py-3.5"
+        style={{ background: dark ? 'rgba(13,11,30,0.92)' : 'rgba(255,255,255,0.94)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${bord}` }}>
+        <ImageWithFallback src={dark ? logoBlancoImg : logoNegroImg} alt="PATRICI.A" className="object-contain" style={{ height: 28 }} />
+        <div className="hidden md:flex items-center gap-7">
+          {[{ label: 'Funcionalidades', id: 'funcionalidades' }, { label: '¿Cómo funciona?', id: 'como-funciona' }].map(({ label, id }) => (
+            <button key={id} onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })}
+              className="text-sm font-medium transition-colors hover:opacity-70" style={{ color: textS, background: 'none', border: 'none' }}>
+              {label}
+            </button>
           ))}
         </div>
         <div className="flex items-center gap-2">
@@ -93,410 +86,430 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
             style={{ borderColor: '#6C63FF', color: '#6C63FF', background: 'transparent' }}>
             Iniciar sesión
           </button>
-          <button onClick={onRegister}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105"
+          <motion.button onClick={onRegister} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold"
             style={{ background: 'linear-gradient(135deg,#6C63FF,#8B7FFF)', color: 'white', boxShadow: '0 4px 14px rgba(108,99,255,0.35)' }}>
-            Registrarse gratis <ArrowRight size={14} />
-          </button>
+            Registrarse <ArrowRight size={14} />
+          </motion.button>
         </div>
       </nav>
 
-      <div className="relative z-10 pt-16">
+      {/* ══════════════════════════════════════
+          HERO — Split layout + Floating cards
+      ══════════════════════════════════════ */}
+      <section style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', position: 'relative', overflow: 'hidden' }}>
+        {/* Photo background */}
+        <div style={{
+          position:'absolute', inset:0,
+          backgroundImage:`url(${concurso1Img})`,
+          backgroundSize:'cover', backgroundPosition:'center 25%',
+        }} />
+        <div style={{
+          position:'absolute', inset:0,
+          background:'linear-gradient(135deg, rgba(13,11,30,0.90) 0%, rgba(18,16,42,0.82) 50%, rgba(15,22,40,0.88) 100%)',
+        }} />
+        {/* Decorative blobs */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div style={{ position:'absolute', top:'15%', left:'5%', width:500, height:500, borderRadius:'50%', background:'rgba(108,99,255,0.07)', filter:'blur(90px)' }} />
+          <div style={{ position:'absolute', bottom:'10%', right:'8%', width:320, height:320, borderRadius:'50%', background:'rgba(127,231,196,0.06)', filter:'blur(70px)' }} />
+          <div style={{ position:'absolute', top:'60%', left:'40%', width:250, height:250, borderRadius:'50%', background:'rgba(255,107,157,0.05)', filter:'blur(60px)' }} />
+        </div>
 
-        {/* ══════════════════════════════════════
-            HERO — Carousel + Split text
-        ══════════════════════════════════════ */}
-        <section className="relative" style={{ minHeight: '100vh' }}>
-          {/* Full-screen carousel */}
-          <div className="absolute inset-0 overflow-hidden"
-            onMouseEnter={() => setAutoplay(false)}
-            onMouseLeave={() => setAutoplay(true)}>
-            <AnimatePresence mode="sync">
-              <motion.div key={slide}
-                initial={{ opacity: 0, scale: 1.06 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.9, ease: [0.4, 0, 0.2, 1] }}
-                className="absolute inset-0">
-                <ImageWithFallback src={SLIDES[slide].img} alt={SLIDES[slide].headline}
-                  className="w-full h-full object-cover" />
-                {/* Multi-layer overlay for readability */}
-                <div className="absolute inset-0" style={{ background: 'linear-gradient(105deg, rgba(13,11,30,0.92) 0%, rgba(13,11,30,0.65) 45%, rgba(13,11,30,0.2) 100%)' }} />
-                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(13,11,30,0.9) 0%, rgba(13,11,30,0.2) 50%, transparent 100%)' }} />
-              </motion.div>
-            </AnimatePresence>
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-24 w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center relative">
 
-            {/* Carousel prev/next */}
-            <button onClick={prev}
-              className="absolute left-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-110 z-10"
-              style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)' }}>
-              <ChevronLeft size={20} color="white" />
-            </button>
-            <button onClick={next}
-              className="absolute right-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center transition-all hover:scale-110 z-10"
-              style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)' }}>
-              <ChevronRight size={20} color="white" />
-            </button>
-          </div>
-
-          {/* Hero content */}
-          <div className="relative flex items-center min-h-screen px-4 sm:px-8 lg:px-20">
-            <div className="max-w-2xl">
-              {/* Slide tag */}
-              <AnimatePresence mode="wait">
-                <motion.div key={`tag-${slide}`}
-                  initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-5"
-                  style={{ background: 'rgba(108,99,255,0.25)', border: '1px solid rgba(108,99,255,0.4)', backdropFilter: 'blur(8px)' }}>
-                  <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#7FE7C4' }} />
-                  <span style={{ fontSize: '0.75rem', color: '#7FE7C4', fontWeight: 700, letterSpacing: '0.06em' }}>
-                    {SLIDES[slide].tag}
-                  </span>
-                </motion.div>
-              </AnimatePresence>
-
-              {/* Main headline */}
-              <h1 style={{ fontWeight: 900, fontSize: 'clamp(2.4rem,5.5vw,4rem)', lineHeight: 1.05, color: 'white', marginBottom: '20px' }}>
-                La comunidad social<br />
-                <span style={{ background: 'linear-gradient(135deg,#6C63FF,#7FE7C4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                  de la ECI
-                </span>
-              </h1>
-
-              {/* Slide sub */}
-              <AnimatePresence mode="wait">
-                <motion.p key={`sub-${slide}`}
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  style={{ fontSize: '1.1rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.7, marginBottom: '32px', maxWidth: 480 }}>
-                  {SLIDES[slide].headline} — {SLIDES[slide].sub}
-                </motion.p>
-              </AnimatePresence>
-
-              {/* CTA buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                <motion.button onClick={onRegister}
-                  whileHover={{ scale: 1.04, boxShadow: '0 8px 32px rgba(108,99,255,0.6)' }}
-                  whileTap={{ scale: 0.97 }}
-                  className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-base"
-                  style={{ background: 'linear-gradient(135deg,#6C63FF,#8B7FFF)', color: 'white', boxShadow: '0 4px 24px rgba(108,99,255,0.45)' }}>
-                  Crear cuenta gratis <ArrowRight size={18} />
-                </motion.button>
-                <button onClick={onLogin}
-                  className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-semibold text-base transition-all hover:bg-white/10"
-                  style={{ border: '2px solid rgba(255,255,255,0.3)', color: 'white', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}>
-                  Ya tengo cuenta
-                </button>
-              </div>
-              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)' }}>
-                🔒 Solo correos <span style={{ color: '#7FE7C4' }}>@mail.escuelaing.edu.co</span> · Gratis para siempre
-              </p>
+          {/* LEFT — text + CTAs */}
+          <motion.div initial={{ opacity:0, x:-30 }} animate={{ opacity:1, x:0 }} transition={{ duration:0.8, ease:[0.4,0,0.2,1] }}>
+            {/* Live badge */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full mb-7"
+              style={{ background:'rgba(108,99,255,0.14)', border:'1px solid rgba(108,99,255,0.32)' }}>
+              <div className="w-2 h-2 rounded-full animate-pulse" style={{ background:'#7FE7C4' }} />
+              <span style={{ fontSize:'0.72rem', color:'#7FE7C4', fontWeight:700, letterSpacing:'0.06em' }}>
+                EXCLUSIVO · Escuela Colombiana de Ingeniería
+              </span>
             </div>
 
+            <h1 style={{ fontWeight:900, fontSize:'clamp(2.8rem,5.5vw,4.4rem)', lineHeight:1.04, color:'white', marginBottom:'22px' }}>
+              Conecta,<br />
+              aprende y<br />
+              <span style={{ background:'linear-gradient(135deg,#6C63FF,#7FE7C4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
+                crece juntos
+              </span>
+            </h1>
+
+            <p style={{ fontSize:'1.05rem', color:'rgba(255,255,255,0.62)', lineHeight:1.78, marginBottom:'36px', maxWidth:460 }}>
+              La plataforma social construida 100% para estudiantes de la ECI. Parches, matching inteligente, eventos y bienestar — todo en un lugar.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 mb-8">
+              <motion.button onClick={onRegister}
+                whileHover={{ scale:1.04, boxShadow:'0 14px 40px rgba(108,99,255,0.65)' }} whileTap={{ scale:0.97 }}
+                className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-base"
+                style={{ background:'linear-gradient(135deg,#6C63FF,#8B7FFF)', color:'white', boxShadow:'0 4px 24px rgba(108,99,255,0.48)' }}>
+                Crear cuenta gratis <ArrowRight size={18} />
+              </motion.button>
+              <button onClick={onLogin}
+                className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-semibold text-base transition-all hover:bg-white/10"
+                style={{ border:'2px solid rgba(255,255,255,0.18)', color:'white', background:'rgba(255,255,255,0.05)', backdropFilter:'blur(8px)' }}>
+                Ya tengo cuenta
+              </button>
+            </div>
+
+            {/* Feature pills */}
+            <div className="flex flex-wrap gap-2">
+              {['⚡ Matching IA','🎪 Parches virtuales','📅 Eventos campus','🧘 Bienestar 24/7','🎴 Álbum de Monas'].map(tag => (
+                <span key={tag} className="px-3 py-1.5 rounded-full text-xs font-medium"
+                  style={{ background:'rgba(255,255,255,0.07)', color:'rgba(255,255,255,0.6)', border:'1px solid rgba(255,255,255,0.12)' }}>
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* RIGHT — Floating app preview cards */}
+          <div className="relative hidden lg:block" style={{ height:530 }}>
+
+            {/* MATCH CARD */}
+            <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.35, duration:0.7 }}
+              style={{ position:'absolute', top:0, left:'4%', width:232, borderRadius:20, overflow:'hidden',
+                background:'rgba(13,11,30,0.88)', backdropFilter:'blur(24px)',
+                border:'1px solid rgba(108,99,255,0.38)',
+                boxShadow:'0 28px 70px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04)' }}>
+              <motion.div animate={{ y:[0,-11,0] }} transition={{ duration:4, repeat:Infinity, ease:'easeInOut' }}>
+                <div style={{ height:68, background:'linear-gradient(135deg,#6C63FF,#FF6B9D)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <div style={{ width:44, height:44, borderRadius:'50%', background:'rgba(255,255,255,0.18)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, color:'white', fontSize:'0.92rem', border:'2px solid rgba(255,255,255,0.28)' }}>CR</div>
+                </div>
+                <div style={{ padding:'11px 15px 15px' }}>
+                  <span style={{ fontSize:'0.58rem', fontWeight:800, color:'#FF6B9D', letterSpacing:'0.07em', textTransform:'uppercase' }}>💜 ¡Match!</span>
+                  <p style={{ fontWeight:700, fontSize:'0.88rem', color:'white', marginTop:4, marginBottom:2 }}>Camila Rodríguez</p>
+                  <p style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.5)', marginBottom:9 }}>Ing. de Sistemas · 7mo sem.</p>
+                  <div style={{ background:'rgba(108,99,255,0.2)', borderRadius:8, padding:'4px 9px', display:'inline-flex', gap:4 }}>
+                    <span style={{ fontSize:'0.64rem', color:'#A78BFA', fontWeight:700 }}>⚡ 96% compatibilidad</span>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+
+            {/* LIVE EVENT CARD */}
+            <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.55, duration:0.7 }}
+              style={{ position:'absolute', top:'20%', right:'2%', width:215, borderRadius:18,
+                background:'rgba(13,11,30,0.88)', backdropFilter:'blur(22px)',
+                border:'1px solid rgba(255,179,71,0.32)',
+                boxShadow:'0 18px 52px rgba(0,0,0,0.55)', padding:'14px 16px' }}>
+              <motion.div animate={{ y:[0,9,0] }} transition={{ duration:3.5, repeat:Infinity, ease:'easeInOut', delay:0.6 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:10 }}>
+                  <div style={{ width:7, height:7, borderRadius:'50%', background:'#FF4D6A', boxShadow:'0 0 8px #FF4D6A' }} />
+                  <span style={{ fontSize:'0.58rem', fontWeight:800, color:'#FF4D6A', textTransform:'uppercase', letterSpacing:'0.09em' }}>En vivo</span>
+                </div>
+                <p style={{ fontWeight:700, fontSize:'0.86rem', color:'white', marginBottom:3 }}>Hackathon ECI 2026 💻</p>
+                <p style={{ fontSize:'0.7rem', color:'rgba(255,255,255,0.47)', marginBottom:11 }}>Sáb 20 Jun · Auditorio Ppal.</p>
+                <div style={{ height:4, background:'rgba(255,255,255,0.08)', borderRadius:2, overflow:'hidden', marginBottom:5 }}>
+                  <div style={{ width:'78%', height:'100%', background:'linear-gradient(90deg,#FFB347,#FF6B9D)', borderRadius:2 }} />
+                </div>
+                <p style={{ fontSize:'0.64rem', color:'rgba(255,255,255,0.38)' }}>156 / 200 inscritos</p>
+              </motion.div>
+            </motion.div>
+
+            {/* MESSAGE NOTIFICATION */}
+            <motion.div initial={{ opacity:0, scale:0.88 }} animate={{ opacity:1, scale:1 }} transition={{ delay:0.75, duration:0.6 }}
+              style={{ position:'absolute', top:'52%', right:'10%', borderRadius:14,
+                background:'linear-gradient(135deg,rgba(108,99,255,0.9),rgba(139,127,255,0.88))',
+                backdropFilter:'blur(14px)',
+                boxShadow:'0 10px 32px rgba(108,99,255,0.52)', padding:'10px 15px', maxWidth:196 }}>
+              <motion.div animate={{ y:[0,-6,0] }} transition={{ duration:3, repeat:Infinity, ease:'easeInOut', delay:1 }}>
+                <p style={{ fontSize:'0.75rem', fontWeight:800, color:'white', marginBottom:3 }}>💬 Camila te escribió</p>
+                <p style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.75)', lineHeight:1.45 }}>¿Hacemos parche de estudio mañana? 📚</p>
+              </motion.div>
+            </motion.div>
+
+            {/* ACTIVE PARCHE */}
+            <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.95, duration:0.7 }}
+              style={{ position:'absolute', bottom:'9%', left:'7%', borderRadius:16,
+                background:'rgba(13,11,30,0.88)', backdropFilter:'blur(22px)',
+                border:'1px solid rgba(127,231,196,0.28)',
+                boxShadow:'0 14px 40px rgba(0,0,0,0.45)', padding:'10px 15px', display:'flex', alignItems:'center', gap:11 }}>
+              <motion.div animate={{ y:[0,7,0] }} transition={{ duration:5, repeat:Infinity, ease:'easeInOut', delay:1.5 }}
+                style={{ display:'flex', alignItems:'center', gap:11 }}>
+                <div style={{ width:38, height:38, borderRadius:11, background:'rgba(108,99,255,0.18)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.1rem', flexShrink:0 }}>📐</div>
+                <div>
+                  <p style={{ fontWeight:700, fontSize:'0.78rem', color:'white', lineHeight:1.2 }}>Cálculo III Survivors</p>
+                  <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:3 }}>
+                    <div style={{ width:6, height:6, borderRadius:'50%', background:'#7FE7C4' }} />
+                    <span style={{ fontSize:'0.64rem', color:'#7FE7C4', fontWeight:600 }}>7 activos ahora</span>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+
+            {/* XP BADGE */}
+            <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:1.1, duration:0.6 }}
+              style={{ position:'absolute', bottom:'32%', left:'2%', borderRadius:12, padding:'8px 12px',
+                background:'rgba(255,179,71,0.15)', border:'1px solid rgba(255,179,71,0.4)',
+                backdropFilter:'blur(12px)' }}>
+              <motion.div animate={{ scale:[1,1.06,1] }} transition={{ duration:2.5, repeat:Infinity, ease:'easeInOut' }}>
+                <p style={{ fontSize:'0.7rem', fontWeight:800, color:'#FFB347' }}>⭐ +120 XP ganados hoy</p>
+              </motion.div>
+            </motion.div>
           </div>
+        </div>
 
-          {/* Slide dots */}
-          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-            {SLIDES.map((_, i) => (
-              <button key={i} onClick={() => setSlide(i)}
-                className="transition-all rounded-full"
-                style={{ width: i === slide ? 28 : 8, height: 8, background: i === slide ? '#6C63FF' : 'rgba(255,255,255,0.35)' }} />
-            ))}
-          </div>
+        {/* Scroll cue */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+          <motion.div animate={{ y:[0,7,0] }} transition={{ duration:1.6, repeat:Infinity }}>
+            <div style={{ width:24, height:40, borderRadius:12, border:'2px solid rgba(255,255,255,0.18)', display:'flex', justifyContent:'center', paddingTop:6 }}>
+              <div style={{ width:3, height:10, borderRadius:2, background:'rgba(255,255,255,0.35)' }} />
+            </div>
+          </motion.div>
+        </div>
+      </section>
 
-        </section>
 
-        {/* Feature highlights strip — animated, no fake data */}
-        <div className="relative z-10 py-5 px-4 sm:px-8 border-y overflow-hidden"
-          style={{ borderColor: bord, background: dark ? 'rgba(13,11,30,0.7)' : 'rgba(255,255,255,0.7)', backdropFilter: 'blur(16px)' }}>
-          <div className="max-w-5xl mx-auto flex flex-wrap justify-center gap-3 sm:gap-4">
-            {[
-              { icon: '🔒', label: 'Solo correos @escuelaing.edu.co', color: '#6C63FF' },
-              { icon: '⚡', label: 'Comunicación en tiempo real', color: '#7FE7C4' },
-              { icon: '🤖', label: 'IA integrada en toda la plataforma', color: '#FFB347' },
-              { icon: '🎮', label: 'Gamificación y coleccionables', color: '#FF6B9D' },
-              { icon: '💜', label: 'Bienestar estudiantil 24/7', color: '#A78BFA' },
-            ].map((item, i) => (
+      {/* ══════════════════════════════════════
+          GALLERY STRIP — Shopify style
+      ══════════════════════════════════════ */}
+      <section style={{ padding:'60px 0 68px', background: dark ? '#0B0918' : '#F3F2FF' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-8">
+          <motion.div initial={{ opacity:0, y:16 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
+            className="text-center mb-10">
+            <p style={{ fontSize:'0.72rem', fontWeight:800, color:'#6C63FF', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:8 }}>
+              Hecho para la ECI
+            </p>
+            <h2 style={{ fontWeight:900, fontSize:'clamp(1.6rem,3.2vw,2.4rem)', color:textH }}>
+              Momentos reales de la comunidad
+            </h2>
+          </motion.div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-5">
+            {GALLERY.map((item, i) => (
               <motion.div key={item.label}
-                initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ delay: i * 0.07 }}
-                className="flex items-center gap-2 px-4 py-2 rounded-full"
-                style={{ background: `${item.color}12`, border: `1px solid ${item.color}30` }}>
-                <span style={{ fontSize: '0.9rem' }}>{item.icon}</span>
-                <span style={{ fontSize: '0.78rem', fontWeight: 600, color: dark ? 'rgba(255,255,255,0.82)' : '#1A1829', whiteSpace: 'nowrap' }}>{item.label}</span>
+                initial={{ opacity:0, y:28 }} whileInView={{ opacity:1, y:0 }}
+                viewport={{ once:true }} transition={{ delay: i*0.08 }}
+                whileHover={{ y:-7, scale:1.02, transition:{ duration:0.22 } }}
+                style={{
+                  height: i % 3 === 0 ? 290 : i % 3 === 2 ? 270 : 250,
+                  borderRadius:20, overflow:'hidden', position:'relative',
+                  cursor:'pointer',
+                  boxShadow:'0 12px 40px rgba(0,0,0,0.32)',
+                }}>
+                <ImageWithFallback src={item.img} alt={item.label} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                <div style={{ position:'absolute', inset:0, background:`linear-gradient(to top, ${item.color}dd 0%, rgba(0,0,0,0.1) 60%, transparent 100%)` }} />
+                <div style={{ position:'absolute', bottom:16, left:16 }}>
+                  <p style={{ fontWeight:800, fontSize:'1rem', color:'white', lineHeight:1.2 }}>{item.label}</p>
+                  <p style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.78)', marginTop:2 }}>{item.desc}</p>
+                </div>
               </motion.div>
             ))}
           </div>
         </div>
+      </section>
 
-        {/* ══════════════════════════════════════
-            FEATURES — "Todo en un lugar"
-        ══════════════════════════════════════ */}
-        <section id="funcionalidades" className="py-16 sm:py-24 px-4 sm:px-8">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
-              <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
-                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-5 text-sm font-semibold"
-                  style={{ background: 'rgba(108,99,255,0.1)', color: '#6C63FF', border: '1px solid rgba(108,99,255,0.25)' }}>
-                  ✨ Funcionalidades
-                </span>
-                <h2 style={{ fontWeight: 900, fontSize: 'clamp(1.8rem,4vw,2.8rem)', color: textH, lineHeight: 1.15, marginBottom: '14px' }}>
-                  Todo lo que necesitas,<br />
-                  <span style={{ background: 'linear-gradient(135deg,#6C63FF,#7FE7C4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    en un solo lugar
-                  </span>
-                </h2>
-                <p style={{ fontSize: '1.05rem', color: textB, maxWidth: 520, margin: '0 auto', lineHeight: 1.75 }}>
-                  PATRICI.A no es otra red social — es la plataforma que la comunidad ECI siempre necesitó.
-                </p>
-              </motion.div>
-            </div>
 
-            {/* 3-column grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
-              {FEATURES.map((f, i) => (
-                <motion.div key={f.title}
-                  initial={{ opacity: 0, y: 28 }} whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }} transition={{ delay: i * 0.07 }}
-                  onHoverStart={() => setHoveredF(i)} onHoverEnd={() => setHoveredF(null)}
-                  whileHover={{ y: -10, boxShadow: `0 24px 56px ${f.color}25` }}
-                  className="rounded-3xl border p-6 cursor-default relative overflow-hidden transition-all"
-                  style={{ background: hoveredF === i ? `linear-gradient(135deg,${f.color}12,${f.color}04)` : card, borderColor: hoveredF === i ? `${f.color}55` : bord, backdropFilter: 'blur(12px)' }}>
-                  {hoveredF === i && (
-                    <div className="absolute top-0 right-0 w-28 h-28 opacity-10 pointer-events-none"
-                      style={{ background: f.color, borderRadius: '0 24px 0 100%', filter: 'blur(24px)' }} />
-                  )}
-                  <div className="w-13 h-13 rounded-2xl flex items-center justify-center mb-5"
-                    style={{ background: `${f.color}16`, border: `1.5px solid ${f.color}35`, width: 52, height: 52 }}>
-                    <span style={{ fontSize: '1.5rem' }}>{f.emoji}</span>
-                  </div>
-                  <h3 style={{ fontWeight: 700, fontSize: '1rem', color: textH, marginBottom: '8px' }}>{f.title}</h3>
-                  <p style={{ fontSize: '0.84rem', color: textS, lineHeight: 1.7 }}>{f.desc}</p>
-                  <div className="absolute bottom-0 left-0 h-0.5 rounded-full transition-all"
-                    style={{ width: hoveredF === i ? '100%' : '0%', background: `linear-gradient(90deg,${f.color},transparent)`, transitionDuration: '350ms' }} />
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Full-width trust card */}
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-              className="rounded-3xl border overflow-hidden"
-              style={{ background: card, borderColor: bord, backdropFilter: 'blur(12px)' }}>
-              <div className="flex flex-col lg:flex-row">
-                {/* Left text */}
-                <div className="flex-1 p-10">
-                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-5"
-                    style={{ background: 'rgba(127,231,196,0.1)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.25)' }}>
-                    <Shield size={12} /> Exclusivo para la ECI
-                  </span>
-                  <h3 style={{ fontWeight: 800, fontSize: '1.4rem', color: textH, lineHeight: 1.3, marginBottom: '12px' }}>
-                    Construido 100%<br />para la comunidad ECI
-                  </h3>
-                  <p style={{ fontSize: '0.9rem', color: textB, lineHeight: 1.75, marginBottom: '20px', maxWidth: 420 }}>
-                    Verificación institucional, datos protegidos con JWT, moderación activa, matching inteligente basado en tus intereses académicos y soporte de bienestar disponible 24/7.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {['🔒 Verificación ECI', '⚡ Tiempo real', '🤖 IA integrada', '💜 Bienestar 24/7', '🎮 Gamificado'].map(tag => (
-                      <span key={tag} className="px-3 py-1.5 rounded-full text-sm"
-                        style={{ background: 'rgba(108,99,255,0.1)', color: '#6C63FF', border: '1px solid rgba(108,99,255,0.2)', fontWeight: 500 }}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                {/* Right steps */}
-                <div className="flex-1 p-10 border-t lg:border-t-0 lg:border-l"
-                  style={{ borderColor: bord, background: dark ? 'rgba(108,99,255,0.04)' : 'rgba(108,99,255,0.02)' }}>
-                  <p style={{ fontWeight: 700, fontSize: '0.8rem', color: '#6C63FF', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '20px' }}>
-                    Empieza en 3 pasos
-                  </p>
-                  <div className="space-y-6">
-                    {STEPS.map((step, i) => (
-                      <motion.div key={step.n}
-                        initial={{ opacity: 0, x: 16 }} whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true }} transition={{ delay: 0.1 * i }}
-                        className="flex items-start gap-4">
-                        <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
-                          style={{ background: `${step.color}15`, border: `1.5px solid ${step.color}30` }}>
-                          <span style={{ fontSize: '1.2rem' }}>{step.icon}</span>
-                        </div>
-                        <div>
-                          <p style={{ fontWeight: 700, fontSize: '0.9rem', color: textH }}>{step.title}</p>
-                          <p style={{ fontSize: '0.8rem', color: textS, lineHeight: 1.6, marginTop: '3px' }}>{step.desc}</p>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* ══════════════════════════════════════
-            HOW IT WORKS
-        ══════════════════════════════════════ */}
-        <section id="como-funciona" className="py-12 sm:py-16 px-4 sm:px-8">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12">
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-4 text-sm font-semibold"
-                style={{ background: 'rgba(127,231,196,0.1)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.25)' }}>
-                🚀 ¿Cómo funciona?
+      {/* ══════════════════════════════════════
+          FEATURES — Spotlight carousel
+      ══════════════════════════════════════ */}
+      <section id="funcionalidades" className="py-14 sm:py-20 px-4 sm:px-8">
+        <div className="max-w-6xl mx-auto">
+          <motion.div initial={{ opacity:0 }} whileInView={{ opacity:1 }} viewport={{ once:true }} className="text-center mb-10">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-5 text-sm font-semibold"
+              style={{ background:'rgba(108,99,255,0.1)', color:'#6C63FF', border:'1px solid rgba(108,99,255,0.25)' }}>
+              ✨ Funcionalidades
+            </span>
+            <h2 style={{ fontWeight:900, fontSize:'clamp(1.8rem,4vw,2.8rem)', color:textH, lineHeight:1.15, marginBottom:14 }}>
+              Todo lo que necesitas,<br />
+              <span style={{ background:'linear-gradient(135deg,#6C63FF,#7FE7C4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
+                en un solo lugar
               </span>
-              <h2 style={{ fontWeight: 800, fontSize: 'clamp(1.6rem,3.5vw,2.2rem)', color: textH }}>
-                Únete en 3 simples pasos
-              </h2>
-            </div>
-            <div className="flex flex-col sm:flex-row items-start sm:items-start gap-8 sm:gap-0 relative">
-              {/* connecting line */}
-              <div className="hidden sm:block absolute top-8 left-[calc(16.67%+28px)] right-[calc(16.67%+28px)] h-0.5" style={{ background: 'linear-gradient(90deg, #6C63FF, #7FE7C4, #FFB347)' }} />
-              {STEPS.map((step, i) => (
-                <motion.div key={step.n}
-                  initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }} transition={{ delay: i * 0.15 }}
-                  className="flex-1 flex flex-col items-center text-center px-6">
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center mb-5 relative z-10"
-                    style={{ background: `linear-gradient(135deg, ${step.color}, ${step.color}88)`, boxShadow: `0 8px 24px ${step.color}40` }}>
-                    <span style={{ fontSize: '1.8rem' }}>{step.icon}</span>
-                  </div>
-                  <span style={{ fontWeight: 900, fontSize: '0.75rem', color: step.color, letterSpacing: '0.08em', marginBottom: '6px', display: 'block' }}>
-                    PASO {step.n}
-                  </span>
-                  <h3 style={{ fontWeight: 700, fontSize: '1rem', color: textH, marginBottom: '8px' }}>{step.title}</h3>
-                  <p style={{ fontSize: '0.85rem', color: textS, lineHeight: 1.7 }}>{step.desc}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
+            </h2>
+            <p style={{ fontSize:'1.05rem', color:textB, maxWidth:520, margin:'0 auto', lineHeight:1.75 }}>
+              PATRICI.A no es otra red social — es la plataforma que la comunidad ECI siempre necesitó.
+            </p>
+          </motion.div>
 
-        {/* ══════════════════════════════════════
-            COMUNIDAD
-        ══════════════════════════════════════ */}
-        <section id="comunidad" className="py-12 sm:py-16 px-4 sm:px-8">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12">
-              <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
-                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-5 text-sm font-semibold"
-                  style={{ background: 'rgba(255,107,157,0.1)', color: '#FF6B9D', border: '1px solid rgba(255,107,157,0.25)' }}>
-                  👥 Comunidad ECI
-                </span>
-                <h2 style={{ fontWeight: 900, fontSize: 'clamp(1.8rem,4vw,2.6rem)', color: textH, lineHeight: 1.15, marginBottom: '14px' }}>
-                  Conecta con tu comunidad<br />
-                  <span style={{ background: 'linear-gradient(135deg,#FF6B9D,#6C63FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    en la Escuela Colombiana de Ingeniería
-                  </span>
-                </h2>
-                <p style={{ fontSize: '1.05rem', color: textB, maxWidth: 520, margin: '0 auto', lineHeight: 1.75 }}>
-                  Parches de estudio, gaming, arte, ciencia y mucho más. La comunidad que siempre quisiste tener en tu universidad.
-                </p>
-              </motion.div>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
-              {[
-                { emoji: '🎮', label: 'Gaming', color: '#6C63FF' },
-                { emoji: '📚', label: 'Estudio', color: '#7FE7C4' },
-                { emoji: '🎨', label: 'Arte y diseño', color: '#FF6B9D' },
-                { emoji: '🔬', label: 'Ciencia & Tech', color: '#FFB347' },
-              ].map((item, i) => (
-                <motion.div key={item.label}
-                  initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }} transition={{ delay: i * 0.08 }}
-                  className="rounded-2xl border p-5 text-center"
-                  style={{ background: card, borderColor: `${item.color}30`, backdropFilter: 'blur(12px)' }}>
-                  <div className="text-3xl mb-3">{item.emoji}</div>
-                  <p style={{ fontWeight: 700, fontSize: '0.95rem', color: textH }}>{item.label}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ══════════════════════════════════════
-            CTA FINAL
-        ══════════════════════════════════════ */}
-        <section className="py-16 sm:py-24 px-4 sm:px-8">
-          <div className="max-w-4xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96 }} whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              className="rounded-[32px] overflow-hidden relative"
-              style={{ background: 'linear-gradient(135deg, #4A42C0 0%, #6C63FF 40%, #3B8A72 100%)' }}>
-              {/* BG decoration */}
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full opacity-15"
-                  style={{ background: '#7FE7C4', filter: 'blur(60px)' }} />
-                <div className="absolute -bottom-16 -left-16 w-64 h-64 rounded-full opacity-10"
-                  style={{ background: '#FF6B9D', filter: 'blur(48px)' }} />
-              </div>
-
-              <div className="relative flex flex-col lg:flex-row items-center gap-10 p-12 lg:p-16">
-                {/* Text */}
-                <div className="flex-1 text-center lg:text-left">
-                  <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>
-                    ¡Únete gratis hoy!
-                  </p>
-                  <h2 style={{ fontWeight: 900, fontSize: 'clamp(1.7rem,3.5vw,2.4rem)', color: 'white', lineHeight: 1.2, marginBottom: '14px' }}>
-                    ¿Listo para ser parte de<br />la comunidad ECI?
-                  </h2>
-                  <p style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.7, marginBottom: '28px', maxWidth: 420 }}>
-                    En menos de 2 minutos estás registrado y conectando con la comunidad de la Escuela Colombiana de Ingeniería.
-                  </p>
-                  {/* Checklist */}
-                  <div className="flex flex-col gap-2 mb-8">
-                    {['Totalmente gratuito para estudiantes ECI', 'Verificación segura con correo institucional', 'Soporte de bienestar disponible 24/7'].map(item => (
-                      <div key={item} className="flex items-center gap-2.5">
-                        <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                          style={{ background: 'rgba(127,231,196,0.25)' }}>
-                          <Check size={11} style={{ color: '#7FE7C4' }} strokeWidth={3} />
-                        </div>
-                        <span style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.85)' }}>{item}</span>
+          <div className="flex flex-col lg:flex-row gap-5 mb-5">
+            {/* Spotlight card */}
+            <div className="flex-1 relative overflow-hidden rounded-3xl border min-h-[260px]"
+              style={{ background:card, borderColor:`${FEATURES[featureIdx].color}50`, backdropFilter:'blur(12px)' }}>
+              <div className="absolute inset-0 pointer-events-none"
+                style={{ background:`radial-gradient(circle at 20% 50%, ${FEATURES[featureIdx].color}16, transparent 60%)` }} />
+              <AnimatePresence mode="wait">
+                <motion.div key={featureIdx}
+                  initial={{ opacity:0, x:24 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:-24 }}
+                  transition={{ duration:0.4, ease:[0.4,0,0.2,1] }}
+                  className="relative p-8 h-full flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-4 mb-5">
+                      <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
+                        style={{ background:`${FEATURES[featureIdx].color}18`, border:`2px solid ${FEATURES[featureIdx].color}35` }}>
+                        {FEATURES[featureIdx].emoji}
                       </div>
-                    ))}
+                      <div>
+                        <span className="text-xs font-bold uppercase tracking-widest mb-1 block" style={{ color:FEATURES[featureIdx].color }}>
+                          Funcionalidad
+                        </span>
+                        <h3 style={{ fontWeight:800, fontSize:'1.35rem', color:textH, lineHeight:1.2 }}>
+                          {FEATURES[featureIdx].title}
+                        </h3>
+                      </div>
+                    </div>
+                    <p style={{ fontSize:'0.95rem', color:textB, lineHeight:1.8, maxWidth:520 }}>
+                      {FEATURES[featureIdx].desc}
+                    </p>
                   </div>
-                  <motion.button onClick={onRegister}
-                    whileHover={{ scale: 1.05, boxShadow: '0 12px 36px rgba(127,231,196,0.5)' }}
-                    whileTap={{ scale: 0.97 }}
-                    className="flex items-center gap-2.5 px-9 py-4 rounded-2xl font-bold text-base"
-                    style={{ background: '#7FE7C4', color: '#0F0E1A', boxShadow: '0 6px 24px rgba(127,231,196,0.4)' }}>
-                    Crear mi cuenta gratis <ArrowRight size={18} />
-                  </motion.button>
-                </div>
+                  <div className="mt-6">
+                    <div className="h-0.5 rounded-full overflow-hidden" style={{ background:`${FEATURES[featureIdx].color}20` }}>
+                      <motion.div key={featureIdx} className="h-full rounded-full"
+                        style={{ background:FEATURES[featureIdx].color }}
+                        initial={{ width:'0%' }} animate={{ width:'100%' }}
+                        transition={{ duration:3.8, ease:'linear' }} />
+                    </div>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
 
-                {/* Mono mascot */}
-                <div className="flex-shrink-0 relative">
-                  <motion.div animate={{ y: [0, -12, 0] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}>
-                    <ImageWithFallback src={monoPatriciaImg} alt="Mascota PATRICI.A"
-                      className="object-contain"
-                      style={{ width: 180, height: 180, filter: 'drop-shadow(0 16px 40px rgba(0,0,0,0.3))' }} />
-                  </motion.div>
-                  {/* Floating badge */}
-                  <motion.div
-                    animate={{ rotate: [-3, 3, -3] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                    className="absolute -top-4 -right-4 px-3 py-1.5 rounded-xl text-xs font-bold"
-                    style={{ background: '#6C63FF', color: 'white', boxShadow: '0 4px 14px rgba(108,99,255,0.4)' }}>
-                    🎪 ¡Únete!
-                  </motion.div>
-                </div>
-              </div>
-            </motion.div>
+            {/* Thumbnail grid */}
+            <div className="grid grid-cols-3 lg:grid-cols-2 gap-3 lg:w-52 lg:flex-shrink-0">
+              {FEATURES.map((f,i) => (
+                <button key={f.title} onClick={() => setFeatureIdx(i)}
+                  className="rounded-2xl border p-3 text-left transition-all hover:scale-105 relative overflow-hidden"
+                  style={{ background:featureIdx===i ? `${f.color}15` : card, borderColor:featureIdx===i ? `${f.color}60` : bord,
+                    backdropFilter:'blur(12px)', boxShadow:featureIdx===i ? `0 4px 20px ${f.color}20` : 'none' }}>
+                  <div className="text-xl mb-1.5">{f.emoji}</div>
+                  <p style={{ fontSize:'0.72rem', fontWeight:700, color:featureIdx===i ? f.color : textS, lineHeight:1.3 }}>{f.title}</p>
+                  {featureIdx===i && <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background:`linear-gradient(90deg,${f.color},transparent)` }} />}
+                </button>
+              ))}
+            </div>
           </div>
-        </section>
-
-        {/* Footer */}
-        <footer className="py-10 px-4 sm:px-8 border-t text-center" style={{ borderColor: bord }}>
-          <ImageWithFallback src={dark ? logoBlancoImg : logoNegroImg} alt="PATRICI.A"
-            className="object-contain mx-auto mb-4"
-            style={{ height: 24, filter: dark ? 'none' : undefined }} />
-          <p style={{ fontSize: '0.8rem', color: textS }}>
-            PATRICI.A © 2026 · Escuela Colombiana de Ingeniería · 🔒 Solo para la comunidad ECI
-          </p>
-          <div className="flex items-center justify-center gap-6 mt-4">
-            {['Términos de uso', 'Privacidad', 'Centro de ayuda', 'Contacto'].map(l => (
-              <button key={l} className="text-xs hover:underline transition-all" style={{ color: textS }}>{l}</button>
+          <div className="flex items-center justify-center gap-2">
+            {FEATURES.map((f,i) => (
+              <button key={i} onClick={() => setFeatureIdx(i)} className="rounded-full transition-all"
+                style={{ width:i===featureIdx ? 24 : 8, height:8, background:i===featureIdx ? FEATURES[i].color : `${FEATURES[i].color}40` }} />
             ))}
           </div>
-        </footer>
-      </div>
+        </div>
+      </section>
+
+
+      {/* ══════════════════════════════════════
+          CÓMO FUNCIONA — 3 steps visual
+      ══════════════════════════════════════ */}
+      <section id="como-funciona" className="py-14 sm:py-20 px-4 sm:px-8">
+        <div className="max-w-5xl mx-auto">
+          <motion.div initial={{ opacity:0, y:16 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} className="text-center mb-10">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-4 text-sm font-semibold"
+              style={{ background:'rgba(127,231,196,0.1)', color:'#7FE7C4', border:'1px solid rgba(127,231,196,0.25)' }}>
+              <Shield size={12} /> Exclusivo para la ECI
+            </span>
+            <h2 style={{ fontWeight:900, fontSize:'clamp(1.6rem,3.2vw,2.4rem)', color:textH }}>
+              Empieza en 3 pasos
+            </h2>
+          </motion.div>
+
+          <div className="relative">
+            {/* Connecting line — desktop */}
+            <div className="hidden lg:block absolute" style={{ top:40, left:'17%', right:'17%', height:2, background:'linear-gradient(90deg,#6C63FF,#7FE7C4,#FFB347)', borderRadius:1, opacity:0.4 }} />
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+              {STEPS.map((step,i) => (
+                <motion.div key={i}
+                  initial={{ opacity:0, y:24 }} whileInView={{ opacity:1, y:0 }}
+                  viewport={{ once:true }} transition={{ delay:i*0.14 }}
+                  className="text-center relative">
+                  <div className="w-20 h-20 rounded-3xl mx-auto mb-5 flex items-center justify-center text-3xl relative z-10"
+                    style={{ background:`${step.color}14`, border:`2px solid ${step.color}28`, boxShadow:`0 8px 28px ${step.color}20` }}>
+                    {step.icon}
+                    <div className="absolute -top-2.5 -right-2.5 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black"
+                      style={{ background:step.color, color:'white', boxShadow:`0 4px 12px ${step.color}55` }}>
+                      {i+1}
+                    </div>
+                  </div>
+                  <h3 style={{ fontWeight:800, fontSize:'1rem', color:textH, marginBottom:8 }}>{step.title}</h3>
+                  <p style={{ fontSize:'0.85rem', color:textS, lineHeight:1.65 }}>{step.desc}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-3 mt-14">
+            {['🔒 Verificación ECI','⚡ Tiempo real','🤖 IA integrada','💜 Bienestar 24/7','🎮 Gamificado'].map(tag => (
+              <span key={tag} className="px-4 py-2 rounded-full text-sm"
+                style={{ background:'rgba(108,99,255,0.08)', color:'#6C63FF', border:'1px solid rgba(108,99,255,0.16)', fontWeight:500 }}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+
+      {/* ══════════════════════════════════════
+          CTA FINAL
+      ══════════════════════════════════════ */}
+      <section className="py-12 sm:py-16 px-4 sm:px-8">
+        <div className="max-w-4xl mx-auto">
+          <motion.div initial={{ opacity:0, scale:0.96 }} whileInView={{ opacity:1, scale:1 }} viewport={{ once:true }}
+            className="rounded-[32px] overflow-hidden relative"
+            style={{ background:'linear-gradient(135deg,#4A42C0 0%,#6C63FF 40%,#3B8A72 100%)' }}>
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <div style={{ position:'absolute', top:'-80px', right:'-80px', width:320, height:320, borderRadius:'50%', background:'#7FE7C4', filter:'blur(70px)', opacity:0.13 }} />
+              <div style={{ position:'absolute', bottom:'-60px', left:'-60px', width:260, height:260, borderRadius:'50%', background:'#FF6B9D', filter:'blur(55px)', opacity:0.1 }} />
+            </div>
+            <div className="relative flex flex-col lg:flex-row items-center gap-10 p-12 lg:p-16">
+              <div className="flex-1 text-center lg:text-left">
+                <p style={{ fontSize:'0.78rem', color:'rgba(255,255,255,0.58)', fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:12 }}>
+                  ¡Únete gratis hoy!
+                </p>
+                <h2 style={{ fontWeight:900, fontSize:'clamp(1.7rem,3.5vw,2.4rem)', color:'white', lineHeight:1.2, marginBottom:14 }}>
+                  ¿Listo para ser parte de<br />la comunidad ECI?
+                </h2>
+                <p style={{ fontSize:'1rem', color:'rgba(255,255,255,0.72)', lineHeight:1.72, marginBottom:28, maxWidth:420 }}>
+                  En menos de 2 minutos estás registrado y conectando con la comunidad de la Escuela Colombiana de Ingeniería.
+                </p>
+                <div className="flex flex-col gap-2.5 mb-8">
+                  {['Totalmente gratuito para estudiantes ECI','Verificación segura con correo institucional','Soporte de bienestar disponible 24/7'].map(item => (
+                    <div key={item} className="flex items-center gap-2.5">
+                      <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background:'rgba(127,231,196,0.22)' }}>
+                        <Check size={11} style={{ color:'#7FE7C4' }} strokeWidth={3} />
+                      </div>
+                      <span style={{ fontSize:'0.87rem', color:'rgba(255,255,255,0.84)' }}>{item}</span>
+                    </div>
+                  ))}
+                </div>
+                <motion.button onClick={onRegister}
+                  whileHover={{ scale:1.05, boxShadow:'0 14px 40px rgba(127,231,196,0.52)' }} whileTap={{ scale:0.97 }}
+                  className="flex items-center gap-2.5 px-9 py-4 rounded-2xl font-bold text-base"
+                  style={{ background:'#7FE7C4', color:'#0F0E1A', boxShadow:'0 6px 24px rgba(127,231,196,0.38)' }}>
+                  Crear mi cuenta gratis <ArrowRight size={18} />
+                </motion.button>
+              </div>
+              <div className="flex-shrink-0 relative">
+                <motion.div animate={{ y:[0,-12,0] }} transition={{ duration:4, repeat:Infinity, ease:'easeInOut' }}>
+                  <ImageWithFallback src={monoPatriciaImg} alt="Mascota PATRICI.A" className="object-contain"
+                    style={{ width:180, height:180, filter:'drop-shadow(0 18px 44px rgba(0,0,0,0.32))' }} />
+                </motion.div>
+                <motion.div animate={{ rotate:[-3,3,-3] }} transition={{ duration:3, repeat:Infinity, ease:'easeInOut' }}
+                  className="absolute -top-4 -right-4 px-3 py-1.5 rounded-xl text-xs font-bold"
+                  style={{ background:'#6C63FF', color:'white', boxShadow:'0 4px 14px rgba(108,99,255,0.42)' }}>
+                  🎪 ¡Únete!
+                </motion.div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="py-10 px-4 sm:px-8 border-t text-center" style={{ borderColor:bord }}>
+        <ImageWithFallback src={dark ? logoBlancoImg : logoNegroImg} alt="PATRICI.A" className="object-contain mx-auto mb-4" style={{ height:24 }} />
+        <p style={{ fontSize:'0.8rem', color:textS }}>
+          PATRICI.A © 2026 · Escuela Colombiana de Ingeniería · 🔒 Solo para la comunidad ECI
+        </p>
+        <div className="flex items-center justify-center gap-6 mt-4">
+          {['Términos de uso','Privacidad','Centro de ayuda','Contacto'].map(l => (
+            <button key={l} className="text-xs hover:underline transition-all" style={{ color:textS, background:'none', border:'none' }}>{l}</button>
+          ))}
+        </div>
+      </footer>
     </div>
   );
 }

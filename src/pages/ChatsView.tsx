@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Send, Smile, Paperclip, MoreHorizontal, Check, CheckCheck } from 'lucide-react';
+import { Search, Send, Smile, Paperclip, MoreHorizontal, Check, CheckCheck, X, ArrowLeft } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useTheme } from '../store/ThemeContext';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -56,12 +57,30 @@ const CHAT_HISTORY: Record<number, Message[]> = {
 
 const STATUS_COLOR: Record<string, string> = { online: '#7FE7C4', away: '#FFB347', offline: '#555' };
 
-export function ChatsView() {
+type ViewId = 'home' | 'matching' | 'parches' | 'campus' | 'eventos' | 'bienestar' | 'album' | 'notificaciones' | 'ranking' | 'ajustes' | 'perfil';
+
+const SCHED_DAYS = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+const SCHED_SLOTS = ['8-10', '10-12', '12-14', '14-16', '16-18', '18-20'];
+function contactSchedule(id: number): Set<string> {
+  const patterns = [
+    ['0-1','0-2','1-0','2-1','3-0','4-2'],
+    ['0-0','1-2','2-0','3-1','4-0','4-2'],
+    ['1-1','2-2','3-0','3-3','4-1','4-3'],
+    ['0-2','1-1','2-3','3-2','4-0','4-3'],
+    ['0-0','0-3','1-2','2-1','3-0','4-1'],
+  ];
+  const s = new Set<string>();
+  patterns[id % patterns.length].forEach(k => s.add(k));
+  return s;
+}
+
+export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId) => void }) {
   const t = useTheme();
   const [selected, setSelected] = useState<Contact>(CONTACTS[0]);
   const [messages, setMessages] = useState<Message[]>(CHAT_HISTORY[1] || []);
   const [input, setInput] = useState('');
   const [search, setSearch] = useState('');
+  const [showContactProfile, setShowContactProfile] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -87,6 +106,7 @@ export function ChatsView() {
   const cardStyle = { background: t.cardBg, borderColor: t.cardBorder };
 
   return (
+    <>
     <div className="h-full overflow-hidden flex rounded-2xl border" style={cardStyle}>
 
       {/* ── Contact list ── */}
@@ -176,7 +196,12 @@ export function ChatsView() {
                 style={{ background: STATUS_COLOR[selected.status], borderColor: t.cardBg }} />
             </div>
             <div>
-              <p style={{ fontWeight: 700, fontSize: '0.95rem', color: t.text }}>{selected.name}</p>
+              <button onClick={() => setShowContactProfile(true)}
+                style={{ fontWeight: 700, fontSize: '0.95rem', color: t.text, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'transparent' }}
+                onMouseEnter={e => { (e.target as HTMLElement).style.textDecorationColor = t.textMuted; }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.textDecorationColor = 'transparent'; }}>
+                {selected.name}
+              </button>
               <p style={{ fontSize: '0.7rem', color: selected.status === 'online' ? '#7FE7C4' : t.textMuted }}>
                 {selected.status === 'online' ? '● En línea' : selected.status === 'away' ? '● Ausente' : '● Desconectado'}
               </p>
@@ -256,5 +281,71 @@ export function ChatsView() {
         </div>
       </div>
     </div>
+
+    {/* Contact profile modal */}
+    {showContactProfile && createPortal(
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)' }}
+        onClick={() => setShowContactProfile(false)}>
+        <div className="rounded-3xl border w-full max-w-sm overflow-hidden"
+          style={{ background: t.cardBg, borderColor: t.cardBorder }}
+          onClick={e => e.stopPropagation()}>
+          {/* Hero */}
+          <div className="relative h-36 flex items-center justify-center" style={{ background: selected.gradient }}>
+            <button onClick={() => setShowContactProfile(false)}
+              className="absolute top-4 left-4 w-8 h-8 rounded-full flex items-center justify-center"
+              style={{ background: 'rgba(0,0,0,0.3)' }}>
+              <ArrowLeft size={16} color="white" />
+            </button>
+            <div className="w-20 h-20 rounded-full flex items-center justify-center border-4 border-white/30 font-black text-white text-2xl"
+              style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)' }}>
+              {selected.avatar}
+            </div>
+            <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+              style={{ background: 'rgba(0,0,0,0.4)' }}>
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: STATUS_COLOR[selected.status] }} />
+              <span style={{ fontSize: '0.7rem', color: 'white', fontWeight: 600 }}>
+                {selected.status === 'online' ? 'En línea' : selected.status === 'away' ? 'Ausente' : 'Desconectado'}
+              </span>
+            </div>
+          </div>
+          <div className="p-5">
+            <h3 style={{ fontWeight: 800, fontSize: '1.15rem', color: t.text }}>{selected.name}</h3>
+            <p style={{ fontSize: '0.8rem', color: t.textMuted, marginBottom: '12px' }}>{selected.program}</p>
+            <div className="flex items-center gap-2 mb-5">
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold"
+                style={{ background: 'rgba(108,99,255,0.12)', color: '#6C63FF' }}>
+                ⚡ {selected.match}% compatibilidad
+              </span>
+            </div>
+            {/* Schedule */}
+            <p style={{ fontWeight: 700, fontSize: '0.8rem', color: t.text, marginBottom: '8px' }}>Disponibilidad semanal</p>
+            <div style={{ overflowX: 'auto' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '36px repeat(6, 1fr)', gap: 2, minWidth: 260 }}>
+                <div />
+                {SCHED_DAYS.map(d => (
+                  <div key={d} style={{ textAlign: 'center', fontSize: '0.58rem', fontWeight: 700, color: t.textMuted }}>{d}</div>
+                ))}
+                {SCHED_SLOTS.map((slot, si) => {
+                  const sched = contactSchedule(selected.id);
+                  return (
+                    <>
+                      <div key={`l${si}`} style={{ fontSize: '0.52rem', color: t.textMuted, display: 'flex', alignItems: 'center' }}>{slot}</div>
+                      {SCHED_DAYS.map((_, di) => {
+                        const active = sched.has(`${di}-${si}`);
+                        return (
+                          <div key={`${di}-${si}`} style={{ height: 16, borderRadius: 3, background: active ? 'linear-gradient(135deg,#6C63FF,#A78BFA)' : t.inputBg, border: `1px solid ${active ? 'transparent' : t.cardBorder}` }} />
+                        );
+                      })}
+                    </>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
   );
 }

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { MapPin, Calendar, Clock, Users, Plus, Lock, Globe, Bookmark, Filter, ChevronRight, Star, X } from 'lucide-react';
-import { motion } from 'motion/react';
+import { MapPin, Calendar, Clock, Users, Plus, Lock, Globe, Bookmark, Filter, ChevronRight, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
-import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from '@react-google-maps/api';
+import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 
 const EVENTOS = [
   {
@@ -72,7 +72,6 @@ const categoryColor: Record<string, string> = {
   Cultural: '#5BC8FF',
 };
 
-// ── Google Maps helpers ────────────────────────────────────────
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string ?? '';
 const ECI_CENTER = { lat: 4.7830, lng: -74.0441 };
 
@@ -88,6 +87,11 @@ const DARK_MAP_STYLES = [
 function pinSvg(color: string) {
   const c = color.replace('#', '%23');
   return `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='36' viewBox='0 0 28 36'><path fill='${c}' stroke='white' stroke-width='2' d='M14 1C7.4 1 2 6.4 2 14c0 9 12 21 12 21S26 23 26 14C26 6.4 20.6 1 14 1z'/><circle cx='14' cy='14' r='5.5' fill='white' opacity='0.85'/></svg>`;
+}
+
+function pinSvgSelected(color: string) {
+  const c = color.replace('#', '%23');
+  return `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='36' height='46' viewBox='0 0 28 36'><path fill='${c}' stroke='white' stroke-width='2.5' d='M14 1C7.4 1 2 6.4 2 14c0 9 12 21 12 21S26 23 26 14C26 6.4 20.6 1 14 1z'/><circle cx='14' cy='14' r='6' fill='white'/></svg>`;
 }
 
 type EventCoord = { id: number; lat: number; lng: number; color: string; title: string; location: string; address: string; emoji: string };
@@ -121,10 +125,17 @@ function CampusMap({
         </div>
         <div className="flex flex-wrap gap-2 justify-center mt-1">
           {events.map(ev => (
-            <div key={ev.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs"
-              style={{ background: `${ev.color}15`, color: ev.color, border: `1px solid ${ev.color}30` }}>
+            <button
+              key={ev.id}
+              onClick={() => onSelect?.(ev.id === selectedId ? null : ev.id)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-all hover:opacity-80"
+              style={{
+                background: selectedId === ev.id ? ev.color : `${ev.color}15`,
+                color: selectedId === ev.id ? 'white' : ev.color,
+                border: `1px solid ${ev.color}30`,
+              }}>
               {ev.emoji} {ev.location}
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -149,130 +160,252 @@ function CampusMap({
       onClick={pickMode && onPick ? (e: any) => { if (e.latLng) onPick({ lat: e.latLng.lat(), lng: e.latLng.lng() }); } : undefined}
     >
       {events.map(ev => (
-        <Marker key={ev.id} position={{ lat: ev.lat, lng: ev.lng }} icon={pinSvg(ev.color)} onClick={() => onSelect?.(ev.id)} />
+        <Marker
+          key={ev.id}
+          position={{ lat: ev.lat, lng: ev.lng }}
+          icon={selectedId === ev.id ? pinSvgSelected(ev.color) : pinSvg(ev.color)}
+          zIndex={selectedId === ev.id ? 10 : 1}
+          onClick={() => onSelect?.(ev.id === selectedId ? null : ev.id)}
+        />
       ))}
-      {selectedEvent && (
-        <InfoWindow
-          position={{ lat: selectedEvent.lat, lng: selectedEvent.lng }}
-          onCloseClick={() => onSelect?.(null)}
-          options={{ pixelOffset: new (window as any).google.maps.Size(0, -32) } as any}
-        >
-          <div style={{ fontFamily: 'Inter,sans-serif', padding: '2px 4px', maxWidth: 190 }}>
-            <p style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: 2 }}>{selectedEvent.emoji} {selectedEvent.title}</p>
-            <p style={{ fontSize: '0.75rem', color: '#555', marginBottom: 1 }}>{selectedEvent.location}</p>
-            <p style={{ fontSize: '0.7rem', color: '#888' }}>{selectedEvent.address}</p>
-          </div>
-        </InfoWindow>
-      )}
-      {pickMode && pickedPos && (
-        <Marker position={pickedPos} />
-      )}
+      {pickMode && pickedPos && <Marker position={pickedPos} />}
     </GoogleMap>
   );
 }
 
-function EventCard({ event, onEnroll, onSave, onViewMap }: { event: typeof EVENTOS[0], onEnroll: (id: number) => void, onSave: (id: number) => void, onViewMap: (id: number) => void }) {
+function EventSummaryCard({ event, onMore, onEnroll, onClose }: {
+  event: typeof EVENTOS[0];
+  onMore: () => void;
+  onEnroll: (id: number) => void;
+  onClose: () => void;
+}) {
   const pct = Math.round((event.enrolled / event.capacity) * 100);
   const full = pct >= 100;
 
   return (
     <motion.div
-      whileHover={{ y: -4 }}
-      transition={{ type: 'spring', stiffness: 300 }}
-      className="rounded-2xl border overflow-hidden"
-      style={{ background: 'var(--p-card)', borderColor: `${event.color}25` }}
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 8 }}
+      className="rounded-2xl border"
+      style={{ background: 'var(--p-card)', borderColor: `${event.color}35`, overflow: 'hidden' }}
     >
-      {/* Top accent */}
-      <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${event.color}, ${event.color}60)` }} />
-
-      <div className="p-5">
+      <div className="h-1" style={{ background: `linear-gradient(90deg, ${event.color}, ${event.color}40)` }} />
+      <div className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
               style={{ background: `${event.color}18` }}>
               {event.emoji}
             </div>
             <div>
-              <div className="flex items-center gap-2 mb-0.5">
-                <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--p-text)' }}>{event.title}</span>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <p style={{ fontWeight: 700, fontSize: '0.97rem', color: 'var(--p-text)' }}>{event.title}</p>
                 {event.type === 'private'
-                  ? <Lock size={12} style={{ color: 'var(--p-muted)' }} />
-                  : <Globe size={12} style={{ color: '#7FE7C4' }} />}
+                  ? <Lock size={11} style={{ color: 'var(--p-muted)' }} />
+                  : <Globe size={11} style={{ color: '#7FE7C4' }} />}
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-2 py-0.5 rounded-full text-xs"
                   style={{ background: `${categoryColor[event.category] || '#6C63FF'}20`, color: categoryColor[event.category] || '#6C63FF' }}>
                   {event.category}
                 </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--p-muted)' }}>por {event.organizer}</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--p-muted)' }}>por {event.organizer}</span>
               </div>
             </div>
           </div>
-          <button onClick={() => onSave(event.id)} className="transition-all hover:scale-110">
-            <Bookmark size={18} fill={event.saved ? '#7FE7C4' : 'none'} style={{ color: event.saved ? '#7FE7C4' : 'var(--p-muted)' }} />
+          <button onClick={onClose} className="hover:opacity-60 transition-all ml-2 flex-shrink-0">
+            <X size={16} style={{ color: 'var(--p-muted)' }} />
           </button>
         </div>
 
-        <p style={{ fontSize: '0.85rem', color: 'var(--p-sub)', lineHeight: 1.6 }} className="mb-4">{event.description}</p>
-
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          <div className="flex items-center gap-2">
-            <Calendar size={13} style={{ color: event.color }} />
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-3">
+          <div className="flex items-center gap-1.5">
+            <Calendar size={12} style={{ color: event.color }} />
             <span style={{ fontSize: '0.78rem', color: 'var(--p-sub)' }}>
-              {new Date(event.date).toLocaleDateString('es-CO', { weekday: 'short', month: 'short', day: 'numeric' })}
+              {new Date(event.date).toLocaleDateString('es-CO', { weekday: 'short', month: 'short', day: 'numeric' })} · {event.time}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <Clock size={13} style={{ color: event.color }} />
-            <span style={{ fontSize: '0.78rem', color: 'var(--p-sub)' }}>{event.time}</span>
+          <div className="flex items-center gap-1.5">
+            <MapPin size={12} style={{ color: event.color }} />
+            <span style={{ fontSize: '0.78rem', color: 'var(--p-sub)' }}>{event.location}</span>
           </div>
-          <button onClick={() => onViewMap(event.id)} className="flex items-center gap-2 hover:opacity-70 transition-all text-left">
-            <MapPin size={13} style={{ color: event.color }} />
-            <span style={{ fontSize: '0.78rem', color: 'var(--p-sub)', textDecoration: 'underline', textDecorationStyle: 'dotted' }}>{event.location}</span>
-          </button>
-          <div className="flex items-center gap-2">
-            <Users size={13} style={{ color: event.color }} />
-            <span style={{ fontSize: '0.78rem', color: 'var(--p-sub)' }}>{event.enrolled}/{event.capacity}</span>
+          <div className="flex items-center gap-1.5">
+            <Users size={12} style={{ color: full ? '#FF4D6A' : event.color }} />
+            <span style={{ fontSize: '0.78rem', color: full ? '#FF4D6A' : 'var(--p-sub)' }}>
+              {full ? 'Sin cupos' : `${event.capacity - event.enrolled} cupos disponibles`}
+            </span>
           </div>
         </div>
 
-        <div className="mb-3">
-          <div className="flex justify-between mb-1">
-            <span style={{ fontSize: '0.7rem', color: 'var(--p-muted)' }}>Cupos</span>
-            <span style={{ fontSize: '0.7rem', color: full ? '#FF4D6A' : event.color, fontWeight: 600 }}>
-              {full ? 'Lleno' : `${event.capacity - event.enrolled} disponibles`}
-            </span>
-          </div>
-          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--p-divider)' }}>
-            <div className="h-full rounded-full transition-all"
-              style={{ width: `${Math.min(pct, 100)}%`, background: full ? '#FF4D6A' : `linear-gradient(90deg, ${event.color}, ${event.color}90)` }} />
-          </div>
-        </div>
-
-        <div className="flex gap-2 mb-3">
+        <div className="flex gap-1.5 mb-4 flex-wrap">
           {event.tags.map(tag => (
-            <span key={tag} className="px-2 py-0.5 rounded-full" style={{ background: 'rgba(108,99,255,0.1)', color: 'var(--p-muted)', fontSize: '0.7rem' }}>
+            <span key={tag} className="px-2 py-0.5 rounded-full"
+              style={{ background: `${event.color}12`, color: event.color, fontSize: '0.7rem', border: `1px solid ${event.color}25` }}>
               #{tag}
             </span>
           ))}
         </div>
 
-        <button
-          onClick={() => onEnroll(event.id)}
-          disabled={full && !event.enrolled_me}
-          className="w-full py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{
-            background: event.enrolled_me
-              ? 'rgba(127,231,196,0.15)'
-              : full ? 'rgba(255,77,106,0.1)' : `linear-gradient(135deg, ${event.color}, ${event.color}CC)`,
-            color: event.enrolled_me ? '#7FE7C4' : full ? '#FF4D6A' : 'white',
-            border: event.enrolled_me ? '1px solid rgba(127,231,196,0.3)' : 'none',
-          }}
-        >
-          {event.enrolled_me ? '✓ Inscrito — Cancelar' : full ? 'Sin cupos disponibles' : '+ Inscribirse'}
-        </button>
+        <div className="flex gap-2">
+          <button onClick={onMore}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all hover:opacity-80"
+            style={{ borderColor: `${event.color}40`, color: event.color, background: `${event.color}08` }}>
+            Ver más <ChevronRight size={14} />
+          </button>
+          <button
+            onClick={() => onEnroll(event.id)}
+            disabled={full && !event.enrolled_me}
+            className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              background: event.enrolled_me
+                ? 'rgba(127,231,196,0.15)'
+                : full ? 'rgba(255,77,106,0.1)' : `linear-gradient(135deg, ${event.color}, ${event.color}CC)`,
+              color: event.enrolled_me ? '#7FE7C4' : full ? '#FF4D6A' : 'white',
+              border: event.enrolled_me ? '1px solid rgba(127,231,196,0.3)' : 'none',
+            }}>
+            {event.enrolled_me ? '✓ Inscrito — Cancelar' : full ? 'Sin cupos' : '+ Inscribirse'}
+          </button>
+        </div>
       </div>
     </motion.div>
+  );
+}
+
+function EventDetailModal({ event, onClose, onEnroll, onSave }: {
+  event: typeof EVENTOS[0];
+  onClose: () => void;
+  onEnroll: (id: number) => void;
+  onSave: (id: number) => void;
+}) {
+  const t = useTheme();
+  const pct = Math.round((event.enrolled / event.capacity) * 100);
+  const full = pct >= 100;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.75)' }}
+      onClick={onClose}>
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="rounded-2xl border overflow-hidden w-full max-w-lg"
+        style={{ background: t.cardBg, borderColor: `${event.color}35`, maxHeight: '88vh', overflowY: 'auto' }}
+        onClick={e => e.stopPropagation()}>
+
+        <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${event.color}, ${event.color}60)` }} />
+
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl"
+                style={{ background: `${event.color}18` }}>
+                {event.emoji}
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span style={{ fontWeight: 800, fontSize: '1.1rem', color: t.text }}>{event.title}</span>
+                  {event.type === 'private'
+                    ? <Lock size={13} style={{ color: t.textMuted }} />
+                    : <Globe size={13} style={{ color: '#7FE7C4' }} />}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full text-xs"
+                    style={{ background: `${categoryColor[event.category] || '#6C63FF'}20`, color: categoryColor[event.category] || '#6C63FF' }}>
+                    {event.category}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: t.textMuted }}>por {event.organizer}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button onClick={() => onSave(event.id)} className="hover:scale-110 transition-all">
+                <Bookmark size={18} fill={event.saved ? '#7FE7C4' : 'none'}
+                  style={{ color: event.saved ? '#7FE7C4' : t.textMuted }} />
+              </button>
+              <button onClick={onClose} className="hover:opacity-60 transition-all">
+                <X size={18} style={{ color: t.textMuted }} />
+              </button>
+            </div>
+          </div>
+
+          <p style={{ fontSize: '0.87rem', color: t.textSub, lineHeight: 1.65, marginBottom: '20px' }}>
+            {event.description}
+          </p>
+
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            <div className="flex items-center gap-2.5 p-3 rounded-xl" style={{ background: t.inputBg }}>
+              <Calendar size={15} style={{ color: event.color }} />
+              <div>
+                <p style={{ fontSize: '0.65rem', color: t.textMuted, marginBottom: '1px' }}>Fecha</p>
+                <p style={{ fontSize: '0.82rem', color: t.text, fontWeight: 600 }}>
+                  {new Date(event.date).toLocaleDateString('es-CO', { weekday: 'short', month: 'short', day: 'numeric' })}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5 p-3 rounded-xl" style={{ background: t.inputBg }}>
+              <Clock size={15} style={{ color: event.color }} />
+              <div>
+                <p style={{ fontSize: '0.65rem', color: t.textMuted, marginBottom: '1px' }}>Hora</p>
+                <p style={{ fontSize: '0.82rem', color: t.text, fontWeight: 600 }}>{event.time}</p>
+              </div>
+            </div>
+            <div className="col-span-2 flex items-start gap-2.5 p-3 rounded-xl" style={{ background: t.inputBg }}>
+              <MapPin size={15} style={{ color: event.color, marginTop: 2 }} />
+              <div>
+                <p style={{ fontSize: '0.65rem', color: t.textMuted, marginBottom: '1px' }}>Ubicación</p>
+                <p style={{ fontSize: '0.82rem', color: t.text, fontWeight: 600 }}>{event.location}</p>
+                <p style={{ fontSize: '0.72rem', color: t.textMuted }}>{event.address}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Users size={14} style={{ color: event.color }} />
+                <span style={{ fontSize: '0.82rem', color: t.text, fontWeight: 600 }}>Cupos</span>
+              </div>
+              <span style={{ fontSize: '0.82rem', color: full ? '#FF4D6A' : event.color, fontWeight: 700 }}>
+                {full ? 'Lleno' : `${event.capacity - event.enrolled} disponibles`}
+              </span>
+            </div>
+            <div className="flex justify-between mb-1.5">
+              <span style={{ fontSize: '0.7rem', color: t.textMuted }}>{event.enrolled} inscritos</span>
+              <span style={{ fontSize: '0.7rem', color: t.textMuted }}>{event.capacity} total</span>
+            </div>
+            <div className="h-2 rounded-full overflow-hidden" style={{ background: t.inputBg }}>
+              <div className="h-full rounded-full transition-all"
+                style={{ width: `${Math.min(pct, 100)}%`, background: full ? '#FF4D6A' : `linear-gradient(90deg, ${event.color}, ${event.color}80)` }} />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 mb-5">
+            {event.tags.map(tag => (
+              <span key={tag} className="px-2.5 py-1 rounded-full"
+                style={{ background: `${event.color}12`, color: event.color, fontSize: '0.78rem', border: `1px solid ${event.color}25` }}>
+                #{tag}
+              </span>
+            ))}
+          </div>
+
+          <button
+            onClick={() => onEnroll(event.id)}
+            disabled={full && !event.enrolled_me}
+            className="w-full py-3.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              background: event.enrolled_me
+                ? 'rgba(127,231,196,0.15)'
+                : full ? 'rgba(255,77,106,0.1)' : `linear-gradient(135deg, ${event.color}, ${event.color}CC)`,
+              color: event.enrolled_me ? '#7FE7C4' : full ? '#FF4D6A' : 'white',
+              border: event.enrolled_me ? '1px solid rgba(127,231,196,0.3)' : 'none',
+            }}>
+            {event.enrolled_me ? '✓ Inscrito — Cancelar inscripción' : full ? 'Sin cupos disponibles' : '+ Inscribirse al evento'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
   );
 }
 
@@ -281,9 +414,8 @@ export function EventosView() {
   const [category, setCategory] = useState('Todos');
   const [eventos, setEventos] = useState(EVENTOS);
   const [showCreate, setShowCreate] = useState(false);
-  const [mapSelectedId, setMapSelectedId] = useState<number | null>(null);
-  const [viewMapEvent, setViewMapEvent] = useState<number | null>(null);
-  const [showCampusMap, setShowCampusMap] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [detailEventId, setDetailEventId] = useState<number | null>(null);
   const [pickedLocation, setPickedLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const toggleEnroll = (id: number) => {
@@ -295,11 +427,14 @@ export function EventosView() {
   };
 
   const filtered = category === 'Todos' ? eventos : eventos.filter(e => e.category === category);
+  const selectedEvent = selectedEventId != null ? filtered.find(e => e.id === selectedEventId) ?? null : null;
+  const detailEvent = detailEventId != null ? eventos.find(e => e.id === detailEventId) ?? null : null;
 
   return (
     <div className="h-full overflow-y-auto pb-6">
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-5">
         <div>
           <h2 style={{ fontWeight: 700, fontSize: '1.3rem', color: 'var(--p-text)' }}>Eventos ECI</h2>
           <p style={{ fontSize: '0.85rem', color: t.textMuted }}>Descubre y únete a lo que pasa en tu campus</p>
@@ -307,48 +442,16 @@ export function EventosView() {
         <button onClick={() => setShowCreate(true)}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-90"
           style={{ background: '#6C63FF', color: 'white' }}>
-          <Plus size={16} />
-          Crear evento
+          <Plus size={16} /> Crear evento
         </button>
       </div>
 
-      {/* Ver mapa button */}
-      <button onClick={() => setShowCampusMap(true)}
-        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-80 mb-6 w-full justify-center border"
-        style={{ background: 'rgba(108,99,255,0.08)', borderColor: 'rgba(108,99,255,0.25)', color: '#6C63FF' }}>
-        <MapPin size={15} />
-        Ver mapa del campus · eventos cercanos a ti
-      </button>
-
-      {/* Campus map modal */}
-      {showCampusMap && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.75)' }}
-          onClick={() => { setShowCampusMap(false); setMapSelectedId(null); }}>
-          <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-            className="rounded-2xl border overflow-hidden"
-            style={{ background: t.cardBg, borderColor: 'rgba(108,99,255,0.3)', width: '96%', maxWidth: 750 }}
-            onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: `1px solid ${t.cardBorder}` }}>
-              <div className="flex items-center gap-2">
-                <MapPin size={15} style={{ color: '#6C63FF' }} />
-                <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--p-text)' }}>Mapa del Campus ECI</span>
-                <span style={{ fontSize: '0.72rem', color: 'var(--p-muted)' }}>· toca un pin para ver el evento</span>
-              </div>
-              <button onClick={() => { setShowCampusMap(false); setMapSelectedId(null); }} className="hover:opacity-60 transition-all">
-                <X size={18} style={{ color: 'var(--p-muted)' }} />
-              </button>
-            </div>
-            <CampusMap events={eventos} height={520} selectedId={mapSelectedId} onSelect={setMapSelectedId} />
-          </motion.div>
-        </div>
-      )}
-
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-5">
-        <Filter size={15} style={{ color: 'var(--p-muted)' }} />
-        <div className="flex gap-2 overflow-x-auto">
+      <div className="flex items-center gap-3 mb-4">
+        <Filter size={15} style={{ color: 'var(--p-muted)', flexShrink: 0 }} />
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
           {CATEGORIES.map(cat => (
-            <button key={cat} onClick={() => setCategory(cat)}
+            <button key={cat} onClick={() => { setCategory(cat); setSelectedEventId(null); }}
               className="whitespace-nowrap px-4 py-1.5 rounded-full text-sm transition-all"
               style={{
                 background: category === cat ? '#6C63FF' : 'var(--p-hover)',
@@ -361,41 +464,54 @@ export function EventosView() {
         </div>
       </div>
 
-      {/* Events grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {filtered.map(evento => (
-          <EventCard key={evento.id} event={evento} onEnroll={toggleEnroll} onSave={toggleSave} onViewMap={setViewMapEvent} />
-        ))}
+      {/* Map - main content */}
+      <div className="rounded-2xl overflow-hidden border mb-4"
+        style={{ borderColor: 'rgba(108,99,255,0.2)', boxShadow: '0 4px 24px rgba(108,99,255,0.08)' }}>
+        <CampusMap
+          events={filtered}
+          height={480}
+          selectedId={selectedEventId}
+          onSelect={(id) => { setSelectedEventId(id); setDetailEventId(null); }}
+        />
       </div>
 
-      {/* Event location modal */}
-      {viewMapEvent !== null && (() => {
-        const ev = eventos.find(e => e.id === viewMapEvent);
-        if (!ev) return null;
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.75)' }}
-            onClick={() => setViewMapEvent(null)}>
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-              className="rounded-2xl border overflow-hidden"
-              style={{ background: t.cardBg, borderColor: `${ev.color}40`, width: '92%', maxWidth: 520 }}
-              onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: `1px solid ${t.cardBorder}` }}>
-                <div className="flex items-center gap-2">
-                  <span style={{ fontSize: '1.1rem' }}>{ev.emoji}</span>
-                  <div>
-                    <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--p-text)' }}>{ev.title}</p>
-                    <p style={{ fontSize: '0.72rem', color: 'var(--p-muted)' }}>{ev.location} · {ev.address}</p>
-                  </div>
-                </div>
-                <button onClick={() => setViewMapEvent(null)} className="hover:opacity-60 transition-all">
-                  <X size={18} style={{ color: 'var(--p-muted)' }} />
-                </button>
-              </div>
-              <CampusMap events={[ev]} height={380} selectedId={ev.id} onSelect={() => {}} />
-            </motion.div>
-          </div>
-        );
-      })()}
+      {/* Hint / summary card */}
+      <AnimatePresence mode="wait">
+        {!selectedEvent && (
+          <motion.div
+            key="hint"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex items-center justify-center gap-2 py-3"
+            style={{ color: 'var(--p-muted)', fontSize: '0.82rem' }}>
+            <MapPin size={13} />
+            <span>{filtered.length} evento{filtered.length !== 1 ? 's' : ''} en el mapa · toca un pin para ver el detalle</span>
+          </motion.div>
+        )}
+
+        {selectedEvent && (
+          <EventSummaryCard
+            key={`summary-${selectedEvent.id}`}
+            event={selectedEvent}
+            onMore={() => setDetailEventId(selectedEvent.id)}
+            onEnroll={toggleEnroll}
+            onClose={() => setSelectedEventId(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Event detail modal */}
+      <AnimatePresence>
+        {detailEvent && (
+          <EventDetailModal
+            event={detailEvent}
+            onClose={() => setDetailEventId(null)}
+            onEnroll={toggleEnroll}
+            onSave={toggleSave}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Create event modal */}
       {showCreate && (
@@ -404,7 +520,7 @@ export function EventosView() {
           <div className="rounded-2xl p-6 w-[480px] border max-h-[80vh] overflow-y-auto"
             style={{ background: t.cardBg, borderColor: 'rgba(108,99,255,0.3)' }}
             onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '20px' }}>Crear Evento</h3>
+            <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '20px', color: t.text }}>Crear Evento</h3>
             <div className="space-y-4">
               <input placeholder="Título del evento..." className="w-full rounded-xl px-4 py-3 text-sm outline-none"
                 style={{ background: t.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text }} />
@@ -420,7 +536,7 @@ export function EventosView() {
                 style={{ background: t.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text }} />
               <div>
                 <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>
-                  📍 Punto inicial en el campus — toca el mapa para ubicar el evento
+                  📍 Toca el mapa para ubicar el evento
                 </p>
                 <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'rgba(108,99,255,0.2)' }}>
                   <CampusMap
@@ -433,7 +549,7 @@ export function EventosView() {
                 </div>
                 {pickedLocation && (
                   <p style={{ fontSize: '0.7rem', color: '#6C63FF', marginTop: 4 }}>
-                    ✓ Ubicación seleccionada — ({pickedLocation.lat.toFixed(5)}, {pickedLocation.lng.toFixed(5)})
+                    ✓ Ubicación seleccionada
                     <button onClick={() => setPickedLocation(null)} className="ml-2 hover:opacity-70" style={{ color: '#FF6B9D' }}>✕ Quitar</button>
                   </p>
                 )}
