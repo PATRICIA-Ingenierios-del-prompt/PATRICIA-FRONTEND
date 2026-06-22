@@ -143,7 +143,7 @@ export function AnimatedBackground({ light = false }: { light?: boolean }) {
     <canvas
       ref={canvasRef}
       className="absolute inset-0 w-full h-full pointer-events-none"
-      style={{ zIndex: 0 }}
+      style={{ zIndex: -1 }}
     />
   );
 }
