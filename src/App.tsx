@@ -122,6 +122,7 @@ function CampusView() {
 }
 
 import monoPATRICIAImg from './assets/monoPATRICIA.png';
+import monoSOCIALImg   from './assets/monoSINFONDO.png';
 import monoCODERImg    from './assets/monoCODER.png';
 import monoDJImg       from './assets/monoDJ.png';
 import monoCIENTImg    from './assets/monoCIENTIFICO.png';
@@ -137,19 +138,21 @@ import monoCOMIDAImg   from './assets/monoCOMIDA.png';
 
 function AlbumView() {
   const t = useTheme();
+  const [showMonasGuide, setShowMonasGuide] = useState(false);
   const ALL_MONAS = [
-    { id:  1, name: 'Mona Coder',      rarity: 'Épica',      xp: 500,  color: '#6C63FF', img: monoCODERImg,   unlocked: true,  how: 'Completa 5 parches de estudio' },
-    { id:  2, name: 'Mona DJ',         rarity: 'Épica',      xp: 500,  color: '#5BC8FF', img: monoDJImg,      unlocked: true,  how: 'Organiza un evento musical' },
-    { id:  3, name: 'Mona Científica', rarity: 'Rara',       xp: 300,  color: '#A78BFA', img: monoCIENTImg,   unlocked: true,  how: 'Publica 10 posts académicos' },
-    { id:  4, name: 'Mona Cultura',    rarity: 'Rara',       xp: 300,  color: '#FF9BAE', img: monoCULTImg,    unlocked: false, how: 'Asiste a 5 eventos culturales' },
-    { id:  5, name: 'Mona Tranquila',  rarity: 'Común',      xp: 100,  color: '#7FE7C4', img: monoTRANQImg,   unlocked: true,  how: 'Registra 7 días de bienestar' },
-    { id:  6, name: 'Mona Respira',    rarity: 'Común',      xp: 100,  color: '#00D9FF', img: monoRESPIRAImg, unlocked: false, how: 'Completa 10 sesiones de respiración' },
-    { id:  7, name: 'Mona Música',     rarity: 'Rara',       xp: 300,  color: '#FF6B9D', img: monoMUSICAImg,  unlocked: true,  how: 'Asiste a 3 conciertos en campus' },
-    { id:  8, name: 'Mona Gamer',      rarity: 'Épica',      xp: 500,  color: '#FFB347', img: monoJUEGOSImg,  unlocked: false, how: 'Gana 5 torneos de Parqués' },
-    { id:  9, name: 'Mona Estudiosa',  rarity: 'Común',      xp: 100,  color: '#6C63FF', img: monoESTUDIOImg, unlocked: true,  how: 'Crea tu primer parche de estudio' },
-    { id: 10, name: 'Mona Arte',       rarity: 'Épica',      xp: 500,  color: '#FF9BAE', img: monoARTEImg,    unlocked: false, how: 'Comparte 10 fotos artísticas' },
-    { id: 11, name: 'Mona Aire Libre', rarity: 'Legendaria', xp: 1000, color: '#7FE7C4', img: monoAIREImg,    unlocked: false, how: 'Consigue 20 matches activos' },
-    { id: 12, name: 'Mona Foodie',     rarity: 'Legendaria', xp: 1000, color: '#FFB347', img: monoCOMIDAImg,  unlocked: false, how: 'Visita todas las cafeterías ECI' },
+    { id:  1, name: 'Mona Coder',      rarity: 'Épica',      xp: 500,  color: '#6C63FF', img: monoCODERImg,   unlocked: true,  how: 'Únete a un parche de estudio con programación' },
+    { id:  2, name: 'Mona DJ',         rarity: 'Épica',      xp: 500,  color: '#5BC8FF', img: monoDJImg,      unlocked: true,  how: 'Crea o únete a un parche o evento de música' },
+    { id:  3, name: 'Mona Científica', rarity: 'Rara',       xp: 300,  color: '#A78BFA', img: monoCIENTImg,   unlocked: true,  how: 'Crea o únete a un parche o evento de física o química' },
+    { id:  4, name: 'Mona Cultura',    rarity: 'Rara',       xp: 300,  color: '#FF9BAE', img: monoCULTImg,    unlocked: false, how: 'Crea o únete a un parche o evento de cultura' },
+    { id:  5, name: 'Mona Tranquila',  rarity: 'Común',      xp: 100,  color: '#7FE7C4', img: monoTRANQImg,   unlocked: true,  how: 'Únete o crea un parche de relajación y realiza los 3 ejercicios de bienestar' },
+    { id:  6, name: 'Mona Respira',    rarity: 'Común',      xp: 100,  color: '#00D9FF', img: monoRESPIRAImg, unlocked: false, how: 'Realiza los 3 ejercicios de relajación en Bienestar' },
+    { id:  7, name: 'Mona Música',     rarity: 'Rara',       xp: 300,  color: '#FF6B9D', img: monoMUSICAImg,  unlocked: true,  how: 'Crea o únete a un parche o evento de música' },
+    { id:  8, name: 'Mona Gamer',      rarity: 'Épica',      xp: 500,  color: '#FFB347', img: monoJUEGOSImg,  unlocked: false, how: 'Gana 3 rondas de Parqués y únete o crea un parche de juegos' },
+    { id:  9, name: 'Mona Estudiosa',  rarity: 'Común',      xp: 100,  color: '#6C63FF', img: monoESTUDIOImg, unlocked: true,  how: 'Crea o únete a 3 parches de estudio diferentes' },
+    { id: 10, name: 'Mona Arte',       rarity: 'Épica',      xp: 500,  color: '#FF9BAE', img: monoARTEImg,    unlocked: false, how: 'Crea o únete a un evento o parche de arte' },
+    { id: 11, name: 'Mona Aire Libre', rarity: 'Legendaria', xp: 1000, color: '#7FE7C4', img: monoAIREImg,    unlocked: false, how: 'Únete a un parche de recreación o deporte' },
+    { id: 12, name: 'Mona Foodie',     rarity: 'Legendaria', xp: 1000, color: '#FFB347', img: monoCOMIDAImg,  unlocked: false, how: 'Crea o únete a un parche de comida' },
+    { id: 13, name: 'Mona Social',     rarity: 'Épica',      xp: 500,  color: '#FF6B9D', img: monoSOCIALImg,  unlocked: false, how: 'Ten más de 10 matches en la app' },
   ];
   const rarityColor: Record<string, string> = { 'Común': t.textMuted, 'Rara': '#7FE7C4', 'Épica': '#6C63FF', 'Legendaria': '#FFB347' };
   const rarityBorder: Record<string, string> = { 'Común': '#8B85B025', 'Rara': '#7FE7C435', 'Épica': '#6C63FF45', 'Legendaria': '#FFB34760' };
@@ -182,12 +185,17 @@ function AlbumView() {
 
           {/* Explanation */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
               <h2 style={{ fontWeight: 800, fontSize: '1.2rem', color: t.text }}>Álbum de Monas 🎴</h2>
               <span className="px-3 py-1 rounded-full text-xs font-bold"
                 style={{ background: 'rgba(108,99,255,0.15)', color: '#6C63FF', border: '1px solid rgba(108,99,255,0.3)' }}>
                 {unlocked}/{ALL_MONAS.length} coleccionadas
               </span>
+              <button onClick={() => setShowMonasGuide(true)}
+                className="ml-auto px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-85 flex items-center gap-1.5"
+                style={{ background: 'rgba(127,231,196,0.15)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.35)' }}>
+                🗺️ ¿Cómo se ganan?
+              </button>
             </div>
             <p style={{ fontSize: '0.85rem', color: t.textSub, lineHeight: 1.7, marginBottom: '12px' }}>
               Las <strong style={{ color: '#6C63FF' }}>Monas</strong> son personajes coleccionables únicos que desbloqueas participando activamente en la comunidad ECI. Cada una tiene una <strong style={{ color: '#7FE7C4' }}>misión específica</strong> que debes completar y otorga <strong style={{ color: '#FFB347' }}>XP</strong> al conseguirla.
@@ -283,6 +291,88 @@ function AlbumView() {
           </motion.div>
         ))}
       </div>
+
+      {/* ── Monas Guide Popup ── */}
+      <AnimatePresence>
+        {showMonasGuide && (
+          <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+            style={{ background:'rgba(0,0,0,0.8)' }}
+            onClick={() => setShowMonasGuide(false)}>
+            <motion.div initial={{ scale:0.92, y:20 }} animate={{ scale:1, y:0 }} exit={{ scale:0.92 }}
+              className="rounded-3xl w-full max-w-3xl overflow-hidden flex flex-col"
+              style={{ background: t.darkMode ? '#1A1829' : '#F4F2FF', border:'1px solid rgba(108,99,255,0.3)', maxHeight:'85vh' }}
+              onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0"
+                style={{ borderColor:'rgba(108,99,255,0.2)', background:'rgba(108,99,255,0.06)' }}>
+                <div>
+                  <h3 style={{ fontWeight:800, fontSize:'1.15rem', color: t.text }}>🗺️ Guía de Monas</h3>
+                  <p style={{ fontSize:'0.78rem', color: t.textMuted, marginTop:'2px' }}>Cómo desbloquear cada personaje</p>
+                </div>
+                <button onClick={() => setShowMonasGuide(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center hover:opacity-70 transition-all"
+                  style={{ background:'rgba(108,99,255,0.15)' }}>
+                  <span style={{ fontSize:'1rem', color:'var(--p-muted)' }}>✕</span>
+                </button>
+              </div>
+              {/* Rarity legend */}
+              <div className="flex gap-3 px-6 py-3 border-b flex-shrink-0 flex-wrap"
+                style={{ borderColor:'rgba(108,99,255,0.1)', background: t.darkMode ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.4)' }}>
+                {[
+                  { rarity:'Común',      color:'#8B85B0', xp:100,  emoji:'⚪' },
+                  { rarity:'Rara',       color:'#7FE7C4', xp:300,  emoji:'🟢' },
+                  { rarity:'Épica',      color:'#6C63FF', xp:500,  emoji:'🔵' },
+                  { rarity:'Legendaria', color:'#FFB347', xp:1000, emoji:'🟡' },
+                ].map(r => (
+                  <div key={r.rarity} className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl"
+                    style={{ background:`${r.color}15`, border:`1px solid ${r.color}30` }}>
+                    <span style={{ fontSize:'0.75rem' }}>{r.emoji}</span>
+                    <span style={{ fontSize:'0.72rem', fontWeight:700, color:r.color }}>{r.rarity}</span>
+                    <span className="px-1.5 py-0.5 rounded-full text-xs font-bold"
+                      style={{ background:'rgba(255,179,71,0.15)', color:'#FFB347', fontSize:'0.62rem' }}>
+                      +{r.xp} XP
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {/* Monas list */}
+              <div className="overflow-y-auto flex-1 p-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {ALL_MONAS.map(mona => (
+                    <div key={mona.id} className="flex items-center gap-3 rounded-2xl p-3 border transition-all"
+                      style={{ background: mona.unlocked ? `${mona.color}10` : (t.darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'), borderColor: mona.unlocked ? `${mona.color}35` : 'rgba(108,99,255,0.12)' }}>
+                      <div className={`flex-shrink-0 ${mona.unlocked ? '' : 'grayscale opacity-40'}`}
+                        style={{ width:52, height:52 }}>
+                        <ImageWithFallback src={mona.img} alt={mona.name}
+                          className="w-full h-full object-contain"
+                          style={{ filter: mona.unlocked ? `drop-shadow(0 2px 8px ${mona.color}50)` : 'none' }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span style={{ fontWeight:700, fontSize:'0.85rem', color: mona.unlocked ? mona.color : t.textMuted }}>{mona.name}</span>
+                          {mona.unlocked && <span style={{ fontSize:'0.7rem' }}>✅</span>}
+                        </div>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="px-1.5 py-0.5 rounded-full"
+                            style={{ fontSize:'0.58rem', color:rarityColor[mona.rarity], background:`${rarityColor[mona.rarity]}18`, fontWeight:600 }}>
+                            {mona.rarity}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded-full"
+                            style={{ fontSize:'0.58rem', color:'#FFB347', background:'rgba(255,179,71,0.12)', fontWeight:700 }}>
+                            +{mona.xp} XP
+                          </span>
+                        </div>
+                        <p style={{ fontSize:'0.7rem', color: t.textSub, lineHeight:1.4 }}>{mona.how}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -18,13 +18,33 @@ import monoPatriciaImg from '../assets/monoPATRICIA.png';
 type InteriorTab = 'chat' | 'archivos' | 'lienzo' | 'juegos' | 'voz';
 type GameId = null | 'parques';
 
+const PARCHE_CATEGORIES = [
+  { id:'estudio',    label:'Estudio',    emoji:'📚', color:'#6C63FF',
+    subcategories:[
+      'Programación','Cálculos','Estructuras','Física','Química','Cultura',
+      'Ingeniería Civil','Ingeniería Eléctrica','Ingeniería de Sistemas',
+      'Ingeniería Industrial','Ingeniería Electrónica','Economía',
+      'Administración de Empresas','Matemáticas','Ingeniería Mecánica',
+      'Ingeniería Biomédica','Ingeniería Ambiental','Ingeniería Estadística',
+      'Ingeniería de Inteligencia Artificial','Ingeniería de Ciberseguridad',
+      'Ingeniería en Biotecnología',
+    ] },
+  { id:'musica',     label:'Música',     emoji:'🎵', color:'#FF6B9D', subcategories:[] },
+  { id:'recreacion', label:'Recreación', emoji:'🌿', color:'#7FE7C4', subcategories:[] },
+  { id:'relajacion', label:'Relajación', emoji:'🧘', color:'#A78BFA', subcategories:[] },
+  { id:'juegos',     label:'Juegos',     emoji:'🎮', color:'#5BC8FF', subcategories:[] },
+  { id:'arte',       label:'Arte',       emoji:'🎨', color:'#FF9BAE', subcategories:[] },
+  { id:'comida',     label:'Comida',     emoji:'🍕', color:'#FFB347', subcategories:[] },
+  { id:'deporte',    label:'Deporte',    emoji:'⚽', color:'#4ADE80', subcategories:[] },
+];
+
 const PARCHES_LIST = [
-  { id:1, name:'Cálculo III Survivors', emoji:'📐', color:'#6C63FF', type:'public',  live:7,  unread:3,  desc:'Grupo de estudio para Cálculo' },
-  { id:2, name:'Proyecto IA — Grupo 4', emoji:'🤖', color:'#7FE7C4', type:'private', live:3,  unread:0,  desc:'Equipo de proyecto final' },
-  { id:3, name:'Fútbol Martes ECI',     emoji:'⚽', color:'#FFB347', type:'public',  live:12, unread:7,  desc:'Partidos semanales en campus' },
-  { id:4, name:'Gaming Night 🎮',       emoji:'🎮', color:'#FF6B9D', type:'private', live:5,  unread:0,  desc:'Torneos y diversión' },
-  { id:5, name:'Tesis & Proyectos',     emoji:'🎓', color:'#5BC8FF', type:'public',  live:9,  unread:1,  desc:'Apoyo para proyectos de grado' },
-  { id:6, name:'Club Fotografía',       emoji:'📷', color:'#A78BFA', type:'public',  live:4,  unread:0,  desc:'Salidas fotográficas semanales' },
+  { id:1, name:'Cálculo III Survivors', emoji:'📐', color:'#6C63FF', type:'public',  live:7,  unread:3,  desc:'Grupo de estudio para Cálculo',    category:'estudio',    subcategory:'Cálculos'      },
+  { id:2, name:'Proyecto IA — Grupo 4', emoji:'🤖', color:'#7FE7C4', type:'private', live:3,  unread:0,  desc:'Equipo de proyecto final',          category:'estudio',    subcategory:'Programación'  },
+  { id:3, name:'Fútbol Martes ECI',     emoji:'⚽', color:'#FFB347', type:'public',  live:12, unread:7,  desc:'Partidos semanales en campus',      category:'deporte',    subcategory:''              },
+  { id:4, name:'Gaming Night 🎮',       emoji:'🎮', color:'#FF6B9D', type:'private', live:5,  unread:0,  desc:'Torneos y diversión',               category:'juegos',     subcategory:''              },
+  { id:5, name:'Tesis & Proyectos',     emoji:'🎓', color:'#5BC8FF', type:'public',  live:9,  unread:1,  desc:'Apoyo para proyectos de grado',     category:'estudio',    subcategory:'Ing. Sistemas' },
+  { id:6, name:'Club Fotografía',       emoji:'📷', color:'#A78BFA', type:'public',  live:4,  unread:0,  desc:'Salidas fotográficas semanales',    category:'arte',       subcategory:''              },
 ];
 
 const INIT_MESSAGES = [
@@ -190,6 +210,9 @@ export function ParchesView() {
   const [voiceScreenShare, setVoiceScreenShare] = useState(false);
   const [memberMenuOpen, setMemberMenuOpen] = useState<string|null>(null);
   const [createType, setCreateType] = useState<'public'|'private'>('public');
+  const [createCategory, setCreateCategory] = useState('');
+  const [createSubcategory, setCreateSubcategory] = useState('');
+  const [sidebarCategory, setSidebarCategory] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
@@ -248,11 +271,29 @@ export function ParchesView() {
               </button>
             ))}
           </div>
+          {/* Category filter chips */}
+          <div className="flex gap-1.5 overflow-x-auto mt-2 pb-0.5" style={{ scrollbarWidth:'none' }}>
+            <button onClick={()=>setSidebarCategory('')}
+              className="flex-shrink-0 px-2 py-0.5 rounded-full transition-all"
+              style={{ background: sidebarCategory==='' ? '#6C63FF' : 'var(--p-input)', color: sidebarCategory==='' ? 'white' : 'var(--p-muted)', fontSize:'0.6rem', fontWeight: sidebarCategory==='' ? 700 : 400 }}>
+              Todos
+            </button>
+            {PARCHE_CATEGORIES.map(cat => (
+              <button key={cat.id} onClick={()=>setSidebarCategory(sidebarCategory===cat.id ? '' : cat.id)}
+                className="flex-shrink-0 flex items-center gap-0.5 px-2 py-0.5 rounded-full transition-all"
+                style={{ background: sidebarCategory===cat.id ? cat.color : 'var(--p-input)', color: sidebarCategory===cat.id ? 'white' : 'var(--p-muted)', fontSize:'0.6rem', fontWeight: sidebarCategory===cat.id ? 700 : 400 }}>
+                {cat.emoji} {cat.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* List */}
         <div className="flex-1 overflow-y-auto py-2">
-          {PARCHES_LIST.filter(p => sidebarFilter==='all' || p.type===sidebarFilter).map(parche=>(
+          {PARCHES_LIST.filter(p =>
+            (sidebarFilter==='all' || p.type===sidebarFilter) &&
+            (sidebarCategory==='' || p.category===sidebarCategory)
+          ).map(parche=>(
             <motion.div key={parche.id} onClick={()=>setSelectedParche(parche)}
               whileHover={{ x:2 }}
               className="w-full px-3 py-2.5 flex items-center gap-3 text-left group relative transition-all cursor-pointer"
@@ -279,6 +320,15 @@ export function ParchesView() {
                   {parche.type==='private' ? <Lock size={10} style={{ color:'var(--p-muted)', flexShrink:0 }} /> : <Globe size={10} style={{ color:'#7FE7C4', flexShrink:0 }} />}
                 </div>
                 <p style={{ fontSize:'0.68rem', color:'var(--p-muted)' }}>{parche.live} en vivo</p>
+                {(() => {
+                  const cat = PARCHE_CATEGORIES.find(c=>c.id===parche.category);
+                  return cat ? (
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full mt-0.5"
+                      style={{ fontSize:'0.55rem', background:`${cat.color}22`, color:cat.color, fontWeight:600 }}>
+                      {cat.emoji} {cat.label}{parche.subcategory ? ` · ${parche.subcategory}` : ''}
+                    </span>
+                  ) : null;
+                })()}
               </div>
               {/* Badge */}
               {parche.unread>0 && (
@@ -862,6 +912,37 @@ export function ParchesView() {
                   style={{ background:'var(--p-input)', border:'1px solid rgba(108,99,255,0.2)', color:'var(--p-text)' }} />
                 <textarea placeholder="Descripción..." rows={3} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
                   style={{ background:'var(--p-input)', border:'1px solid rgba(108,99,255,0.2)', color:'var(--p-text)' }} />
+                {/* Category picker */}
+                <div>
+                  <p style={{ fontSize:'0.8rem', fontWeight:600, marginBottom:'8px', color:'var(--p-sub)' }}>
+                    Tipo de parche <span style={{ color:'#FF4D6A' }}>*</span>
+                  </p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {PARCHE_CATEGORIES.map(cat=>(
+                      <button key={cat.id} onClick={()=>{setCreateCategory(cat.id);setCreateSubcategory('');}}
+                        className="flex flex-col items-center gap-1 py-2.5 rounded-xl border transition-all"
+                        style={{ background: createCategory===cat.id ? `${cat.color}20` : 'var(--p-input)', borderColor: createCategory===cat.id ? cat.color : 'rgba(108,99,255,0.15)', color: createCategory===cat.id ? cat.color : 'var(--p-muted)' }}>
+                        <span style={{ fontSize:'1.1rem' }}>{cat.emoji}</span>
+                        <span style={{ fontSize:'0.6rem', fontWeight: createCategory===cat.id ? 700 : 400 }}>{cat.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Subcategory — only for Estudio */}
+                {createCategory==='estudio' && (
+                  <div>
+                    <p style={{ fontSize:'0.78rem', fontWeight:600, marginBottom:'6px', color:'var(--p-sub)' }}>Área de estudio</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {PARCHE_CATEGORIES.find(c=>c.id==='estudio')!.subcategories.map(sub=>(
+                        <button key={sub} onClick={()=>setCreateSubcategory(sub)}
+                          className="px-2.5 py-1 rounded-lg text-xs transition-all border"
+                          style={{ background: createSubcategory===sub ? 'rgba(108,99,255,0.2)' : 'var(--p-input)', borderColor: createSubcategory===sub ? '#6C63FF' : 'rgba(108,99,255,0.15)', color: createSubcategory===sub ? '#6C63FF' : 'var(--p-muted)', fontWeight: createSubcategory===sub ? 700 : 400 }}>
+                          {sub}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="flex gap-3">
                   {[{val:'public',label:'🌍 Público'},{val:'private',label:'🔒 Privado'}].map(opt=>(
                     <button key={opt.val} onClick={()=>setCreateType(opt.val as 'public'|'private')}
