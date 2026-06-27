@@ -3,7 +3,7 @@ import { ImageWithFallback } from '../components/ImageWithFallback';
 import { AnimatedBackground } from '../components/AnimatedBackground';
 import logoNuevoOscuroImg from '../assets/logoNuevoOscuro.png';
 import logoNuevoClaroImg from '../assets/logoNuevoClaro.png';
-import monoImg from '../assets/monoSINFONDO.png';
+import monoImg from '../assets/monoULink.png';
 import { motion } from 'motion/react';
 
 interface LoginViewProps {
@@ -68,13 +68,10 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-px"
             style={{ background: 'linear-gradient(90deg, transparent, rgba(108,99,255,0.4), transparent)' }} />
 
-          {/* Logo + brand name */}
-          <div className="flex flex-col items-center gap-2 mb-6">
+          {/* Logo */}
+          <div className="flex flex-col items-center mb-6">
             <ImageWithFallback src={darkMode ? logoNuevoOscuroImg : logoNuevoClaroImg} alt="U•link" className="object-contain"
-              style={{ height: 80, width: 'auto' }} />
-            <span style={{ fontWeight: 900, fontSize: '1.5rem', letterSpacing: '0.12em', background: 'linear-gradient(135deg,#6C63FF,#7FE7C4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              U•link
-            </span>
+              style={{ height: 104, width: 'auto' }} />
           </div>
 
           {/* Mono mascota */}

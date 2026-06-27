@@ -3,10 +3,12 @@ import { Send, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
 import { ImageWithFallback } from '../components/ImageWithFallback';
-import monoPatriciaImg  from '../assets/monoPATRICIA.png';
-import monoRespiraImg   from '../assets/monoRESPIRA.png';
-import monoTranqImg     from '../assets/monoTRANQUILO.png';
-import monoMusicaImg    from '../assets/monoMUSICA.png';
+import monoPatriciaImg  from '../assets/monoFondoU.png';
+import monoULinkImg     from '../assets/monoULink.png';
+import monoDiarioImg    from '../assets/monoDiario.png';
+import monoRespiraImg   from '../assets/monoRespiraN.png';
+import monoTranqImg     from '../assets/monoTranquiloN.png';
+import monoMusicaImg    from '../assets/monoMusicaN.png';
 import ruidoBlancoAudio from '../assets/audio/RuidoBlanco.mp3';
 import ruidoMarronAudio from '../assets/audio/RuidoMarron.mp3';
 import lluviaAudio      from '../assets/audio/lluvia.mp3';
@@ -219,8 +221,8 @@ export function BienestarView() {
         <div className="rounded-2xl border overflow-hidden flex flex-col" style={{ background: t.cardBg, borderColor: t.cardBorder, height: '520px' }}>
           <div className="px-5 py-3 border-b flex items-center gap-3"
             style={{ borderColor: 'var(--p-divider)', background: 'rgba(108,99,255,0.06)' }}>
-            <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0" style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)' }}>
-              <ImageWithFallback src={monoPatriciaImg} alt="Mono" className="w-full h-full object-contain" />
+            <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0" style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)' }}>
+              <ImageWithFallback src={monoULinkImg} alt="Mono" className="w-full h-full object-contain" />
             </div>
             <div>
               <p style={{ fontWeight: 700, fontSize: '0.95rem' }}>Mono — Bienestar ECI</p>
@@ -240,9 +242,9 @@ export function BienestarView() {
             {msgs.map(m => (
               <div key={m.id} className={`flex gap-3 ${m.from === 'user' ? 'flex-row-reverse' : ''}`}>
                 {m.from === 'bot' && (
-                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0"
+                  <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0"
                     style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)' }}>
-                    <ImageWithFallback src={monoPatriciaImg} alt="Mono" className="w-full h-full object-contain" />
+                    <ImageWithFallback src={monoULinkImg} alt="Mono" className="w-full h-full object-contain" />
                   </div>
                 )}
                 <div className="max-w-xs px-4 py-2.5 rounded-2xl"
@@ -292,7 +294,12 @@ export function BienestarView() {
             <div className="rounded-3xl overflow-hidden border relative"
               style={{ background: 'linear-gradient(135deg, #1A1829 0%, #251F3D 100%)', borderColor: 'rgba(108,99,255,0.22)' }}>
               <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(108,99,255,0.3), transparent 50%)' }} />
-              <div className="relative p-6">
+              <div className="absolute right-0 bottom-0 h-full flex items-end pointer-events-none">
+                <ImageWithFallback src={monoDiarioImg} alt="Mono Diario"
+                  className="object-contain object-bottom"
+                  style={{ height: 190, filter: 'drop-shadow(0 4px 18px rgba(108,99,255,0.35))' }} />
+              </div>
+              <div className="relative p-6 pr-36">
                 <div className="flex items-center justify-between mb-5">
                   <div>
                     <p style={{ fontWeight: 800, fontSize: '1.05rem', color: '#F0EEFF' }}>¿Cómo te sientes hoy?</p>

@@ -5,7 +5,7 @@ import { AnimatedBackground } from '../components/AnimatedBackground';
 import { InteresesPicker } from '../components/InteresesPicker';
 import logoNuevoOscuroImg from '../assets/logoNuevoOscuro.png';
 import logoNuevoClaroImg from '../assets/logoNuevoClaro.png';
-import monoImg from '../assets/monoSINFONDO.png';
+import monoImg from '../assets/monoULink.png';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface RegisterViewProps {
@@ -698,11 +698,8 @@ export function RegisterView({ onRegister, onGoLogin, darkMode = true, setDarkMo
           {/* Step 0 — Microsoft connect */}
           {step === 0 && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <div className="flex flex-col items-center gap-2 mb-6">
-                <ImageWithFallback src={darkMode ? logoNuevoOscuroImg : logoNuevoClaroImg} alt="U•link" className="object-contain" style={{ height: 80, width: 'auto' }} />
-                <span style={{ fontWeight: 900, fontSize: '1.5rem', letterSpacing: '0.12em', background: 'linear-gradient(135deg,#6C63FF,#7FE7C4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                  U•link
-                </span>
+              <div className="flex flex-col items-center mb-6">
+                <ImageWithFallback src={darkMode ? logoNuevoOscuroImg : logoNuevoClaroImg} alt="U•link" className="object-contain" style={{ height: 104, width: 'auto' }} />
               </div>
               <div className="flex justify-center mb-6">
                 <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}>
@@ -749,11 +746,8 @@ export function RegisterView({ onRegister, onGoLogin, darkMode = true, setDarkMo
           {step >= 1 && (
             <>
               {/* Logo */}
-              <div className="flex flex-col items-center gap-1 mb-5">
-                <ImageWithFallback src={darkMode ? logoNuevoOscuroImg : logoNuevoClaroImg} alt="U•link" className="object-contain" style={{ height: 56, width: 'auto' }} />
-                <span style={{ fontWeight: 900, fontSize: '1rem', letterSpacing: '0.12em', background: 'linear-gradient(135deg,#6C63FF,#7FE7C4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                  U•link
-                </span>
+              <div className="flex flex-col items-center mb-5">
+                <ImageWithFallback src={darkMode ? logoNuevoOscuroImg : logoNuevoClaroImg} alt="U•link" className="object-contain" style={{ height: 72, width: 'auto' }} />
               </div>
 
               {/* Progress */}

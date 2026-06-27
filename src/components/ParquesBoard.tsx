@@ -2,10 +2,10 @@ import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
 
-import monoJuegos     from '../assets/monoJUEGOS.png';
-import monoArte       from '../assets/monoARTE.png';
-import monoCientifico from '../assets/monoCIENTIFICO.png';
-import monoDj         from '../assets/monoDJ.png';
+import monoJuegos     from '../assets/monoGamerN.png';
+import monoArte       from '../assets/monoArteN.png';
+import monoCientifico from '../assets/monoCientificoN.png';
+import monoDj         from '../assets/monoDJN.png';
 
 const P_COLORS = ['#7c6cff', '#f25fb0', '#2bd4bd', '#f4b13e'] as const;
 const P_NAMES  = ['Tú', 'Felipe', 'Sofía', 'Andrés'] as const;

@@ -8,12 +8,12 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ParquesBoard } from '../components/ParquesBoard';
-import monoCoderImg    from '../assets/monoCODER.png';
-import monoDJImg       from '../assets/monoDJ.png';
-import monoArteImg     from '../assets/monoARTE.png';
-import monoCientImg    from '../assets/monoCIENTIFICO.png';
-import monoCultImg     from '../assets/monoCULTURA.png';
-import monoPatriciaImg from '../assets/monoPATRICIA.png';
+import monoCoderImg    from '../assets/monoCoderN.png';
+import monoDJImg       from '../assets/monoDJN.png';
+import monoArteImg     from '../assets/monoArteN.png';
+import monoCientImg    from '../assets/monoCientificoN.png';
+import monoCultImg     from '../assets/monoCulturaN.png';
+import monoPatriciaImg from '../assets/monoFondoU.png';
 
 type InteriorTab = 'chat' | 'archivos' | 'lienzo' | 'juegos' | 'voz';
 type GameId = null | 'parques';

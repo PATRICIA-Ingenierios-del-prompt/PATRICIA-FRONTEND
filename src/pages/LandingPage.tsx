@@ -4,7 +4,7 @@ import { ImageWithFallback } from '../components/ImageWithFallback';
 import { AnimatedBackground } from '../components/AnimatedBackground';
 import logoNuevoOscuroImg from '../assets/logoNuevoOscuro.png';
 import logoNuevoClaroImg from '../assets/logoNuevoClaro.png';
-import monoPatriciaImg from '../assets/monoPATRICIA.png';
+import monoPatriciaImg from '../assets/monoFondoU.png';
 import lp1 from '../assets/landingpage1.jpg';
 import lp2 from '../assets/landingpage2.png';
 import lp3 from '../assets/landingpage3.jpg';
@@ -279,9 +279,9 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
 
 
       {/* ══════════════════════════════════════
-          GALLERY STRIP — Shopify style
+          GALLERY — Bento editorial layout
       ══════════════════════════════════════ */}
-      <section style={{ padding:'60px 0 68px', background: dark ? '#0B0918' : '#F3F2FF' }}>
+      <section style={{ padding:'60px 0 72px', background: dark ? '#0B0918' : '#F3F2FF' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-8">
           <motion.div initial={{ opacity:0, y:16 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
             className="text-center mb-10">
@@ -293,23 +293,85 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
             </h2>
           </motion.div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-5">
+          {/* ── Desktop bento ── */}
+          <div className="hidden md:flex flex-col gap-3">
+
+            {/* Row 1: hero (2/3) + right stack (1/3) */}
+            <div className="flex gap-3" style={{ height: 380 }}>
+
+              {/* Hero card */}
+              <motion.div
+                initial={{ opacity:0, y:22 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
+                whileHover={{ scale:1.012, transition:{ duration:0.22 } }}
+                style={{ flex:2, borderRadius:24, overflow:'hidden', position:'relative', cursor:'pointer',
+                  boxShadow: dark ? '0 20px 56px rgba(0,0,0,0.5)' : '0 14px 44px rgba(0,0,0,0.18)' }}>
+                <ImageWithFallback src={GALLERY[0].img} alt={GALLERY[0].label}
+                  style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s ease' }} />
+                <div style={{ position:'absolute', inset:0, background:`linear-gradient(to top, ${GALLERY[0].color}d0 0%, rgba(0,0,0,0.08) 50%, transparent 100%)` }} />
+                <div style={{ position:'absolute', bottom:22, left:22 }}>
+                  <span style={{ display:'inline-block', padding:'4px 13px', borderRadius:20, background:'rgba(0,0,0,0.35)', backdropFilter:'blur(10px)', border:'1px solid rgba(255,255,255,0.2)', fontSize:'0.65rem', fontWeight:800, color:'white', letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:7 }}>
+                    {GALLERY[0].label}
+                  </span>
+                  <p style={{ fontWeight:700, fontSize:'1.05rem', color:'white', lineHeight:1.2, textShadow:'0 2px 8px rgba(0,0,0,0.4)' }}>{GALLERY[0].desc}</p>
+                </div>
+              </motion.div>
+
+              {/* Right stack */}
+              <div className="flex flex-col gap-3" style={{ flex:1 }}>
+                {[GALLERY[1], GALLERY[2]].map((item, i) => (
+                  <motion.div key={item.label}
+                    initial={{ opacity:0, y:22 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} transition={{ delay: (i+1)*0.09 }}
+                    whileHover={{ scale:1.015, transition:{ duration:0.22 } }}
+                    style={{ flex:1, borderRadius:20, overflow:'hidden', position:'relative', cursor:'pointer',
+                      boxShadow: dark ? '0 12px 36px rgba(0,0,0,0.45)' : '0 10px 32px rgba(0,0,0,0.15)' }}>
+                    <ImageWithFallback src={item.img} alt={item.label}
+                      style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                    <div style={{ position:'absolute', inset:0, background:`linear-gradient(to top, ${item.color}cc 0%, transparent 60%)` }} />
+                    <div style={{ position:'absolute', bottom:14, left:14 }}>
+                      <span style={{ display:'inline-block', padding:'3px 10px', borderRadius:20, background:'rgba(0,0,0,0.32)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,0.18)', fontSize:'0.6rem', fontWeight:800, color:'white', letterSpacing:'0.07em', textTransform:'uppercase', marginBottom:4 }}>
+                        {item.label}
+                      </span>
+                      <p style={{ fontWeight:600, fontSize:'0.78rem', color:'rgba(255,255,255,0.9)' }}>{item.desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+            {/* Row 2: 3 equal cards */}
+            <div className="flex gap-3" style={{ height: 210 }}>
+              {[GALLERY[3], GALLERY[4], GALLERY[5]].map((item, i) => (
+                <motion.div key={item.label}
+                  initial={{ opacity:0, y:22 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} transition={{ delay: i*0.09 + 0.18 }}
+                  whileHover={{ scale:1.015, transition:{ duration:0.22 } }}
+                  style={{ flex:1, borderRadius:20, overflow:'hidden', position:'relative', cursor:'pointer',
+                    boxShadow: dark ? '0 12px 36px rgba(0,0,0,0.45)' : '0 10px 32px rgba(0,0,0,0.15)' }}>
+                  <ImageWithFallback src={item.img} alt={item.label}
+                    style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                  <div style={{ position:'absolute', inset:0, background:`linear-gradient(to top, ${item.color}cc 0%, transparent 58%)` }} />
+                  <div style={{ position:'absolute', bottom:14, left:14 }}>
+                    <span style={{ display:'inline-block', padding:'3px 10px', borderRadius:20, background:'rgba(0,0,0,0.32)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,0.18)', fontSize:'0.6rem', fontWeight:800, color:'white', letterSpacing:'0.07em', textTransform:'uppercase', marginBottom:4 }}>
+                      {item.label}
+                    </span>
+                    <p style={{ fontWeight:600, fontSize:'0.78rem', color:'rgba(255,255,255,0.9)' }}>{item.desc}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Mobile 2-col ── */}
+          <div className="md:hidden grid grid-cols-2 gap-3">
             {GALLERY.map((item, i) => (
               <motion.div key={item.label}
-                initial={{ opacity:0, y:28 }} whileInView={{ opacity:1, y:0 }}
-                viewport={{ once:true }} transition={{ delay: i*0.08 }}
-                whileHover={{ y:-7, scale:1.02, transition:{ duration:0.22 } }}
-                style={{
-                  height: i % 3 === 0 ? 290 : i % 3 === 2 ? 270 : 250,
-                  borderRadius:20, overflow:'hidden', position:'relative',
-                  cursor:'pointer',
-                  boxShadow:'0 12px 40px rgba(0,0,0,0.32)',
-                }}>
+                initial={{ opacity:0, y:18 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} transition={{ delay: i*0.07 }}
+                style={{ height:158, borderRadius:16, overflow:'hidden', position:'relative', cursor:'pointer',
+                  boxShadow:'0 8px 24px rgba(0,0,0,0.3)' }}>
                 <ImageWithFallback src={item.img} alt={item.label} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                <div style={{ position:'absolute', inset:0, background:`linear-gradient(to top, ${item.color}dd 0%, rgba(0,0,0,0.1) 60%, transparent 100%)` }} />
-                <div style={{ position:'absolute', bottom:16, left:16 }}>
-                  <p style={{ fontWeight:800, fontSize:'1rem', color:'white', lineHeight:1.2 }}>{item.label}</p>
-                  <p style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.78)', marginTop:2 }}>{item.desc}</p>
+                <div style={{ position:'absolute', inset:0, background:`linear-gradient(to top, ${item.color}cc 0%, transparent 55%)` }} />
+                <div style={{ position:'absolute', bottom:10, left:10 }}>
+                  <p style={{ fontWeight:700, fontSize:'0.78rem', color:'white', lineHeight:1.2 }}>{item.label}</p>
+                  <p style={{ fontSize:'0.62rem', color:'rgba(255,255,255,0.78)' }}>{item.desc}</p>
                 </div>
               </motion.div>
             ))}

@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { ImageWithFallback } from '../components/ImageWithFallback';
-import monoImg       from '../assets/monoSINFONDO.png';
-import monoMusica    from '../assets/monoMUSICA.png';
-import monoEstudio   from '../assets/monoESTUDIO.png';
-import monoAireLibre from '../assets/monoAIRELIBRE.png';
-import monoComida    from '../assets/monoCOMIDA.png';
-import monoJuegos    from '../assets/monoJUEGOS.png';
-import monoArte      from '../assets/monoARTE.png';
+import monoImg       from '../assets/monoULink.png';
+import monoMusica    from '../assets/monoMusicaN.png';
+import monoEstudio   from '../assets/monoEstudiosoN.png';
+import monoAireLibre from '../assets/monoAireLibreN.png';
+import monoComida    from '../assets/monoFoodieN.png';
+import monoJuegos    from '../assets/monoGamerN.png';
+import monoArte      from '../assets/monoArteN.png';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
 

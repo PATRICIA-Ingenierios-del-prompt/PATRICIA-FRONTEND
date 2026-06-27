@@ -464,15 +464,6 @@ export function MatchingView() {
             {hasSentTo(current.id) ? '💜 Solicitud enviada · esperando respuesta' : '↩ Anterior  ·  ✕ Pasar  ·  ✓ Solicitud'}
           </p>
 
-          {sentRequests.length > 0 && (
-            <div className="mt-4 flex items-center gap-2 px-4 py-2.5 rounded-xl"
-              style={{ background: 'rgba(127,231,196,0.06)', border: '1px solid rgba(127,231,196,0.2)' }}>
-              <span style={{ fontSize: '0.8rem', color: '#7FE7C4' }}>⏳</span>
-              <span style={{ fontSize: '0.78rem', color: t.textMuted }}>
-                {sentRequests.length} solicitud{sentRequests.length > 1 ? 'es' : ''} pendiente{sentRequests.length > 1 ? 's' : ''} · el match ocurre cuando ellos también digan ❤️
-              </span>
-            </div>
-          )}
         </div>
       )}
 
