@@ -1,12 +1,12 @@
-# PATRICI.A — Plataforma Social ECI
+# U•link — Plataforma Social ECI
 
 > Plataforma social universitaria diseñada exclusivamente para la comunidad de la **Escuela Colombiana de Ingeniería Julio Garavito**.
 
 ---
 
-## ¿Qué es PATRICI.A?
+## ¿Qué es U•link?
 
-PATRICI.A es una red social privada y verificada para estudiantes de la ECI. Integra comunicación en tiempo real, inteligencia artificial, gamificación y bienestar estudiantil en un solo lugar. Solo accesible con correo institucional `@mail.escuelaing.edu.co`.
+U•link es una red social privada y verificada para estudiantes de la ECI. Integra comunicación en tiempo real, inteligencia artificial, gamificación y bienestar estudiantil en un solo lugar. El acceso es exclusivo mediante correo institucional `@mail.escuelaing.edu.co`, verificado con código OTP al momento del registro.
 
 ---
 
@@ -14,13 +14,28 @@ PATRICI.A es una red social privada y verificada para estudiantes de la ECI. Int
 
 | Módulo | Descripción |
 |---|---|
-| **Parches** | Grupos de interés con chat, voz, lienzo colaborativo y juegos integrados (Parqués) |
-| **Matching** | Algoritmo de compatibilidad basado en intereses académicos y personales |
-| **Bienestar 24/7** | Chatbot de apoyo emocional, diario con IA, respiración guiada y sonidos de relajación |
-| **Álbum de Monas** | 12 personajes coleccionables con 4 rarezas. Gana XP participando en la comunidad |
-| **Eventos** | Hackathones, charlas, torneos y actividades con geolocalización en tiempo real |
-| **Chats privados** | Mensajería directa entre estudiantes con matches |
-| **Perfil** | Perfil personalizable con intereses, nivel ECI y ranking |
+| **Landing Page** | Página de inicio con hero dinámico, galería de la comunidad ECI, sección de funcionalidades y pasos de onboarding |
+| **Registro con OTP** | Flujo de 4 pasos: verificación de correo vía código OTP → datos básicos → perfil académico → intereses. Validación de campos obligatorios en cada paso |
+| **Parches** | Grupos de interés con chat en tiempo real, lienzo colaborativo (canvas con pluma, borrador, paleta de colores), voz grupal, juego de Parqués integrado y vinculación con eventos |
+| **Matching IA** | Algoritmo de compatibilidad basado en carrera, semestre e intereses. Tarjetas de match con porcentaje de compatibilidad |
+| **Eventos** | Creación de eventos con emoji, fecha y opción de vincularlos a parches. Los eventos vinculados aparecen como notificación en el chat del parche |
+| **Bienestar 24/7** | Chatbot de apoyo emocional, diario con IA, ejercicios de respiración guiada y reproductor de sonidos de relajación (lluvia, bosque, olas, ruido blanco/marrón) |
+| **Álbum de Monas** | 13 personajes coleccionables con 4 rarezas (Común, Rara, Épica, Legendaria). Sistema de raspado real con canvas: toca la tarjeta → popup de revelación → raspa para desbloquear. Dos páginas de álbum estilo Panini con navegación |
+| **Chats** | Mensajería directa entre estudiantes con historial y soporte de archivos |
+| **Perfil** | Perfil personalizable con foto, intereses, carrera, semestre, nivel ECI y sistema de XP |
+| **Ajustes** | Modo oscuro/claro, accesibilidad visual (daltonismo, modo dislexia), notificaciones y privacidad |
+
+---
+
+## Branding
+
+| | |
+|---|---|
+| **Nombre** | U•link |
+| **Logo modo oscuro** | `src/assets/logoNuevoOscuro.png` |
+| **Logo modo claro** | `src/assets/logoNuevoClaro.png` |
+| **Mascota** | Mono Patricia (`src/assets/monoPATRICIA.png`) |
+| **Colores principales** | `#6C63FF` (púrpura), `#7FE7C4` (verde agua), `#FFB347` (ámbar) |
 
 ---
 
@@ -29,7 +44,8 @@ PATRICI.A es una red social privada y verificada para estudiantes de la ECI. Int
 - **React 18** + **TypeScript**
 - **Vite 6** — bundler y dev server
 - **Tailwind CSS v4** — estilos con `@tailwindcss/vite`
-- **motion/react** — animaciones fluidas
+- **motion/react** — animaciones fluidas (spring, AnimatePresence)
+- **HTML5 Canvas API** — lienzo colaborativo y mecánica de raspado de monas
 - **lucide-react** — iconografía
 - **Radix UI** — componentes accesibles base
 - **HTML5 Audio API** — reproductor de sonidos de bienestar
@@ -57,14 +73,30 @@ El servidor de desarrollo corre en `http://localhost:5173` por defecto.
 
 ```
 src/
-├── assets/          # Imágenes, audios y recursos estáticos
-├── components/      # Componentes reutilizables (AnimatedBackground, ToastSystem, ParquesBoard, ...)
-├── pages/           # Vistas principales (LandingPage, HomeView, ParchesView, BienestarView, ...)
-├── store/           # Contextos globales (ThemeContext, LanguageContext)
+├── assets/          # Imágenes (logos, monas), audios y recursos estáticos
+├── components/      # Componentes reutilizables
+│   ├── AnimatedBackground.tsx
+│   ├── ColorAccessibility.tsx
+│   ├── ImageWithFallback.tsx
+│   ├── InteresesPicker.tsx
+│   ├── ParquesBoard.tsx
+│   └── ToastSystem.tsx
+├── pages/           # Vistas principales
+│   ├── LandingPage.tsx
+│   ├── LoginView.tsx
+│   ├── RegisterView.tsx
+│   ├── HomeView.tsx
+│   ├── MatchingView.tsx
+│   ├── ParchesView.tsx
+│   ├── EventosView.tsx
+│   ├── ChatsView.tsx
+│   ├── BienestarView.tsx
+│   ├── ProfileView.tsx
+│   └── AjustesView (en App.tsx)
+├── store/           # Contextos globales (ThemeContext)
 ├── utils/           # Utilidades e internacionalización
-└── App.tsx          # Raíz de la aplicación y enrutamiento de vistas
+└── App.tsx          # Raíz de la app, AlbumView, ScratchCanvas y enrutamiento
 ```
-
 
 ---
 
