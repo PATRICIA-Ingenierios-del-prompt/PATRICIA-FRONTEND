@@ -1,0 +1,266 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 16px;
+  --background: #0F0E1A;
+  --foreground: #F0EEFF;
+  --card: #1A1829;
+  --card-foreground: #F0EEFF;
+  --popover: #1A1829;
+  --popover-foreground: #F0EEFF;
+  --primary: #6C63FF;
+  --primary-foreground: #ffffff;
+  --secondary: #251F3D;
+  --secondary-foreground: #F0EEFF;
+  --muted: #1E1C30;
+  --muted-foreground: #8B85B0;
+  --accent: #7FE7C4;
+  --accent-foreground: #0F0E1A;
+  --destructive: #FF4D6A;
+  --destructive-foreground: #ffffff;
+  --border: rgba(108, 99, 255, 0.18);
+  --input: rgba(108, 99, 255, 0.1);
+  --input-background: #1E1C30;
+  --switch-background: #251F3D;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: #6C63FF;
+  --chart-1: #6C63FF;
+  --chart-2: #7FE7C4;
+  --chart-3: #FF6B9D;
+  --chart-4: #FFB347;
+  --chart-5: #5BC8FF;
+  --radius: 0.875rem;
+  --sidebar: #13111F;
+  --sidebar-foreground: #F0EEFF;
+  --sidebar-primary: #6C63FF;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #251F3D;
+  --sidebar-accent-foreground: #F0EEFF;
+  --sidebar-border: rgba(108, 99, 255, 0.12);
+  --sidebar-ring: #6C63FF;
+}
+
+.dark {
+  --background: #0F0E1A;
+  --foreground: #F0EEFF;
+  --card: #1A1829;
+  --card-foreground: #F0EEFF;
+  --popover: #1A1829;
+  --popover-foreground: #F0EEFF;
+  --primary: #6C63FF;
+  --primary-foreground: #ffffff;
+  --secondary: #251F3D;
+  --secondary-foreground: #F0EEFF;
+  --muted: #1E1C30;
+  --muted-foreground: #8B85B0;
+  --accent: #7FE7C4;
+  --accent-foreground: #0F0E1A;
+  --destructive: #FF4D6A;
+  --destructive-foreground: #ffffff;
+  --border: rgba(108, 99, 255, 0.18);
+  --input: rgba(108, 99, 255, 0.1);
+  --input-background: #1E1C30;
+  --switch-background: #251F3D;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: #6C63FF;
+  --chart-1: #6C63FF;
+  --chart-2: #7FE7C4;
+  --chart-3: #FF6B9D;
+  --chart-4: #FFB347;
+  --chart-5: #5BC8FF;
+  --radius: 0.875rem;
+  --sidebar: #13111F;
+  --sidebar-foreground: #F0EEFF;
+  --sidebar-primary: #6C63FF;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #251F3D;
+  --sidebar-accent-foreground: #F0EEFF;
+  --sidebar-border: rgba(108, 99, 255, 0.12);
+  --sidebar-ring: #6C63FF;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', 'Outfit', sans-serif;
+  }
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 { font-family: 'Poppins', 'Outfit', sans-serif; font-size: var(--text-2xl); font-weight: 700; line-height: 1.3; }
+  h2 { font-family: 'Poppins', 'Outfit', sans-serif; font-size: var(--text-xl);  font-weight: 600; line-height: 1.4; }
+  h3 { font-family: 'Poppins', 'Outfit', sans-serif; font-size: var(--text-lg);  font-weight: 600; line-height: 1.4; }
+  h4 { font-family: 'Poppins', 'Outfit', sans-serif; font-size: var(--text-base);font-weight: 500; line-height: 1.5; }
+
+  label { font-size: var(--text-sm); font-weight: var(--font-weight-medium); line-height: 1.5; }
+  button { font-size: var(--text-base); font-weight: var(--font-weight-medium); line-height: 1.5; }
+  input { font-size: var(--text-base); font-weight: var(--font-weight-normal); line-height: 1.5; }
+
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(108, 99, 255, 0.3); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(108, 99, 255, 0.6); }
+}
+
+/* ── Light mode: ensure readable inputs, selects, options ── */
+/* These rules apply when the root div has --p-card set to a light value.
+   Since inline styles can't be overridden, we use CSS vars throughout.
+   This block handles native form elements and option dropdowns. */
+
+/* Selections in light mode need dark text */
+input, textarea, select {
+  color-scheme: dark;
+}
+
+/* When CSS var --p-text resolves to a dark color (light mode), 
+   native form fields must show dark text */
+option {
+  background: #FFFFFF;
+  color: #1A1829;
+}
+
+/* ── Light mode global text override ──────────────────────────────────────── */
+/* When .light-theme is set on the root, force ALL hardcoded light text to
+   dark so components with inline styles become readable without full refactor */
+.light-theme {
+  /* Override common muted/sub palette used in inline styles */
+  color-scheme: light;
+}
+
+/* Every span, p, h1-h6 inside light-theme that has no explicit color
+   class gets dark text via inheritance from the body */
+.light-theme body {
+  color: #0F0E1A;
+}
+
+/* Sidebar nav text in light mode */
+.light-theme aside span,
+.light-theme aside p {
+  color: #1A1829;
+}
+
+/* Cards: white background, dark text everywhere */
+.light-theme [style*="background: rgba(26,24,41"] {
+  background: #FFFFFF !important;
+}
+.light-theme [style*="background: #1A1829"] {
+  background: #FFFFFF !important;
+}
+.light-theme [style*="background: rgba(37,31,61"] {
+  background: #F0EEFF !important;
+}
+.light-theme [style*="background: #13111F"],
+.light-theme [style*="background: rgba(19,17,31"] {
+  background: #F5F3FF !important;
+}
+/* Force hardcoded light text colors to dark */
+.light-theme [style*="color: rgb(240, 238, 255)"],
+.light-theme [style*="color: #F0EEFF"],
+.light-theme [style*="color: #E0E0FF"],
+.light-theme [style*="color: #C0BAE0"],
+.light-theme [style*="color: #E5E0FF"] {
+  color: #1A1829 !important;
+}
+.light-theme [style*="color: rgb(139, 133, 176)"],
+.light-theme [style*="color: #8B85B0"] {
+  color: #3D3660 !important;
+}
+
+/* ── Light mode: CSS token overrides ─────────────────────────────────────── */
+/* Override Tailwind's text-foreground and bg-background to be light-readable */
+.light-theme {
+  --foreground:       #0F0E1A;   /* body text → near-black */
+  --background:       #F4F2FF;   /* page bg */
+  --card:             #FFFFFF;
+  --card-foreground:  #0F0E1A;
+  --muted:            #EDE9FF;
+  --muted-foreground: #5A5480;
+  --popover:          #FFFFFF;
+  --popover-foreground: #0F0E1A;
+  --secondary:        #EDE9FF;
+  --secondary-foreground: #1A1829;
+  --sidebar:          rgba(255,255,255,0.97);
+  --sidebar-foreground: #0F0E1A;
+  --input-background: #F5F3FF;
+
+  color-scheme: light;
+}
+
+/* All text inside .light-theme inherits the dark foreground by default */
+.light-theme body,
+.light-theme main,
+.light-theme aside,
+.light-theme header {
+  color: #0F0E1A;
+}
+
+/* Parches sidebar names */
+.light-theme [style*="color: var(--p-sub)"] {
+  color: #1A1829 !important;
+}
+.light-theme [style*="color: var(--p-text)"] {
+  color: #0F0E1A !important;
+}
+.light-theme [style*="color: var(--p-muted)"] {
+  color: #3D3660 !important;
+}
+
+/* Eventos — all inherited text goes dark */
+.light-theme span:not([style*="color"]),
+.light-theme p:not([style*="color"]),
+.light-theme h1:not([style*="color"]),
+.light-theme h2:not([style*="color"]),
+.light-theme h3:not([style*="color"]),
+.light-theme h4:not([style*="color"]),
+.light-theme div:not([style*="color"]) > span {
+  color: inherit;
+}

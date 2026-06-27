@@ -1,0 +1,62 @@
+/* Design fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Dyslexia-friendly fonts: Lexend (reading proficiency) + Atkinson Hyperlegible (low-vision) */
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap');
+
+/* Dyslexia typography tokens (applied via .dyslexia-mode class on root) */
+:root {
+  --typo-body-family:    'Outfit', 'Inter', sans-serif;
+  --typo-body-size:      1rem;
+  --typo-body-spacing:   normal;
+  --typo-body-height:    1.5;
+  --typo-body-weight:    400;
+  --typo-head-family:    'Outfit', sans-serif;
+  --typo-head-spacing:   normal;
+  --typo-head-height:    1.3;
+}
+
+/* Dyslexia mode overrides — activado via class en el root */
+.dyslexia-mode {
+  --typo-body-family:    'Lexend', 'Atkinson Hyperlegible', Arial, Verdana, sans-serif;
+  --typo-body-size:      1.125rem;    /* 18px — +2px sobre base 16 */
+  --typo-body-spacing:   0.06em;      /* +~1px letter-spacing */
+  --typo-body-height:    1.7;         /* leading 1.7 para mayor separación */
+  --typo-body-weight:    400;
+  --typo-head-family:    'Lexend', Arial, sans-serif;
+  --typo-head-spacing:   0.04em;
+  --typo-head-height:    1.4;
+}
+
+/* Apply tokens throughout */
+.dyslexia-mode body,
+.dyslexia-mode p,
+.dyslexia-mode span,
+.dyslexia-mode li,
+.dyslexia-mode label,
+.dyslexia-mode input,
+.dyslexia-mode textarea,
+.dyslexia-mode button {
+  font-family:    var(--typo-body-family);
+  font-size:      var(--typo-body-size);
+  letter-spacing: var(--typo-body-spacing);
+  line-height:    var(--typo-body-height);
+  font-weight:    var(--typo-body-weight);
+  text-align:     left !important;   /* nunca justificado */
+}
+
+.dyslexia-mode h1,
+.dyslexia-mode h2,
+.dyslexia-mode h3,
+.dyslexia-mode h4 {
+  font-family:    var(--typo-head-family);
+  letter-spacing: var(--typo-head-spacing);
+  line-height:    var(--typo-head-height);
+  font-weight:    600;
+  text-align:     left !important;
+}
+
+/* Word spacing aumentado para facilitar separación */
+.dyslexia-mode * {
+  word-spacing: 0.2em;
+}
