@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Compass, Heart, Users, MessageSquare, Calendar, Smile, Image,
   Bell, Settings, ChevronLeft, ChevronRight, Search, Zap,
@@ -19,8 +19,8 @@ import { AnimatedBackground } from './components/AnimatedBackground';
 import { ThemeContext, getTheme, useTheme } from './store/ThemeContext';
 import { AccessibilityPanel, ColorBlindFilters, applyDyslexiaMode, getVisionFilter, type VisionMode } from './components/ColorAccessibility';
 import { ImageWithFallback } from './components/ImageWithFallback';
-import logoBlancoImg from './assets/logoBLANCO.png';
-import logoNegroImg from './assets/logoNEGRO.png';
+import logoNuevoOscuroImg from './assets/logoNuevoOscuro.png';
+import logoNuevoClaroImg from './assets/logoNuevoClaro.png';
 import { motion, AnimatePresence } from 'motion/react';
 
 type AuthState = 'login' | 'loginform' | 'register' | 'app';
@@ -136,9 +136,98 @@ import monoARTEImg     from './assets/monoARTE.png';
 import monoAIREImg     from './assets/monoAIRELIBRE.png';
 import monoCOMIDAImg   from './assets/monoCOMIDA.png';
 
+function ScratchCanvas({ onComplete }: { onComplete: () => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isDown = useRef(false);
+  const lastPos = useRef<{ x: number; y: number } | null>(null);
+  const done = useRef(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
+    const g = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    g.addColorStop(0, '#C8C8C8');
+    g.addColorStop(0.35, '#A4A4A4');
+    g.addColorStop(0.65, '#D6D6D6');
+    g.addColorStop(1, '#B4B4B4');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('✦ Raspa para', canvas.width / 2, canvas.height / 2 - 10);
+    ctx.fillText('revelar', canvas.width / 2, canvas.height / 2 + 10);
+  }, []);
+
+  const getPos = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const sx = canvas.width / rect.width;
+    const sy = canvas.height / rect.height;
+    if ('touches' in e) {
+      const t = e.touches[0] ?? e.changedTouches[0];
+      return { x: (t.clientX - rect.left) * sx, y: (t.clientY - rect.top) * sy };
+    }
+    return { x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy };
+  };
+
+  const scratch = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isDown.current || done.current) return;
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext('2d')!;
+    const pos = getPos(e);
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    if (lastPos.current) {
+      ctx.moveTo(lastPos.current.x, lastPos.current.y);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.lineWidth = 38;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+    } else {
+      ctx.arc(pos.x, pos.y, 19, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    lastPos.current = pos;
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let transparent = 0;
+    for (let i = 3; i < data.length; i += 4) { if (data[i] < 128) transparent++; }
+    if (transparent / (canvas.width * canvas.height) > 0.52 && !done.current) {
+      done.current = true;
+      onComplete();
+    }
+  };
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={240} height={240}
+      className="absolute inset-0 w-full h-full"
+      style={{ cursor: 'crosshair', zIndex: 15, touchAction: 'none' }}
+      onMouseDown={e => { isDown.current = true; lastPos.current = null; scratch(e); }}
+      onMouseMove={scratch}
+      onMouseUp={() => { isDown.current = false; lastPos.current = null; }}
+      onMouseLeave={() => { isDown.current = false; lastPos.current = null; }}
+      onTouchStart={e => { e.preventDefault(); isDown.current = true; lastPos.current = null; scratch(e); }}
+      onTouchMove={e => { e.preventDefault(); scratch(e); }}
+      onTouchEnd={() => { isDown.current = false; lastPos.current = null; }}
+    />
+  );
+}
+
 function AlbumView() {
   const t = useTheme();
   const [showMonasGuide, setShowMonasGuide] = useState(false);
+  const [unlockedByUser, setUnlockedByUser] = useState(new Set<number>());
+  const [justUnlocked, setJustUnlocked] = useState<null | { id: number; name: string; rarity: string; xp: number; color: string; img: string; how: string }>(null);
+  const [albumPage, setAlbumPage] = useState(0);
+  const [scratchPopupMona, setScratchPopupMona] = useState<null | { id: number; name: string; rarity: string; xp: number; color: string; img: string; how: string }>(null);
+
+  const CAN_UNLOCK_IDS = [4, 8, 10];
+
   const ALL_MONAS = [
     { id:  1, name: 'Mona Coder',      rarity: 'Épica',      xp: 500,  color: '#6C63FF', img: monoCODERImg,   unlocked: true,  how: 'Únete a un parche de estudio con programación' },
     { id:  2, name: 'Mona DJ',         rarity: 'Épica',      xp: 500,  color: '#5BC8FF', img: monoDJImg,      unlocked: true,  how: 'Crea o únete a un parche o evento de música' },
@@ -154,89 +243,57 @@ function AlbumView() {
     { id: 12, name: 'Mona Foodie',     rarity: 'Legendaria', xp: 1000, color: '#FFB347', img: monoCOMIDAImg,  unlocked: false, how: 'Crea o únete a un parche de comida' },
     { id: 13, name: 'Mona Social',     rarity: 'Épica',      xp: 500,  color: '#FF6B9D', img: monoSOCIALImg,  unlocked: false, how: 'Ten más de 10 matches en la app' },
   ];
-  const rarityColor: Record<string, string> = { 'Común': t.textMuted, 'Rara': '#7FE7C4', 'Épica': '#6C63FF', 'Legendaria': '#FFB347' };
-  const rarityBorder: Record<string, string> = { 'Común': '#8B85B025', 'Rara': '#7FE7C435', 'Épica': '#6C63FF45', 'Legendaria': '#FFB34760' };
-  const unlocked = ALL_MONAS.filter(m => m.unlocked).length;
 
-  const xpEarned = ALL_MONAS.filter(m => m.unlocked).reduce((sum, m) => sum + m.xp, 0);
+  const rarityColor: Record<string, string> = { 'Común': '#8B85B0', 'Rara': '#7FE7C4', 'Épica': '#6C63FF', 'Legendaria': '#FFB347' };
 
-  const RARITY_INFO = [
-    { rarity: 'Común',     color: '#8B85B0', xp: 100,  desc: 'Actividades básicas:  parches, check-ins, posts',      emoji: '⚪' },
-    { rarity: 'Rara',      color: '#7FE7C4', xp: 300,  desc: 'Participación activa en eventos y comunidad',           emoji: '🟢' },
-    { rarity: 'Épica',     color: '#6C63FF', xp: 500,  desc: 'Logros especiales: parches creados, torneos ganados',   emoji: '🔵' },
-    { rarity: 'Legendaria',color: '#FFB347', xp: 1000, desc: 'Hazañas extraordinarias en la comunidad ECI',           emoji: '🟡' },
-  ];
+  const isUnlocked = (mona: typeof ALL_MONAS[0]) => mona.unlocked || unlockedByUser.has(mona.id);
+  const canScratch = (mona: typeof ALL_MONAS[0]) => CAN_UNLOCK_IDS.includes(mona.id) && !isUnlocked(mona);
+
+  const handleScratchComplete = (mona: typeof ALL_MONAS[0]) => {
+    setScratchPopupMona(null);
+    setUnlockedByUser(prev => { const s = new Set(prev); s.add(mona.id); return s; });
+    setTimeout(() => {
+      setJustUnlocked(mona);
+      addToast({ type: 'logro', title: '¡Mona desbloqueada!', message: `¡Conseguiste la ${mona.name}!` });
+    }, 300);
+  };
+
+  const PAGES = [ALL_MONAS.slice(0, 8), ALL_MONAS.slice(8)];
+
+  const unlockedCount = ALL_MONAS.filter(m => isUnlocked(m)).length;
+  const xpEarned = ALL_MONAS.filter(m => isUnlocked(m)).reduce((sum, m) => sum + m.xp, 0);
+  const hasScratchable = CAN_UNLOCK_IDS.some(id => !isUnlocked(ALL_MONAS.find(m => m.id === id)!));
 
   return (
     <div className="h-full overflow-y-auto pb-6">
 
-      {/* ── Info header — permanent ── */}
-      <div className="rounded-3xl border overflow-hidden mb-6"
-        style={{ background: t.darkMode ? 'linear-gradient(135deg, #1A1829, #251F3D)' : 'linear-gradient(135deg, #F0EEFF, #E8FBF4)', borderColor: 'rgba(108,99,255,0.22)' }}>
-
-        {/* Top strip */}
-        <div className="flex items-start gap-6 p-6">
-          {/* Mono image */}
-          <div className="flex-shrink-0">
-            <ImageWithFallback src={monoPATRICIAImg} alt="Mascota"
-              className="object-contain"
-              style={{ width: 90, height: 90, filter: 'drop-shadow(0 6px 18px rgba(108,99,255,0.35))' }} />
-          </div>
-
-          {/* Explanation */}
+      {/* ── Album Cover Header ── */}
+      <div className="relative rounded-3xl overflow-hidden mb-6" style={{ background: 'linear-gradient(135deg, #3B2F8E 0%, #6C63FF 55%, #9B55D4 100%)', minHeight: 170 }}>
+        <svg viewBox="0 0 1200 60" preserveAspectRatio="none" className="absolute bottom-0 left-0 right-0 w-full" style={{ height: 36, display: 'block' }}>
+          <path d="M0,30 C300,60 900,0 1200,30 L1200,60 L0,60 Z" fill={t.darkMode ? '#0F0E1A' : '#F9F8FF'} />
+        </svg>
+        <div className="relative z-10 flex items-center gap-5 p-6 pb-12">
+          <ImageWithFallback src={monoPATRICIAImg} alt="Mascota"
+            className="object-contain flex-shrink-0"
+            style={{ width: 76, height: 76, filter: 'drop-shadow(0 6px 20px rgba(0,0,0,0.45))' }} />
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 mb-2 flex-wrap">
-              <h2 style={{ fontWeight: 800, fontSize: '1.2rem', color: t.text }}>Álbum de Monas 🎴</h2>
-              <span className="px-3 py-1 rounded-full text-xs font-bold"
-                style={{ background: 'rgba(108,99,255,0.15)', color: '#6C63FF', border: '1px solid rgba(108,99,255,0.3)' }}>
-                {unlocked}/{ALL_MONAS.length} coleccionadas
+            <h2 style={{ fontWeight: 900, fontSize: '1.45rem', color: 'white', textShadow: '0 2px 12px rgba(0,0,0,0.35)', letterSpacing: '-0.02em' }}>
+              Álbum de Monas
+            </h2>
+            <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', marginTop: '3px' }}>U•link · Colección Exclusiva ECI</p>
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={{ background: 'rgba(255,255,255,0.18)', color: 'white', backdropFilter: 'blur(8px)' }}>
+                {unlockedCount}/{ALL_MONAS.length} coleccionadas
+              </span>
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={{ background: 'rgba(255,179,71,0.28)', color: '#FFD95A', backdropFilter: 'blur(8px)' }}>
+                ⚡ {xpEarned.toLocaleString()} XP
               </span>
               <button onClick={() => setShowMonasGuide(true)}
-                className="ml-auto px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-85 flex items-center gap-1.5"
-                style={{ background: 'rgba(127,231,196,0.15)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.35)' }}>
+                className="px-2.5 py-1 rounded-full text-xs font-semibold transition-all hover:opacity-85"
+                style={{ background: 'rgba(127,231,196,0.22)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.4)', backdropFilter: 'blur(8px)' }}>
                 🗺️ ¿Cómo se ganan?
               </button>
             </div>
-            <p style={{ fontSize: '0.85rem', color: t.textSub, lineHeight: 1.7, marginBottom: '12px' }}>
-              Las <strong style={{ color: '#6C63FF' }}>Monas</strong> son personajes coleccionables únicos que desbloqueas participando activamente en la comunidad ECI. Cada una tiene una <strong style={{ color: '#7FE7C4' }}>misión específica</strong> que debes completar y otorga <strong style={{ color: '#FFB347' }}>XP</strong> al conseguirla.
-            </p>
-
-            {/* XP earned + progress */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
-                style={{ background: 'rgba(255,179,71,0.12)', border: '1px solid rgba(255,179,71,0.25)' }}>
-                <span style={{ fontSize: '0.85rem' }}>⚡</span>
-                <span style={{ fontWeight: 700, fontSize: '0.82rem', color: '#FFB347' }}>{xpEarned.toLocaleString()} XP ganados</span>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
-                style={{ background: 'rgba(127,231,196,0.1)', border: '1px solid rgba(127,231,196,0.25)' }}>
-                <span style={{ fontSize: '0.85rem' }}>🔒</span>
-                <span style={{ fontWeight: 600, fontSize: '0.82rem', color: '#7FE7C4' }}>{ALL_MONAS.length - unlocked} por desbloquear</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Rarity guide */}
-        <div className="border-t px-6 py-4" style={{ borderColor: 'rgba(108,99,255,0.15)', background: t.darkMode ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.4)' }}>
-          <p style={{ fontSize: '0.72rem', fontWeight: 700, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
-            Sistema de rarezas — ¿cómo se ganan?
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {RARITY_INFO.map(r => (
-              <div key={r.rarity} className="rounded-2xl px-3 py-2.5 border"
-                style={{ background: `${r.color}10`, borderColor: `${r.color}30` }}>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: r.color }} />
-                  <span style={{ fontWeight: 700, fontSize: '0.8rem', color: r.color }}>{r.rarity}</span>
-                  <span className="ml-auto px-1.5 py-0.5 rounded-full text-xs font-bold"
-                    style={{ background: 'rgba(255,179,71,0.15)', color: '#FFB347' }}>
-                    +{r.xp} XP
-                  </span>
-                </div>
-                <p style={{ fontSize: '0.68rem', color: t.textMuted, lineHeight: 1.5 }}>{r.desc}</p>
-              </div>
-            ))}
           </div>
         </div>
       </div>
@@ -244,53 +301,285 @@ function AlbumView() {
       {/* Progress bar */}
       <div className="flex items-center justify-between mb-2">
         <p style={{ fontSize: '0.75rem', color: t.textMuted }}>Progreso del álbum</p>
-        <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6C63FF' }}>{Math.round((unlocked/ALL_MONAS.length)*100)}%</p>
+        <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6C63FF' }}>{Math.round((unlockedCount / ALL_MONAS.length) * 100)}%</p>
       </div>
-      <div className="h-2 rounded-full mb-6 overflow-hidden" style={{ background: t.divider }}>
-        <motion.div initial={{ width: 0 }} animate={{ width: `${(unlocked/ALL_MONAS.length)*100}%` }}
+      <div className="h-2 rounded-full mb-5 overflow-hidden" style={{ background: t.divider }}>
+        <motion.div initial={{ width: 0 }} animate={{ width: `${(unlockedCount / ALL_MONAS.length) * 100}%` }}
           transition={{ duration: 1.5, ease: 'easeOut' }}
           className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #6C63FF, #7FE7C4)' }} />
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-5">
-        {ALL_MONAS.map(mona => (
-          <motion.div key={mona.id}
-            whileHover={mona.unlocked ? { scale: 1.04, y: -5 } : { scale: 1.01 }}
-            className="rounded-2xl border flex flex-col items-center text-center cursor-pointer relative overflow-hidden"
-            style={{
-              background: mona.unlocked ? t.cardBg : (t.darkMode ? 'rgba(20,18,35,0.85)' : '#F0EEFF'),
-              borderColor: mona.unlocked ? rarityBorder[mona.rarity] : t.cardBorder,
-              padding: '20px 14px',
-              boxShadow: mona.unlocked ? `0 4px 20px ${mona.color}18` : 'none',
-            }}>
-            {mona.rarity === 'Legendaria' && mona.unlocked && (
-              <div className="absolute inset-0 opacity-8" style={{ background: `radial-gradient(circle at 50% 30%, ${mona.color}, transparent 70%)` }} />
-            )}
-            {/* Real dog image */}
-            <div className={`relative z-10 ${mona.unlocked ? '' : 'opacity-25 grayscale'}`}
-              style={{ width: 100, height: 100 }}>
-              <ImageWithFallback src={mona.img} alt={mona.name}
-                className="w-full h-full object-contain"
-                style={{ filter: mona.unlocked ? 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' : 'none' }} />
-            </div>
-            {!mona.unlocked && (
-              <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 20 }}>
-                <div className="px-3 py-2 rounded-2xl" style={{ background: t.darkMode ? 'rgba(15,14,26,0.85)' : 'rgba(244,242,255,0.9)' }}>
-                  <span style={{ fontSize: '1.5rem' }}>🔒</span>
+
+      {/* Scratch hint banner */}
+      {hasScratchable && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 px-4 py-3 rounded-2xl mb-5"
+          style={{ background: 'rgba(108,99,255,0.12)', border: '1px solid rgba(108,99,255,0.3)' }}>
+          <motion.span animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 1 }} style={{ fontSize: '1.1rem' }}>✦</motion.span>
+          <p style={{ fontSize: '0.8rem', color: '#A89BFF', fontWeight: 500 }}>
+            Tienes monas listas para desbloquear. <strong style={{ color: '#6C63FF' }}>¡Tócalas para rasparlas!</strong>
+          </p>
+        </motion.div>
+      )}
+
+      {/* ── Album pages ── */}
+      <div className="rounded-3xl p-4 mb-2" style={{
+        background: t.darkMode
+          ? '#1A1540'
+          : '#E8E3FF',
+        backgroundImage: t.darkMode
+          ? 'radial-gradient(circle, rgba(108,99,255,0.09) 1px, transparent 1px)'
+          : 'radial-gradient(circle, rgba(108,99,255,0.14) 1px, transparent 1px)',
+        backgroundSize: '20px 20px',
+        border: t.darkMode ? '2px solid rgba(108,99,255,0.3)' : '2px solid rgba(108,99,255,0.22)',
+        boxShadow: '0 8px 40px rgba(108,99,255,0.15)',
+      }}>
+
+        {/* Page label */}
+        <div className="flex items-center justify-center mb-4">
+          <span className="px-4 py-1 rounded-full text-xs font-bold" style={{
+            background: 'rgba(108,99,255,0.2)',
+            color: t.darkMode ? '#A89BFF' : '#5A50CC',
+            border: '1px solid rgba(108,99,255,0.35)',
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+          }}>
+            Página {albumPage + 1} / 2
+          </span>
+        </div>
+
+        {/* Sticker grid */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={albumPage}
+            initial={{ opacity: 0, x: albumPage === 0 ? -40 : 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: albumPage === 0 ? 40 : -40 }}
+            transition={{ duration: 0.28, ease: 'easeOut' }}
+            className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+            {PAGES[albumPage].map(mona => {
+              const unlk = isUnlocked(mona);
+              const scratchable = canScratch(mona);
+              const rc = rarityColor[mona.rarity as keyof typeof rarityColor];
+
+              return (
+                <motion.div key={mona.id}
+                  whileHover={unlk ? { scale: 1.04, y: -4 } : scratchable ? { scale: 1.03, y: -2 } : { scale: 1.01 }}
+                  whileTap={scratchable ? { scale: 0.97 } : {}}
+                  onClick={() => scratchable && setScratchPopupMona(mona)}
+                  className="flex flex-col rounded-xl overflow-hidden relative"
+                  style={{
+                    cursor: scratchable ? 'pointer' : 'default',
+                    background: unlk ? (t.darkMode ? '#28244A' : '#FFFFFF') : (t.darkMode ? '#14122B' : '#EDE8F8'),
+                    border: `1.5px solid ${unlk ? `${mona.color}45` : scratchable ? `${rc}65` : 'rgba(108,99,255,0.18)'}`,
+                    boxShadow: unlk
+                      ? `0 4px 20px ${mona.color}22, 0 2px 8px rgba(0,0,0,0.18)`
+                      : scratchable
+                      ? `0 0 0 2px ${rc}28, 0 6px 20px ${rc}22`
+                      : '0 2px 8px rgba(0,0,0,0.12)',
+                  }}>
+
+                  {/* Rarity stripe */}
+                  <div style={{ height: 7, background: unlk || scratchable ? rc : 'rgba(139,133,176,0.3)', flexShrink: 0 }} />
+
+                  {/* Number badge */}
+                  <div className="absolute top-2.5 left-2.5 z-20">
+                    <span className="px-1.5 py-0.5 rounded-md font-black"
+                      style={{ background: 'rgba(0,0,0,0.52)', color: 'rgba(255,255,255,0.92)', fontSize: '0.5rem', fontFamily: 'monospace', backdropFilter: 'blur(4px)' }}>
+                      #{String(mona.id).padStart(2, '0')}
+                    </span>
+                  </div>
+
+                  {/* Image area */}
+                  <div className="relative flex-1 flex items-center justify-center" style={{ minHeight: 118, padding: '18px 12px 8px' }}>
+                    <div className={`${unlk ? '' : scratchable ? 'opacity-10 grayscale' : 'opacity-20 grayscale'}`} style={{ width: 86, height: 86 }}>
+                      <ImageWithFallback src={mona.img} alt={mona.name}
+                        className="w-full h-full object-contain"
+                        style={{ filter: unlk ? `drop-shadow(0 4px 14px ${mona.color}55)` : 'none' }} />
+                    </div>
+
+                    {/* Tap-to-scratch indicator */}
+                    {scratchable && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ zIndex: 10 }}>
+                        <motion.div
+                          animate={{ scale: [1, 1.22, 1] }}
+                          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                          style={{ fontSize: '1.8rem', lineHeight: 1 }}>✦</motion.div>
+                        <span style={{ fontSize: '0.6rem', fontWeight: 700, color: rc, marginTop: '5px', textAlign: 'center' }}>Toca para raspar</span>
+                      </div>
+                    )}
+
+                    {/* Lock for non-scratchable */}
+                    {!unlk && !scratchable && (
+                      <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 10 }}>
+                        <div className="rounded-xl px-3 py-2" style={{ background: t.darkMode ? 'rgba(15,14,26,0.82)' : 'rgba(237,232,248,0.92)' }}>
+                          <span style={{ fontSize: '1.4rem' }}>🔒</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card footer */}
+                  <div className="px-2.5 pb-3 pt-1.5 text-center" style={{
+                    borderTop: unlk ? `1px solid ${mona.color}18` : 'none',
+                    background: unlk ? (t.darkMode ? 'rgba(108,99,255,0.07)' : 'rgba(108,99,255,0.04)') : 'transparent',
+                  }}>
+                    <p style={{ fontSize: '0.7rem', fontWeight: 800, color: unlk ? mona.color : scratchable ? rc : t.textMuted, lineHeight: 1.2 }}>
+                      {mona.name}
+                    </p>
+                    <div className="flex items-center justify-center gap-1 mt-1 flex-wrap">
+                      <span className="px-1.5 py-0.5 rounded-full" style={{ fontSize: '0.5rem', color: rc, background: `${rc}18`, fontWeight: 700 }}>
+                        {mona.rarity}
+                      </span>
+                      {unlk && (
+                        <span style={{ fontSize: '0.52rem', color: '#7FE7C4', fontWeight: 700 }}>+{mona.xp} XP</span>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Page navigation */}
+        <div className="flex items-center justify-between mt-5">
+          <button onClick={() => setAlbumPage(0)} disabled={albumPage === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-30"
+            style={{ background: 'rgba(108,99,255,0.2)', color: t.darkMode ? '#A89BFF' : '#5A50CC' }}>
+            ← Anterior
+          </button>
+          <div className="flex items-center gap-2">
+            {[0, 1].map(i => (
+              <button key={i} onClick={() => setAlbumPage(i)}
+                className="rounded-full transition-all"
+                style={{
+                  width: albumPage === i ? 20 : 8,
+                  height: 8,
+                  background: albumPage === i ? '#6C63FF' : 'rgba(108,99,255,0.3)',
+                }} />
+            ))}
+          </div>
+          <button onClick={() => setAlbumPage(1)} disabled={albumPage === 1}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-30"
+            style={{ background: 'rgba(108,99,255,0.2)', color: t.darkMode ? '#A89BFF' : '#5A50CC' }}>
+            Siguiente →
+          </button>
+        </div>
+      </div>
+
+      {/* ── Scratch Popup ── */}
+      <AnimatePresence>
+        {scratchPopupMona && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[280] flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(12px)' }}
+            onClick={() => setScratchPopupMona(null)}>
+            <motion.div
+              initial={{ scale: 0.82, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.82, y: 30 }}
+              transition={{ type: 'spring', stiffness: 280, damping: 22 }}
+              onClick={e => e.stopPropagation()}
+              className="rounded-3xl overflow-hidden w-full max-w-sm flex flex-col items-center"
+              style={{
+                background: t.darkMode ? '#1A1829' : '#F4F2FF',
+                border: `2px solid ${scratchPopupMona.color}55`,
+                boxShadow: `0 32px 80px ${scratchPopupMona.color}35`,
+              }}>
+
+              {/* Header */}
+              <div className="w-full px-6 pt-6 pb-4 text-center" style={{ background: `linear-gradient(135deg, ${scratchPopupMona.color}22, ${scratchPopupMona.color}08)` }}>
+                <p style={{ fontWeight: 800, fontSize: '0.65rem', color: scratchPopupMona.color, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: '6px' }}>
+                  Mona desbloqueada
+                </p>
+                <h3 style={{ fontWeight: 900, fontSize: '1.3rem', color: t.text }}>¡Raspa para revelar!</h3>
+                <p style={{ fontSize: '0.78rem', color: t.textMuted, marginTop: '4px' }}>Desliza el dedo sobre la tarjeta</p>
+              </div>
+
+              {/* Scratch area */}
+              <div className="relative mx-6 mb-4 rounded-2xl overflow-hidden"
+                style={{ width: 260, height: 260, background: t.darkMode ? '#12102A' : '#EDE9FF' }}>
+                {/* Mona visible underneath */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <ImageWithFallback
+                    src={scratchPopupMona.img}
+                    alt={scratchPopupMona.name}
+                    className="object-contain"
+                    style={{ width: 200, height: 200, filter: `drop-shadow(0 8px 28px ${scratchPopupMona.color}70)` }}
+                  />
+                </div>
+                {/* Canvas on top */}
+                <ScratchCanvas onComplete={() => handleScratchComplete(scratchPopupMona)} />
+              </div>
+
+              {/* Footer info */}
+              <div className="w-full px-6 pb-6 text-center">
+                <span className="inline-block px-3 py-1 rounded-full mb-3"
+                  style={{ background: `${scratchPopupMona.color}18`, color: scratchPopupMona.color, fontSize: '0.78rem', fontWeight: 700 }}>
+                  {scratchPopupMona.rarity} · +{scratchPopupMona.xp} XP
+                </span>
+                <button onClick={() => setScratchPopupMona(null)}
+                  className="w-full py-2.5 rounded-xl text-sm font-medium transition-all hover:opacity-70"
+                  style={{ background: 'rgba(108,99,255,0.1)', color: t.textMuted }}>
+                  Cerrar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Mona Desbloqueada Overlay ── */}
+      <AnimatePresence>
+        {justUnlocked && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[300] flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(10px)' }}
+            onClick={() => setJustUnlocked(null)}>
+            <motion.div
+              initial={{ scale: 0.65, y: 40 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.65, y: 40 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+              className="rounded-3xl overflow-hidden w-full max-w-xs text-center"
+              style={{ background: t.darkMode ? '#1A1829' : '#F4F2FF', border: `2px solid ${justUnlocked.color}55`, boxShadow: `0 24px 80px ${justUnlocked.color}30` }}
+              onClick={e => e.stopPropagation()}>
+              <div style={{ background: `linear-gradient(135deg, ${justUnlocked.color}30, ${justUnlocked.color}08)`, padding: '36px 28px 28px' }}>
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1], rotate: [0, -6, 6, 0] }}
+                  transition={{ duration: 0.55, delay: 0.15 }}
+                  style={{ fontSize: '2.2rem', marginBottom: '8px' }}>🎉</motion.div>
+                <p style={{ fontWeight: 800, fontSize: '0.65rem', color: justUnlocked.color, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: '16px' }}>
+                  ¡Mona desbloqueada!
+                </p>
+                <motion.div className="mx-auto" style={{ width: 116, height: 116 }}
+                  initial={{ scale: 0 }} animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 16, delay: 0.1 }}>
+                  <ImageWithFallback src={justUnlocked.img} alt={justUnlocked.name}
+                    className="w-full h-full object-contain"
+                    style={{ filter: `drop-shadow(0 8px 28px ${justUnlocked.color}70)` }} />
+                </motion.div>
+                <h3 style={{ fontWeight: 900, fontSize: '1.25rem', color: justUnlocked.color, marginTop: '14px', marginBottom: '4px' }}>
+                  {justUnlocked.name}
+                </h3>
+                <span className="inline-block px-3 py-1 rounded-full" style={{ background: `${justUnlocked.color}20`, color: justUnlocked.color, fontSize: '0.78rem', fontWeight: 700 }}>
+                  {justUnlocked.rarity} · +{justUnlocked.xp} XP
+                </span>
+                <div className="mt-6 flex flex-col gap-2">
+                  <button onClick={() => setJustUnlocked(null)}
+                    className="w-full py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90"
+                    style={{ background: `linear-gradient(135deg, ${justUnlocked.color}, ${justUnlocked.color}CC)`, color: 'white' }}>
+                    Listo
+                  </button>
                 </div>
               </div>
-            )}
-            <p style={{ fontSize: '0.78rem', fontWeight: 700, color: mona.unlocked ? mona.color : t.textMuted, marginTop: '10px', position: 'relative', zIndex: 10 }}>
-              {mona.name}
-            </p>
-            <span className="px-2 py-0.5 rounded-full" style={{ fontSize: '0.62rem', color: rarityColor[mona.rarity], background: `${rarityColor[mona.rarity]}18`, marginTop: '4px', position: 'relative', zIndex: 10 }}>
-              {mona.rarity}
-            </span>
-            <p style={{ fontSize: '0.62rem', color: mona.unlocked ? '#7FE7C4' : t.textMuted, marginTop: '4px', lineHeight: 1.4, position: 'relative', zIndex: 10 }}>
-              {mona.unlocked ? `+${mona.xp} XP` : mona.how}
-            </p>
+            </motion.div>
           </motion.div>
-        ))}
-      </div>
+        )}
+      </AnimatePresence>
 
       {/* ── Monas Guide Popup ── */}
       <AnimatePresence>
@@ -303,7 +592,6 @@ function AlbumView() {
               className="rounded-3xl w-full max-w-3xl overflow-hidden flex flex-col"
               style={{ background: t.darkMode ? '#1A1829' : '#F4F2FF', border:'1px solid rgba(108,99,255,0.3)', maxHeight:'85vh' }}
               onClick={e => e.stopPropagation()}>
-              {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0"
                 style={{ borderColor:'rgba(108,99,255,0.2)', background:'rgba(108,99,255,0.06)' }}>
                 <div>
@@ -316,7 +604,6 @@ function AlbumView() {
                   <span style={{ fontSize:'1rem', color:'var(--p-muted)' }}>✕</span>
                 </button>
               </div>
-              {/* Rarity legend */}
               <div className="flex gap-3 px-6 py-3 border-b flex-shrink-0 flex-wrap"
                 style={{ borderColor:'rgba(108,99,255,0.1)', background: t.darkMode ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.4)' }}>
                 {[
@@ -336,37 +623,39 @@ function AlbumView() {
                   </div>
                 ))}
               </div>
-              {/* Monas list */}
               <div className="overflow-y-auto flex-1 p-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {ALL_MONAS.map(mona => (
-                    <div key={mona.id} className="flex items-center gap-3 rounded-2xl p-3 border transition-all"
-                      style={{ background: mona.unlocked ? `${mona.color}10` : (t.darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'), borderColor: mona.unlocked ? `${mona.color}35` : 'rgba(108,99,255,0.12)' }}>
-                      <div className={`flex-shrink-0 ${mona.unlocked ? '' : 'grayscale opacity-40'}`}
-                        style={{ width:52, height:52 }}>
-                        <ImageWithFallback src={mona.img} alt={mona.name}
-                          className="w-full h-full object-contain"
-                          style={{ filter: mona.unlocked ? `drop-shadow(0 2px 8px ${mona.color}50)` : 'none' }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span style={{ fontWeight:700, fontSize:'0.85rem', color: mona.unlocked ? mona.color : t.textMuted }}>{mona.name}</span>
-                          {mona.unlocked && <span style={{ fontSize:'0.7rem' }}>✅</span>}
+                  {ALL_MONAS.map(mona => {
+                    const unlk = isUnlocked(mona);
+                    const rc = rarityColor[mona.rarity as keyof typeof rarityColor];
+                    return (
+                      <div key={mona.id} className="flex items-center gap-3 rounded-2xl p-3 border transition-all"
+                        style={{ background: unlk ? `${mona.color}10` : (t.darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'), borderColor: unlk ? `${mona.color}35` : 'rgba(108,99,255,0.12)' }}>
+                        <div className={`flex-shrink-0 ${unlk ? '' : 'grayscale opacity-40'}`} style={{ width:52, height:52 }}>
+                          <ImageWithFallback src={mona.img} alt={mona.name}
+                            className="w-full h-full object-contain"
+                            style={{ filter: unlk ? `drop-shadow(0 2px 8px ${mona.color}50)` : 'none' }} />
                         </div>
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <span className="px-1.5 py-0.5 rounded-full"
-                            style={{ fontSize:'0.58rem', color:rarityColor[mona.rarity], background:`${rarityColor[mona.rarity]}18`, fontWeight:600 }}>
-                            {mona.rarity}
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded-full"
-                            style={{ fontSize:'0.58rem', color:'#FFB347', background:'rgba(255,179,71,0.12)', fontWeight:700 }}>
-                            +{mona.xp} XP
-                          </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span style={{ fontWeight:700, fontSize:'0.85rem', color: unlk ? mona.color : t.textMuted }}>{mona.name}</span>
+                            {unlk && <span style={{ fontSize:'0.7rem' }}>✅</span>}
+                          </div>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="px-1.5 py-0.5 rounded-full"
+                              style={{ fontSize:'0.58rem', color:rc, background:`${rc}18`, fontWeight:600 }}>
+                              {mona.rarity}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded-full"
+                              style={{ fontSize:'0.58rem', color:'#FFB347', background:'rgba(255,179,71,0.12)', fontWeight:700 }}>
+                              +{mona.xp} XP
+                            </span>
+                          </div>
+                          <p style={{ fontSize:'0.7rem', color: t.textSub, lineHeight:1.4 }}>{mona.how}</p>
                         </div>
-                        <p style={{ fontSize:'0.7rem', color: t.textSub, lineHeight:1.4 }}>{mona.how}</p>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </motion.div>
@@ -496,9 +785,9 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
             </div>
           </div>
 
-          {/* Sobre PATRICI.A — al final */}
+          {/* Sobre U•link — al final */}
           <div className="rounded-2xl p-5 border" style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
-            <p style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '16px', color: '#6C63FF' }}>Sobre PATRICI.A</p>
+            <p style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '16px', color: '#6C63FF' }}>Sobre U•link</p>
             <div className="space-y-3">
               {[{ label: 'Versión', value: '1.0.0' }, { label: 'Institución', value: 'ECI' }, { label: 'Soporte', value: '24/7' }].map(item => (
                 <div key={item.label} className="flex justify-between">
@@ -532,12 +821,13 @@ export default function App() {
   };
   const [visionMode, setVisionMode] = useState<VisionMode>('normal');
   const [dyslexiaMode, setDyslexiaMode] = useState(false);
+  const [linkedEvents, setLinkedEvents] = useState<Array<{parcheId: number; eventTitle: string; eventEmoji: string; eventDate: string}>>([]);
   const theme = getTheme(darkMode);
 
   // Welcome + demo toasts on login
   useEffect(() => {
     if (authState !== 'app') return;
-    const t0 = setTimeout(() => addToast({ type: 'logro', title: '¡Bienvenido, Explorador! 🐒', message: '¡Qué bueno tenerte de vuelta en PATRICI.A!', duration: 5000 }), 600);
+    const t0 = setTimeout(() => addToast({ type: 'logro', title: '¡Bienvenido, Explorador! 🐒', message: '¡Qué bueno tenerte de vuelta en U•link!', duration: 5000 }), 600);
     const t1 = setTimeout(() => addToast({ type: 'match', title: '¡Nuevo Match!', message: 'Tú y Camila Rodríguez se gustaron 💜' }), 3000);
     const t2 = setTimeout(() => addToast({ type: 'xp', title: '+100 XP', message: 'Bonus de bienvenida desbloqueado ⚡' }), 5500);
     return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2); };
@@ -553,9 +843,9 @@ export default function App() {
   const renderView = () => {
     switch (activeView) {
       case 'home':           return <HomeView onNavigate={setActiveView} />;
-      case 'parches':        return <ParchesView />;
+      case 'parches':        return <ParchesView linkedEvents={linkedEvents} />;
       case 'chats':          return <ChatsView onNavigate={setActiveView} />;
-      case 'eventos':        return <EventosView />;
+      case 'eventos':        return <EventosView onLinkEvent={(parcheId, ev) => setLinkedEvents(prev => [...prev, {parcheId, ...ev}])} />;
       case 'matching':       return <MatchingView />;
       case 'bienestar':      return <BienestarView />;
       case 'perfil':         return <ProfileView />;
@@ -612,19 +902,19 @@ export default function App() {
                 className="flex items-center justify-center w-full transition-all hover:opacity-80 px-1"
                 title="Expandir menú">
                 <ImageWithFallback
-                  src={theme.darkMode ? logoBlancoImg : logoNegroImg}
-                  alt="PATRICI.A"
+                  src={theme.darkMode ? logoNuevoOscuroImg : logoNuevoClaroImg}
+                  alt="U•link"
                   className="object-contain"
-                  style={{ height: 22, width: 'auto', maxWidth: 44 }} />
+                  style={{ height: 52, width: 'auto', maxWidth: 72 }} />
               </motion.button>
             ) : (
               /* Expanded: full logo + collapse button */
               <motion.div key="full" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="flex items-center justify-between w-full gap-2">
                 <ImageWithFallback
-                  src={theme.darkMode ? logoBlancoImg : logoNegroImg}
-                  alt="PATRICI.A" className="object-contain"
-                  style={{ height: 30, maxWidth: 130, filter: theme.darkMode ? 'none' : undefined }} />
+                  src={theme.darkMode ? logoNuevoOscuroImg : logoNuevoClaroImg}
+                  alt="U•link" className="object-contain"
+                  style={{ height: 60, maxWidth: 200, filter: theme.darkMode ? 'none' : undefined }} />
                 <button onClick={() => setCollapsed(true)}
                   className="hidden md:flex w-7 h-7 rounded-lg items-center justify-center flex-shrink-0 transition-all hover:opacity-70"
                   style={{ background: 'rgba(108,99,255,0.08)' }}

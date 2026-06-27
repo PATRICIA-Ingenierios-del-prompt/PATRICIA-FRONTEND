@@ -3,8 +3,8 @@ import { Check, X, Upload, ChevronRight, Sun, Moon } from 'lucide-react';
 import { ImageWithFallback } from '../components/ImageWithFallback';
 import { AnimatedBackground } from '../components/AnimatedBackground';
 import { InteresesPicker } from '../components/InteresesPicker';
-import logoBlancoImg from '../assets/logoBLANCO.png';
-import logoNegroImg from '../assets/logoNEGRO.png';
+import logoNuevoOscuroImg from '../assets/logoNuevoOscuro.png';
+import logoNuevoClaroImg from '../assets/logoNuevoClaro.png';
 import monoImg from '../assets/monoSINFONDO.png';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -29,7 +29,7 @@ function ProgressBar({ step, darkMode }: { step: number; darkMode: boolean }) {
   const inactText = darkMode ? '#444' : '#8B85B0';
   return (
     <div className="flex items-center justify-center gap-0 mb-8">
-      {[1, 2, 3].map((s, i) => (
+      {[1, 2, 3, 4].map((s, i) => (
         <div key={s} className="flex items-center">
           <motion.div
             animate={step >= s ? { scale: [1, 1.2, 1] } : {}}
@@ -57,8 +57,8 @@ function ProgressBar({ step, darkMode }: { step: number; darkMode: boolean }) {
               />
             )}
           </motion.div>
-          {i < 2 && (
-            <div className="w-12 h-0.5 relative overflow-hidden" style={{ background: 'rgba(108,99,255,0.15)' }}>
+          {i < 3 && (
+            <div className="w-8 h-0.5 relative overflow-hidden" style={{ background: 'rgba(108,99,255,0.15)' }}>
               <motion.div
                 animate={{ width: step > s ? '100%' : '0%' }}
                 transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -74,9 +74,10 @@ function ProgressBar({ step, darkMode }: { step: number; darkMode: boolean }) {
 }
 
 const STEP_META = [
-  { title: 'Datos Básicos',  sub: 'Cuéntanos quién eres' },
-  { title: 'Tu Perfil',      sub: 'Carrera, semestre y datos personales' },
-  { title: 'Intereses',      sub: 'Elige tus categorías favoritas' },
+  { title: 'Verificar Correo', sub: 'Ingresa el código enviado a tu email' },
+  { title: 'Datos Básicos',    sub: 'Cuéntanos quién eres' },
+  { title: 'Tu Perfil',        sub: 'Carrera, semestre y datos personales' },
+  { title: 'Intereses',        sub: 'Elige tus categorías favoritas' },
 ];
 
 const inputStyle = (focused: boolean, dark: boolean, error?: boolean): React.CSSProperties => ({
@@ -116,6 +117,7 @@ function Step1({
 }) {
   const [focused, setFocused] = useState<string | null>(null);
   const set = (k: string, v: string) => setData((d: any) => ({ ...d, [k]: v }));
+  const canContinue = !!data.nombre.trim() && !!data.apellidos.trim();
 
   return (
     <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}
@@ -155,11 +157,14 @@ function Step1({
         </p>
       </div>
 
-      <button onClick={onNext}
-        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-semibold mt-2 transition-all"
-        style={{ background: 'linear-gradient(135deg,#6C63FF,#5250d0)', color: 'white', boxShadow: '0 4px 20px rgba(108,99,255,0.3)' }}>
+      <motion.button onClick={onNext}
+        disabled={!canContinue}
+        whileHover={canContinue ? { scale: 1.02 } : {}}
+        whileTap={canContinue ? { scale: 0.98 } : {}}
+        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-semibold mt-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        style={{ background: canContinue ? 'linear-gradient(135deg,#6C63FF,#5250d0)' : 'rgba(108,99,255,0.3)', color: 'white', boxShadow: canContinue ? '0 4px 20px rgba(108,99,255,0.3)' : 'none' }}>
         Continuar <ChevronRight size={18} />
-      </button>
+      </motion.button>
     </motion.div>
   );
 }
@@ -215,7 +220,7 @@ function Step2({
     reader.readAsDataURL(file);
   }, []);
 
-  const canContinue = !!data.carrera && !!data.semestre;
+  const canContinue = !!data.carrera && !!data.semestre && !!data.fechaNac;
 
   return (
     <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}
@@ -608,7 +613,7 @@ function Step4({ data, setData, onFinish, loading, darkMode }: {
         }}>
         {loading
           ? <div className="w-5 h-5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
-          : <>Completar Registro 🎉 <ChevronRight size={18} /></>
+          : <>Completar Registro <ChevronRight size={18} /></>
         }
       </motion.button>
     </motion.div>
@@ -646,8 +651,9 @@ export function RegisterView({ onRegister, onGoLogin, darkMode = true, setDarkMo
     return Object.keys(errs).length === 0;
   };
 
-  const handleNext1 = () => { if (validateStep1()) setStep(2); };
-  const handleNext2 = () => setStep(3); // skip OTP, go directly to interests
+  const handleNextOTP = () => setStep(2); // OTP (step 1) → Datos Básicos (step 2)
+  const handleNext1 = () => { if (validateStep1()) setStep(3); }; // Datos Básicos → Perfil
+  const handleNext2 = () => setStep(4); // Perfil → Intereses
 
   const handleFinish = async () => {
     setLoading(true);
@@ -656,7 +662,7 @@ export function RegisterView({ onRegister, onGoLogin, darkMode = true, setDarkMo
     onRegister();
   };
 
-  const meta = step >= 1 ? STEP_META[Math.min(step - 1, 2)] : null;
+  const meta = step >= 1 ? STEP_META[Math.min(step - 1, 3)] : null;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
@@ -693,9 +699,9 @@ export function RegisterView({ onRegister, onGoLogin, darkMode = true, setDarkMo
           {step === 0 && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <div className="flex flex-col items-center gap-2 mb-6">
-                <ImageWithFallback src={darkMode ? logoBlancoImg : logoNegroImg} alt="PATRICI.A" className="object-contain" style={{ height: 58, width: 'auto' }} />
+                <ImageWithFallback src={darkMode ? logoNuevoOscuroImg : logoNuevoClaroImg} alt="U•link" className="object-contain" style={{ height: 80, width: 'auto' }} />
                 <span style={{ fontWeight: 900, fontSize: '1.5rem', letterSpacing: '0.12em', background: 'linear-gradient(135deg,#6C63FF,#7FE7C4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                  PATRICI.A
+                  U•link
                 </span>
               </div>
               <div className="flex justify-center mb-6">
@@ -706,7 +712,7 @@ export function RegisterView({ onRegister, onGoLogin, darkMode = true, setDarkMo
               </div>
               <div className="text-center mb-8">
                 <h1 style={{ fontWeight: 800, fontSize: '1.55rem', color: textColor, marginBottom: '6px' }}>Crea tu cuenta</h1>
-                <p style={{ fontSize: '0.88rem', color: mutedColor }}>Comienza tu viaje en patrici.a 🚀</p>
+                <p style={{ fontSize: '0.88rem', color: mutedColor }}>Comienza tu viaje en U•link</p>
               </div>
 
               <motion.button onClick={handleMicrosoft} disabled={loading}
@@ -744,9 +750,9 @@ export function RegisterView({ onRegister, onGoLogin, darkMode = true, setDarkMo
             <>
               {/* Logo */}
               <div className="flex flex-col items-center gap-1 mb-5">
-                <ImageWithFallback src={darkMode ? logoBlancoImg : logoNegroImg} alt="PATRICI.A" className="object-contain" style={{ height: 40, width: 'auto' }} />
+                <ImageWithFallback src={darkMode ? logoNuevoOscuroImg : logoNuevoClaroImg} alt="U•link" className="object-contain" style={{ height: 56, width: 'auto' }} />
                 <span style={{ fontWeight: 900, fontSize: '1rem', letterSpacing: '0.12em', background: 'linear-gradient(135deg,#6C63FF,#7FE7C4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                  PATRICI.A
+                  U•link
                 </span>
               </div>
 
@@ -764,12 +770,15 @@ export function RegisterView({ onRegister, onGoLogin, darkMode = true, setDarkMo
               {/* Step content with AnimatePresence */}
               <AnimatePresence mode="wait">
                 {step === 1 && (
-                  <Step1 key="s1" data={formData} setData={setFormData} errors={errors} onNext={handleNext1} darkMode={darkMode} />
+                  <Step3 key="s3" email={formData.email} onNext={handleNextOTP} darkMode={darkMode} />
                 )}
                 {step === 2 && (
-                  <Step2 key="s2" data={formData} setData={setFormData} onNext={handleNext2} darkMode={darkMode} />
+                  <Step1 key="s1" data={formData} setData={setFormData} errors={errors} onNext={handleNext1} darkMode={darkMode} />
                 )}
                 {step === 3 && (
+                  <Step2 key="s2" data={formData} setData={setFormData} onNext={handleNext2} darkMode={darkMode} />
+                )}
+                {step === 4 && (
                   <Step4 key="s4" data={formData} setData={setFormData} onFinish={handleFinish} loading={loading} darkMode={darkMode} />
                 )}
               </AnimatePresence>

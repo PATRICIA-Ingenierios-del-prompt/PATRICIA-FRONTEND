@@ -370,7 +370,7 @@ export function AccessibilityPanel({ mode, setMode, dyslexia, setDyslexia }: Acc
               textAlign: 'left',
               transition: 'all 0.4s ease',
             }}>
-              "La comunidad PATRICI.A conecta estudiantes de la ECI en parches de estudio, eventos y actividades."
+              "La comunidad U • link conecta estudiantes de la ECI en parches de estudio, eventos y actividades."
             </p>
           </div>
 

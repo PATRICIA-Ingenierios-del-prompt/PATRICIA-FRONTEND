@@ -409,7 +409,18 @@ function EventDetailModal({ event, onClose, onEnroll, onSave }: {
   );
 }
 
-export function EventosView() {
+const MY_PARCHES = [
+  { id: 1, name: 'Cálculo III Survivors', emoji: '📐', color: '#6C63FF' },
+  { id: 2, name: 'Proyecto IA — Grupo 4', emoji: '🤖', color: '#7FE7C4' },
+  { id: 3, name: 'Fútbol Martes ECI',     emoji: '⚽', color: '#FFB347' },
+  { id: 4, name: 'Gaming Night 🎮',       emoji: '🎮', color: '#FF6B9D' },
+  { id: 5, name: 'Tesis & Proyectos',     emoji: '🎓', color: '#5BC8FF' },
+  { id: 6, name: 'Club Fotografía',       emoji: '📷', color: '#A78BFA' },
+];
+
+export function EventosView({ onLinkEvent }: {
+  onLinkEvent?: (parcheId: number, ev: { eventTitle: string; eventEmoji: string; eventDate: string }) => void;
+}) {
   const t = useTheme();
   const [category, setCategory] = useState('Todos');
   const [eventos, setEventos] = useState(EVENTOS);
@@ -417,6 +428,9 @@ export function EventosView() {
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [detailEventId, setDetailEventId] = useState<number | null>(null);
   const [pickedLocation, setPickedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [linkedParcheIds, setLinkedParcheIds] = useState<number[]>([]);
+  const [createTitle, setCreateTitle] = useState('');
+  const [createDate, setCreateDate] = useState('');
 
   const toggleEnroll = (id: number) => {
     setEventos(prev => prev.map(e => e.id === id ? { ...e, enrolled_me: !e.enrolled_me, enrolled: e.enrolled_me ? e.enrolled - 1 : e.enrolled + 1 } : e));
@@ -522,12 +536,12 @@ export function EventosView() {
             onClick={e => e.stopPropagation()}>
             <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '20px', color: t.text }}>Crear Evento</h3>
             <div className="space-y-4">
-              <input placeholder="Título del evento..." className="w-full rounded-xl px-4 py-3 text-sm outline-none"
+              <input value={createTitle} onChange={e => setCreateTitle(e.target.value)} placeholder="Título del evento..." className="w-full rounded-xl px-4 py-3 text-sm outline-none"
                 style={{ background: t.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text }} />
               <textarea placeholder="Descripción..." rows={3} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
                 style={{ background: t.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text }} />
               <div className="grid grid-cols-2 gap-3">
-                <input type="date" className="rounded-xl px-4 py-3 text-sm outline-none"
+                <input type="date" value={createDate} onChange={e => setCreateDate(e.target.value)} className="rounded-xl px-4 py-3 text-sm outline-none"
                   style={{ background: t.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text }} />
                 <input type="time" className="rounded-xl px-4 py-3 text-sm outline-none"
                   style={{ background: t.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text }} />
@@ -566,10 +580,49 @@ export function EventosView() {
                   🔒 Privado
                 </button>
               </div>
+
+              {/* Vincular con parche */}
+              <div>
+                <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 8, fontWeight: 600 }}>
+                  🔗 Vincular evento con:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {MY_PARCHES.map(p => (
+                    <button key={p.id}
+                      onClick={() => setLinkedParcheIds(prev => prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id])}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+                      style={{
+                        background: linkedParcheIds.includes(p.id) ? `${p.color}22` : 'var(--p-input)',
+                        border: `1px solid ${linkedParcheIds.includes(p.id) ? p.color : 'rgba(108,99,255,0.2)'}`,
+                        color: linkedParcheIds.includes(p.id) ? p.color : 'var(--p-muted)',
+                      }}>
+                      {p.emoji} {p.name}
+                      {linkedParcheIds.includes(p.id) && <span style={{ marginLeft: 2 }}>✓</span>}
+                    </button>
+                  ))}
+                </div>
+                {linkedParcheIds.length > 0 && (
+                  <p style={{ fontSize: '0.7rem', color: '#6C63FF', marginTop: 6 }}>
+                    {linkedParcheIds.length} parche{linkedParcheIds.length > 1 ? 's' : ''} seleccionado{linkedParcheIds.length > 1 ? 's' : ''}
+                  </p>
+                )}
+              </div>
+
               <div className="flex gap-3">
-                <button onClick={() => setShowCreate(false)} className="flex-1 py-2.5 rounded-xl text-sm"
+                <button onClick={() => { setShowCreate(false); setLinkedParcheIds([]); setCreateTitle(''); setCreateDate(''); }}
+                  className="flex-1 py-2.5 rounded-xl text-sm"
                   style={{ background: 'rgba(108,99,255,0.1)', color: 'var(--p-muted)' }}>Cancelar</button>
-                <button onClick={() => setShowCreate(false)} className="flex-1 py-2.5 rounded-xl text-sm font-medium"
+                <button onClick={() => {
+                    if (onLinkEvent && linkedParcheIds.length > 0) {
+                      const ev = { eventTitle: createTitle || 'Nuevo Evento', eventEmoji: '📅', eventDate: createDate || new Date().toISOString().split('T')[0] };
+                      linkedParcheIds.forEach(parcheId => onLinkEvent(parcheId, ev));
+                    }
+                    setShowCreate(false);
+                    setLinkedParcheIds([]);
+                    setCreateTitle('');
+                    setCreateDate('');
+                  }}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium"
                   style={{ background: '#6C63FF', color: 'white' }}>Publicar Evento</button>
               </div>
             </div>

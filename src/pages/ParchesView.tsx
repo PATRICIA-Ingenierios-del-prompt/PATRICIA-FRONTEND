@@ -81,70 +81,120 @@ const QUICK_REACTIONS = ['👍','❤️','😂','🔥','🙏','✅','👏','😮
 
 function CollabCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [drawing, setDrawing] = useState(false);
+  const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState('#6C63FF');
-  const [size, setSize] = useState(4);
-  const [tool, setTool] = useState<'pen'|'eraser'>('pen');
-  const lastPos = useRef<{x:number;y:number}|null>(null);
-  const COLORS = ['#6C63FF','#7FE7C4','#FF6B9D','#FFB347','#5BC8FF','#FFFFFF','#FF4D6A','#A78BFA'];
+  const [size, setSize] = useState(5);
+  const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
+  const lastPos = useRef<{ x: number; y: number } | null>(null);
+  const COLORS = ['#6C63FF', '#7FE7C4', '#FF6B9D', '#FFB347', '#5BC8FF', '#E0E0FF', '#FF4D6A', '#A78BFA'];
 
-  const getPos = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const r = canvasRef.current!.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  // Scale from CSS coords to canvas internal coords
+  const getPos = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current!;
+    const r = canvas.getBoundingClientRect();
+    const sx = canvas.width / r.width;
+    const sy = canvas.height / r.height;
+    if ('touches' in e) {
+      const t = e.touches[0] ?? e.changedTouches[0];
+      return { x: (t.clientX - r.left) * sx, y: (t.clientY - r.top) * sy };
+    }
+    return { x: (e.clientX - r.left) * sx, y: (e.clientY - r.top) * sy };
   };
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!drawing || !canvasRef.current) return;
-    const ctx = canvasRef.current.getContext('2d')!;
-    const pos = getPos(e);
-    ctx.strokeStyle = tool === 'eraser' ? 'var(--p-card)' : color;
-    ctx.lineWidth = tool === 'eraser' ? size * 4 : size;
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+  const stroke = (from: { x: number; y: number }, to: { x: number; y: number }) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
     ctx.beginPath();
-    if (lastPos.current) ctx.moveTo(lastPos.current.x, lastPos.current.y);
-    else ctx.moveTo(pos.x, pos.y);
-    ctx.lineTo(pos.x, pos.y);
+    if (tool === 'eraser') {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.lineWidth = size * 5;
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = size;
+    }
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
     ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+  };
+
+  const startDraw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if ('touches' in e) e.preventDefault();
+    const pos = getPos(e);
+    setIsDrawing(true);
+    lastPos.current = pos;
+    // Paint a dot on click/tap with no drag
+    stroke(pos, pos);
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if ('touches' in e) e.preventDefault();
+    if (!isDrawing || !lastPos.current) return;
+    const pos = getPos(e);
+    stroke(lastPos.current, pos);
     lastPos.current = pos;
   };
-  const clear = () => { const c = canvasRef.current; if (c) c.getContext('2d')!.clearRect(0,0,c.width,c.height); };
+
+  const stopDraw = () => { setIsDrawing(false); lastPos.current = null; };
+
+  const clear = () => {
+    const c = canvasRef.current;
+    if (c) c.getContext('2d')!.clearRect(0, 0, c.width, c.height);
+  };
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 p-3 border-b flex-shrink-0"
-        style={{ background:'var(--p-card)', borderColor:'var(--p-divider)' }}>
-        <div className="flex gap-1.5">
+      <div className="flex items-center gap-3 p-3 border-b flex-wrap flex-shrink-0"
+        style={{ background: 'var(--p-card)', borderColor: 'var(--p-divider)' }}>
+        {/* Color palette */}
+        <div className="flex gap-1.5 flex-wrap">
           {COLORS.map(c => (
             <button key={c} onClick={() => { setColor(c); setTool('pen'); }}
               className="w-6 h-6 rounded-full border-2 transition-all hover:scale-110"
-              style={{ background:c, borderColor: color===c && tool==='pen' ? 'white' : 'transparent' }} />
+              style={{ background: c, borderColor: color === c && tool === 'pen' ? 'white' : 'rgba(255,255,255,0.15)', boxShadow: color === c && tool === 'pen' ? `0 0 0 2px ${c}` : 'none' }} />
           ))}
         </div>
-        <div className="w-px h-5" style={{ background:'rgba(108,99,255,0.2)' }} />
-        <button onClick={() => setTool(tool==='eraser'?'pen':'eraser')}
-          className="px-2.5 py-1 rounded-lg text-xs transition-all"
-          style={{ background: tool==='eraser' ? 'rgba(108,99,255,0.3)' : 'rgba(108,99,255,0.1)', color: tool==='eraser' ? '#6C63FF' : 'var(--p-muted)' }}>
-          {tool==='eraser' ? '✏️ Borrador' : '✏️ Pluma'}
+        <div className="w-px h-5 flex-shrink-0" style={{ background: 'rgba(108,99,255,0.2)' }} />
+        {/* Tool toggle */}
+        <button onClick={() => setTool(t => t === 'eraser' ? 'pen' : 'eraser')}
+          className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex-shrink-0"
+          style={{ background: tool === 'eraser' ? 'rgba(108,99,255,0.28)' : 'rgba(108,99,255,0.1)', color: tool === 'eraser' ? '#A89BFF' : 'var(--p-muted)' }}>
+          {tool === 'eraser' ? '⬜ Borrador' : '✏️ Pluma'}
         </button>
-        <input type="range" min={2} max={20} value={size} onChange={e=>setSize(+e.target.value)}
-          className="w-20 h-1.5" style={{ accentColor:'#6C63FF' }} />
+        {/* Size slider */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="rounded-full bg-current flex-shrink-0" style={{ width: Math.max(4, size), height: Math.max(4, size), background: tool === 'eraser' ? 'var(--p-muted)' : color }} />
+          <input type="range" min={2} max={24} value={size} onChange={e => setSize(+e.target.value)}
+            className="w-20 h-1.5" style={{ accentColor: '#6C63FF' }} />
+        </div>
         <div className="ml-auto flex items-center gap-3">
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ background:'rgba(127,231,196,0.1)' }}>
-            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background:'#7FE7C4' }} />
-            <span style={{ fontSize:'0.7rem', color:'#7FE7C4' }}>3 colaborando</span>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ background: 'rgba(127,231,196,0.1)' }}>
+            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#7FE7C4' }} />
+            <span style={{ fontSize: '0.7rem', color: '#7FE7C4' }}>3 colaborando</span>
           </div>
           <button onClick={clear} className="px-3 py-1.5 rounded-lg text-xs hover:opacity-80"
-            style={{ background:'rgba(255,77,106,0.1)', color:'#FF4D6A' }}>
+            style={{ background: 'rgba(255,77,106,0.1)', color: '#FF4D6A' }}>
             Limpiar
           </button>
         </div>
       </div>
-      <canvas ref={canvasRef} width={800} height={420}
-        className="flex-1 cursor-crosshair w-full"
-        style={{ background:'var(--p-card)' }}
-        onMouseDown={e=>{setDrawing(true); lastPos.current=getPos(e);}}
+      <canvas
+        ref={canvasRef}
+        width={1400}
+        height={700}
+        className="flex-1 w-full"
+        style={{ background: 'var(--p-card)', cursor: tool === 'eraser' ? 'cell' : 'crosshair', touchAction: 'none', display: 'block' }}
+        onMouseDown={startDraw}
         onMouseMove={draw}
-        onMouseUp={()=>{setDrawing(false); lastPos.current=null;}}
-        onMouseLeave={()=>{setDrawing(false); lastPos.current=null;}}
+        onMouseUp={stopDraw}
+        onMouseLeave={stopDraw}
+        onTouchStart={startDraw}
+        onTouchMove={draw}
+        onTouchEnd={stopDraw}
       />
     </div>
   );
@@ -191,12 +241,16 @@ function memberSched(name: string): Set<string> {
   return s;
 }
 
-export function ParchesView() {
+export function ParchesView({ linkedEvents = [] }: {
+  linkedEvents?: Array<{ parcheId: number; eventTitle: string; eventEmoji: string; eventDate: string }>;
+}) {
+  const [myParches, setMyParches] = useState(PARCHES_LIST);
   const [selectedParche, setSelectedParche] = useState(PARCHES_LIST[0]);
   const [activeTab, setActiveTab] = useState<InteriorTab>('chat');
   const [showMembers, setShowMembers] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [sidebarFilter, setSidebarFilter] = useState<'all'|'public'|'private'>('all');
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [reportMember, setReportMember] = useState<string|null>(null);
   const [viewMemberProfile, setViewMemberProfile] = useState<typeof MEMBERS_DATA[0] | null>(null);
   const [messages, setMessages] = useState(INIT_MESSAGES);
@@ -253,7 +307,7 @@ export function ParchesView() {
           <div className="flex items-center justify-between mb-2.5">
             <h3 style={{ fontWeight:700, fontSize:'0.9rem', color:'var(--p-text)' }}>Mis Parches</h3>
             <span className="px-2 py-0.5 rounded-full text-xs" style={{ background:'var(--p-divider)', color:'#6C63FF' }}>
-              {PARCHES_LIST.reduce((s,p)=>s+p.unread,0)} nuevos
+              {myParches.reduce((s,p)=>s+p.unread,0)} nuevos
             </span>
           </div>
           <div className="relative mb-2.5">
@@ -290,7 +344,7 @@ export function ParchesView() {
 
         {/* List */}
         <div className="flex-1 overflow-y-auto py-2">
-          {PARCHES_LIST.filter(p =>
+          {myParches.filter(p =>
             (sidebarFilter==='all' || p.type===sidebarFilter) &&
             (sidebarCategory==='' || p.category===sidebarCategory)
           ).map(parche=>(
@@ -366,31 +420,62 @@ export function ParchesView() {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b flex-shrink-0"
           style={{ borderColor:'var(--p-divider)', background:'var(--p-card)', backdropFilter:'blur(12px)' }}>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
               style={{ background:`${selectedParche.color}18` }}>
               {selectedParche.emoji}
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span style={{ fontWeight:700, fontSize:'0.95rem', color:'var(--p-text)' }}>{selectedParche.name}</span>
                 {selectedParche.type==='private' ? <Lock size={12} style={{ color:'var(--p-muted)' }} /> : <Globe size={12} style={{ color:'#7FE7C4' }} />}
+                {/* Linked events badge */}
+                {linkedEvents.filter(e => e.parcheId === selectedParche.id).length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full flex-shrink-0"
+                    style={{ fontSize:'0.6rem', background:'rgba(255,179,71,0.15)', color:'#FFB347', border:'1px solid rgba(255,179,71,0.3)', fontWeight:600 }}>
+                    📅 {linkedEvents.filter(e => e.parcheId === selectedParche.id).length} evento{linkedEvents.filter(e => e.parcheId === selectedParche.id).length > 1 ? 's' : ''} vinculado{linkedEvents.filter(e => e.parcheId === selectedParche.id).length > 1 ? 's' : ''}
+                  </span>
+                )}
               </div>
               <span style={{ fontSize:'0.68rem', color:'var(--p-muted)' }}>
                 <span style={{ color:'#7FE7C4' }}>●</span> {selectedParche.live} en vivo
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             <button onClick={()=>setShowMembers(v=>!v)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-all"
               style={{ background: showMembers ? 'rgba(108,99,255,0.2)' : 'var(--p-input)', color:'var(--p-muted)' }}>
               <Users size={14} /> Miembros
             </button>
-            <button className="w-8 h-8 rounded-xl flex items-center justify-center hover:opacity-70"
-              style={{ background:'var(--p-input)' }}>
-              <Settings size={14} style={{ color:'var(--p-muted)' }} />
-            </button>
+            {/* Settings dropdown */}
+            <div className="relative">
+              <button onClick={() => setSettingsMenuOpen(v => !v)}
+                className="w-8 h-8 rounded-xl flex items-center justify-center hover:opacity-70 transition-all"
+                style={{ background: settingsMenuOpen ? 'rgba(108,99,255,0.2)' : 'var(--p-input)' }}>
+                <Settings size={14} style={{ color:'var(--p-muted)' }} />
+              </button>
+              <AnimatePresence>
+                {settingsMenuOpen && (
+                  <motion.div
+                    initial={{ opacity:0, scale:0.9, y:-4 }} animate={{ opacity:1, scale:1, y:0 }} exit={{ opacity:0, scale:0.9, y:-4 }}
+                    transition={{ duration:0.12 }}
+                    className="absolute right-0 top-10 rounded-xl border overflow-hidden z-50 min-w-[180px]"
+                    style={{ background:'var(--p-card)', borderColor:'rgba(108,99,255,0.2)', boxShadow:'0 8px 32px rgba(0,0,0,0.35)' }}>
+                    <button onClick={() => {
+                        setMyParches(prev => prev.filter(p => p.id !== selectedParche.id));
+                        const remaining = myParches.filter(p => p.id !== selectedParche.id);
+                        if (remaining.length > 0) setSelectedParche(remaining[0]);
+                        setSettingsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left hover:opacity-80 transition-all"
+                      style={{ color:'#FF4D6A' }}>
+                      🚪 Salirse del parche
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
 
@@ -414,6 +499,18 @@ export function ParchesView() {
             {activeTab==='chat' && (
               <div className="flex flex-col h-full">
                 <div className="flex-1 overflow-y-auto p-4 space-y-1">
+                  {/* Linked event system messages */}
+                  {linkedEvents.filter(e => e.parcheId === selectedParche.id).map(ev => (
+                    <div key={`ev-${ev.parcheId}-${ev.eventTitle}-${ev.eventDate}`} className="flex justify-center my-2">
+                      <div className="px-4 py-2 rounded-2xl flex items-center gap-2"
+                        style={{ background:'rgba(255,179,71,0.1)', border:'1px solid rgba(255,179,71,0.25)' }}>
+                        <span style={{ fontSize:'0.8rem' }}>📅</span>
+                        <span style={{ fontSize:'0.75rem', color:'#FFB347' }}>
+                          Se vinculó el evento <strong>{ev.eventEmoji} {ev.eventTitle}</strong> con este parche
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                   {messages.map((msg,i)=>{
                     const isMe = msg.userId==='ME';
                     const showAvatar = i===0 || messages[i-1].userId!==msg.userId;

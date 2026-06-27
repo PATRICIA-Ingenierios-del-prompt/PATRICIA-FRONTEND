@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { ArrowRight, Sun, Moon, Check, Users, Heart, Calendar, Smile, Zap, Shield } from 'lucide-react';
 import { ImageWithFallback } from '../components/ImageWithFallback';
 import { AnimatedBackground } from '../components/AnimatedBackground';
-import logoBlancoImg from '../assets/logoBLANCO.png';
-import logoNegroImg from '../assets/logoNEGRO.png';
+import logoNuevoOscuroImg from '../assets/logoNuevoOscuro.png';
+import logoNuevoClaroImg from '../assets/logoNuevoClaro.png';
 import monoPatriciaImg from '../assets/monoPATRICIA.png';
 import lp1 from '../assets/landingpage1.jpg';
 import lp2 from '../assets/landingpage2.png';
@@ -66,7 +66,10 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
       {/* ── NAVBAR ── */}
       <nav className="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-8 py-3.5"
         style={{ background: dark ? 'rgba(13,11,30,0.92)' : 'rgba(255,255,255,0.94)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${bord}` }}>
-        <ImageWithFallback src={dark ? logoBlancoImg : logoNegroImg} alt="PATRICI.A" className="object-contain" style={{ height: 28 }} />
+        <div className="flex items-center gap-2.5">
+          <ImageWithFallback src={dark ? logoNuevoOscuroImg : logoNuevoClaroImg} alt="U•link" className="object-contain" style={{ height: 48 }} />
+          <span style={{ fontWeight: 900, fontSize: '1.6rem', letterSpacing: '-0.03em', background: 'linear-gradient(135deg,#6C63FF,#7FE7C4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>U•link</span>
+        </div>
         <div className="hidden md:flex items-center gap-7">
           {[{ label: 'Funcionalidades', id: 'funcionalidades' }, { label: '¿Cómo funciona?', id: 'como-funciona' }].map(({ label, id }) => (
             <button key={id} onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })}
@@ -106,7 +109,9 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
         }} />
         <div style={{
           position:'absolute', inset:0,
-          background:'linear-gradient(135deg, rgba(13,11,30,0.90) 0%, rgba(18,16,42,0.82) 50%, rgba(15,22,40,0.88) 100%)',
+          background: dark
+            ? 'linear-gradient(135deg, rgba(13,11,30,0.90) 0%, rgba(18,16,42,0.82) 50%, rgba(15,22,40,0.88) 100%)'
+            : 'linear-gradient(135deg, rgba(30,20,70,0.52) 0%, rgba(20,15,55,0.46) 50%, rgba(10,20,50,0.50) 100%)',
         }} />
         {/* Decorative blobs */}
         <div className="absolute inset-0 pointer-events-none">
@@ -128,15 +133,19 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
               </span>
             </div>
 
-            <h1 style={{ fontWeight:900, fontSize:'clamp(2.8rem,5.5vw,4.4rem)', lineHeight:1.04, color:'white', marginBottom:'22px' }}>
-              Conecta,<br />
-              aprende y<br />
-              <span style={{ background:'linear-gradient(135deg,#6C63FF,#7FE7C4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
+            <div className="mb-3">
+              <span style={{ fontWeight: 900, fontSize: 'clamp(2.8rem,5vw,4rem)', letterSpacing: '-0.04em', background: 'linear-gradient(135deg,#A89BFF,#7FE7C4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', display: 'block', lineHeight: 1.05, filter:'drop-shadow(0 2px 12px rgba(108,99,255,0.5))' }}>
+                U•link
+              </span>
+            </div>
+            <h1 style={{ fontWeight:900, fontSize:'clamp(1.9rem,3.5vw,3rem)', lineHeight:1.1, color:'white', marginBottom:'22px', textShadow:'0 2px 16px rgba(0,0,0,0.35)' }}>
+              Conecta, aprende y<br />
+              <span style={{ background:'linear-gradient(135deg,#A89BFF,#7FE7C4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
                 crece juntos
               </span>
             </h1>
 
-            <p style={{ fontSize:'1.05rem', color:'rgba(255,255,255,0.62)', lineHeight:1.78, marginBottom:'36px', maxWidth:460 }}>
+            <p style={{ fontSize:'1.05rem', color:'rgba(255,255,255,0.82)', lineHeight:1.78, marginBottom:'36px', maxWidth:460, textShadow:'0 1px 8px rgba(0,0,0,0.4)' }}>
               La plataforma social construida 100% para estudiantes de la ECI. Parches, matching inteligente, eventos y bienestar — todo en un lugar.
             </p>
 
@@ -148,17 +157,17 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                 Crear cuenta gratis <ArrowRight size={18} />
               </motion.button>
               <button onClick={onLogin}
-                className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-semibold text-base transition-all hover:bg-white/10"
-                style={{ border:'2px solid rgba(255,255,255,0.18)', color:'white', background:'rgba(255,255,255,0.05)', backdropFilter:'blur(8px)' }}>
+                className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-semibold text-base transition-all"
+                style={{ border:'2px solid rgba(255,255,255,0.55)', color:'white', background:'rgba(255,255,255,0.12)', backdropFilter:'blur(8px)' }}>
                 Ya tengo cuenta
               </button>
             </div>
 
             {/* Feature pills */}
             <div className="flex flex-wrap gap-2">
-              {['⚡ Matching IA','🎪 Parches virtuales','📅 Eventos campus','🧘 Bienestar 24/7','🎴 Álbum de Monas'].map(tag => (
+              {['Matching IA','Parches virtuales','Eventos campus','Bienestar 24/7','Álbum de Monas'].map(tag => (
                 <span key={tag} className="px-3 py-1.5 rounded-full text-xs font-medium"
-                  style={{ background:'rgba(255,255,255,0.07)', color:'rgba(255,255,255,0.6)', border:'1px solid rgba(255,255,255,0.12)' }}>
+                  style={{ background:'rgba(0,0,0,0.28)', color:'rgba(255,255,255,0.88)', border:'1px solid rgba(255,255,255,0.22)', backdropFilter:'blur(6px)' }}>
                   {tag}
                 </span>
               ))}
@@ -171,19 +180,20 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
             {/* MATCH CARD */}
             <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.35, duration:0.7 }}
               style={{ position:'absolute', top:0, left:'4%', width:232, borderRadius:20, overflow:'hidden',
-                background:'rgba(13,11,30,0.88)', backdropFilter:'blur(24px)',
-                border:'1px solid rgba(108,99,255,0.38)',
-                boxShadow:'0 28px 70px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04)' }}>
+                background: dark ? 'rgba(13,11,30,0.88)' : 'rgba(255,255,255,0.94)',
+                backdropFilter:'blur(24px)',
+                border: dark ? '1px solid rgba(108,99,255,0.38)' : '1px solid rgba(108,99,255,0.22)',
+                boxShadow: dark ? '0 28px 70px rgba(0,0,0,0.65)' : '0 20px 60px rgba(108,99,255,0.18)' }}>
               <motion.div animate={{ y:[0,-11,0] }} transition={{ duration:4, repeat:Infinity, ease:'easeInOut' }}>
                 <div style={{ height:68, background:'linear-gradient(135deg,#6C63FF,#FF6B9D)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                   <div style={{ width:44, height:44, borderRadius:'50%', background:'rgba(255,255,255,0.18)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, color:'white', fontSize:'0.92rem', border:'2px solid rgba(255,255,255,0.28)' }}>CR</div>
                 </div>
                 <div style={{ padding:'11px 15px 15px' }}>
-                  <span style={{ fontSize:'0.58rem', fontWeight:800, color:'#FF6B9D', letterSpacing:'0.07em', textTransform:'uppercase' }}>💜 ¡Match!</span>
-                  <p style={{ fontWeight:700, fontSize:'0.88rem', color:'white', marginTop:4, marginBottom:2 }}>Camila Rodríguez</p>
-                  <p style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.5)', marginBottom:9 }}>Ing. de Sistemas · 7mo sem.</p>
-                  <div style={{ background:'rgba(108,99,255,0.2)', borderRadius:8, padding:'4px 9px', display:'inline-flex', gap:4 }}>
-                    <span style={{ fontSize:'0.64rem', color:'#A78BFA', fontWeight:700 }}>⚡ 96% compatibilidad</span>
+                  <span style={{ fontSize:'0.58rem', fontWeight:800, color:'#FF6B9D', letterSpacing:'0.07em', textTransform:'uppercase' }}>¡Match!</span>
+                  <p style={{ fontWeight:700, fontSize:'0.88rem', color: dark ? 'white' : '#1A1829', marginTop:4, marginBottom:2 }}>Camila Rodríguez</p>
+                  <p style={{ fontSize:'0.72rem', color: dark ? 'rgba(255,255,255,0.5)' : 'rgba(26,24,41,0.52)', marginBottom:9 }}>Ing. de Sistemas · 7mo sem.</p>
+                  <div style={{ background:'rgba(108,99,255,0.15)', borderRadius:8, padding:'4px 9px', display:'inline-flex', gap:4 }}>
+                    <span style={{ fontSize:'0.64rem', color:'#6C63FF', fontWeight:700 }}>⚡ 96% compatibilidad</span>
                   </div>
                 </div>
               </motion.div>
@@ -192,49 +202,53 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
             {/* LIVE EVENT CARD */}
             <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.55, duration:0.7 }}
               style={{ position:'absolute', top:'20%', right:'2%', width:215, borderRadius:18,
-                background:'rgba(13,11,30,0.88)', backdropFilter:'blur(22px)',
-                border:'1px solid rgba(255,179,71,0.32)',
-                boxShadow:'0 18px 52px rgba(0,0,0,0.55)', padding:'14px 16px' }}>
+                background: dark ? 'rgba(13,11,30,0.88)' : 'rgba(255,255,255,0.94)',
+                backdropFilter:'blur(22px)',
+                border: dark ? '1px solid rgba(255,179,71,0.32)' : '1px solid rgba(255,179,71,0.4)',
+                boxShadow: dark ? '0 18px 52px rgba(0,0,0,0.55)' : '0 16px 48px rgba(0,0,0,0.12)',
+                padding:'14px 16px' }}>
               <motion.div animate={{ y:[0,9,0] }} transition={{ duration:3.5, repeat:Infinity, ease:'easeInOut', delay:0.6 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:10 }}>
                   <div style={{ width:7, height:7, borderRadius:'50%', background:'#FF4D6A', boxShadow:'0 0 8px #FF4D6A' }} />
                   <span style={{ fontSize:'0.58rem', fontWeight:800, color:'#FF4D6A', textTransform:'uppercase', letterSpacing:'0.09em' }}>En vivo</span>
                 </div>
-                <p style={{ fontWeight:700, fontSize:'0.86rem', color:'white', marginBottom:3 }}>Hackathon ECI 2026 💻</p>
-                <p style={{ fontSize:'0.7rem', color:'rgba(255,255,255,0.47)', marginBottom:11 }}>Sáb 20 Jun · Auditorio Ppal.</p>
-                <div style={{ height:4, background:'rgba(255,255,255,0.08)', borderRadius:2, overflow:'hidden', marginBottom:5 }}>
+                <p style={{ fontWeight:700, fontSize:'0.86rem', color: dark ? 'white' : '#1A1829', marginBottom:3 }}>Hackathon ECI 2026 💻</p>
+                <p style={{ fontSize:'0.7rem', color: dark ? 'rgba(255,255,255,0.47)' : 'rgba(26,24,41,0.5)', marginBottom:11 }}>Sáb 20 Jun · Auditorio Ppal.</p>
+                <div style={{ height:4, background: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', borderRadius:2, overflow:'hidden', marginBottom:5 }}>
                   <div style={{ width:'78%', height:'100%', background:'linear-gradient(90deg,#FFB347,#FF6B9D)', borderRadius:2 }} />
                 </div>
-                <p style={{ fontSize:'0.64rem', color:'rgba(255,255,255,0.38)' }}>156 / 200 inscritos</p>
+                <p style={{ fontSize:'0.64rem', color: dark ? 'rgba(255,255,255,0.38)' : 'rgba(26,24,41,0.42)' }}>156 / 200 inscritos</p>
               </motion.div>
             </motion.div>
 
             {/* MESSAGE NOTIFICATION */}
             <motion.div initial={{ opacity:0, scale:0.88 }} animate={{ opacity:1, scale:1 }} transition={{ delay:0.75, duration:0.6 }}
               style={{ position:'absolute', top:'52%', right:'10%', borderRadius:14,
-                background:'linear-gradient(135deg,rgba(108,99,255,0.9),rgba(139,127,255,0.88))',
+                background:'linear-gradient(135deg,rgba(108,99,255,0.92),rgba(139,127,255,0.9))',
                 backdropFilter:'blur(14px)',
-                boxShadow:'0 10px 32px rgba(108,99,255,0.52)', padding:'10px 15px', maxWidth:196 }}>
+                boxShadow:'0 10px 32px rgba(108,99,255,0.45)', padding:'10px 15px', maxWidth:196 }}>
               <motion.div animate={{ y:[0,-6,0] }} transition={{ duration:3, repeat:Infinity, ease:'easeInOut', delay:1 }}>
-                <p style={{ fontSize:'0.75rem', fontWeight:800, color:'white', marginBottom:3 }}>💬 Camila te escribió</p>
-                <p style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.75)', lineHeight:1.45 }}>¿Hacemos parche de estudio mañana? 📚</p>
+                <p style={{ fontSize:'0.75rem', fontWeight:800, color:'white', marginBottom:3 }}>Camila te escribió</p>
+                <p style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.8)', lineHeight:1.45 }}>¿Hacemos parche de estudio mañana?</p>
               </motion.div>
             </motion.div>
 
             {/* ACTIVE PARCHE */}
             <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.95, duration:0.7 }}
               style={{ position:'absolute', bottom:'9%', left:'7%', borderRadius:16,
-                background:'rgba(13,11,30,0.88)', backdropFilter:'blur(22px)',
-                border:'1px solid rgba(127,231,196,0.28)',
-                boxShadow:'0 14px 40px rgba(0,0,0,0.45)', padding:'10px 15px', display:'flex', alignItems:'center', gap:11 }}>
+                background: dark ? 'rgba(13,11,30,0.88)' : 'rgba(255,255,255,0.94)',
+                backdropFilter:'blur(22px)',
+                border: dark ? '1px solid rgba(127,231,196,0.28)' : '1px solid rgba(127,231,196,0.45)',
+                boxShadow: dark ? '0 14px 40px rgba(0,0,0,0.45)' : '0 12px 36px rgba(0,0,0,0.12)',
+                padding:'10px 15px', display:'flex', alignItems:'center', gap:11 }}>
               <motion.div animate={{ y:[0,7,0] }} transition={{ duration:5, repeat:Infinity, ease:'easeInOut', delay:1.5 }}
                 style={{ display:'flex', alignItems:'center', gap:11 }}>
-                <div style={{ width:38, height:38, borderRadius:11, background:'rgba(108,99,255,0.18)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.1rem', flexShrink:0 }}>📐</div>
+                <div style={{ width:38, height:38, borderRadius:11, background:'rgba(108,99,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.1rem', flexShrink:0 }}>📐</div>
                 <div>
-                  <p style={{ fontWeight:700, fontSize:'0.78rem', color:'white', lineHeight:1.2 }}>Cálculo III Survivors</p>
+                  <p style={{ fontWeight:700, fontSize:'0.78rem', color: dark ? 'white' : '#1A1829', lineHeight:1.2 }}>Cálculo III Survivors</p>
                   <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:3 }}>
                     <div style={{ width:6, height:6, borderRadius:'50%', background:'#7FE7C4' }} />
-                    <span style={{ fontSize:'0.64rem', color:'#7FE7C4', fontWeight:600 }}>7 activos ahora</span>
+                    <span style={{ fontSize:'0.64rem', color:'#0D9D74', fontWeight:600 }}>7 activos ahora</span>
                   </div>
                 </div>
               </motion.div>
@@ -243,10 +257,11 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
             {/* XP BADGE */}
             <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:1.1, duration:0.6 }}
               style={{ position:'absolute', bottom:'32%', left:'2%', borderRadius:12, padding:'8px 12px',
-                background:'rgba(255,179,71,0.15)', border:'1px solid rgba(255,179,71,0.4)',
+                background: dark ? 'rgba(255,179,71,0.15)' : 'rgba(255,179,71,0.18)',
+                border:'1px solid rgba(255,179,71,0.45)',
                 backdropFilter:'blur(12px)' }}>
               <motion.div animate={{ scale:[1,1.06,1] }} transition={{ duration:2.5, repeat:Infinity, ease:'easeInOut' }}>
-                <p style={{ fontSize:'0.7rem', fontWeight:800, color:'#FFB347' }}>⭐ +120 XP ganados hoy</p>
+                <p style={{ fontSize:'0.7rem', fontWeight:800, color:'#C47D00' }}>⭐ +120 XP ganados hoy</p>
               </motion.div>
             </motion.div>
           </div>
@@ -320,7 +335,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
               </span>
             </h2>
             <p style={{ fontSize:'1.05rem', color:textB, maxWidth:520, margin:'0 auto', lineHeight:1.75 }}>
-              PATRICI.A no es otra red social — es la plataforma que la comunidad ECI siempre necesitó.
+              U•link no es otra red social — es la plataforma que la comunidad ECI siempre necesitó.
             </p>
           </motion.div>
 
@@ -484,7 +499,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
               </div>
               <div className="flex-shrink-0 relative">
                 <motion.div animate={{ y:[0,-12,0] }} transition={{ duration:4, repeat:Infinity, ease:'easeInOut' }}>
-                  <ImageWithFallback src={monoPatriciaImg} alt="Mascota PATRICI.A" className="object-contain"
+                  <ImageWithFallback src={monoPatriciaImg} alt="Mascota U•link" className="object-contain"
                     style={{ width:180, height:180, filter:'drop-shadow(0 18px 44px rgba(0,0,0,0.32))' }} />
                 </motion.div>
                 <motion.div animate={{ rotate:[-3,3,-3] }} transition={{ duration:3, repeat:Infinity, ease:'easeInOut' }}
@@ -500,9 +515,12 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
 
       {/* FOOTER */}
       <footer className="py-10 px-4 sm:px-8 border-t text-center" style={{ borderColor:bord }}>
-        <ImageWithFallback src={dark ? logoBlancoImg : logoNegroImg} alt="PATRICI.A" className="object-contain mx-auto mb-4" style={{ height:24 }} />
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <ImageWithFallback src={dark ? logoNuevoOscuroImg : logoNuevoClaroImg} alt="U•link" className="object-contain" style={{ height:32 }} />
+          <span style={{ fontWeight:900, fontSize:'1rem', background:'linear-gradient(135deg,#6C63FF,#7FE7C4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>U•link</span>
+        </div>
         <p style={{ fontSize:'0.8rem', color:textS }}>
-          PATRICI.A © 2026 · Escuela Colombiana de Ingeniería · 🔒 Solo para la comunidad ECI
+          U•link © 2026 · Escuela Colombiana de Ingeniería · Solo para la comunidad ECI
         </p>
         <div className="flex items-center justify-center gap-6 mt-4">
           {['Términos de uso','Privacidad','Centro de ayuda','Contacto'].map(l => (
