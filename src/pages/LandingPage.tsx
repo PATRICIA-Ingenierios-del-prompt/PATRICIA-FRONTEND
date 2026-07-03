@@ -11,6 +11,12 @@ import lp3 from '../assets/landingpage3.jpg';
 import lp4 from '../assets/landingpage4.jpg';
 import concurso1Img from '../assets/concurso1.png';
 import concurso2Img from '../assets/concurso2.jpg';
+import monoSocialFImg    from '../assets/monoDJN.png';
+import monoCulturaFImg   from '../assets/monoCulturaN.png';
+import monoMusicaFImg    from '../assets/monoMusicaN.png';
+import monoTranquiloFImg from '../assets/monoTranquiloN.png';
+import monoCoderFImg     from '../assets/monoCoderN.png';
+import monoEstudioFImg   from '../assets/monoEstudiosoN.png';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface LandingPageProps {
@@ -21,12 +27,12 @@ interface LandingPageProps {
 }
 
 const FEATURES = [
-  { emoji: '🎪', icon: Users,    color: '#6C63FF', title: 'Parches Virtuales',    desc: 'Grupos por intereses con chat, voz, lienzo colaborativo y juegos como Parqués integrados.' },
-  { emoji: '💜', icon: Heart,    color: '#FF6B9D', title: 'Matching Inteligente', desc: 'Encuentra estudiantes con tu misma vibra académica. Algoritmo basado en intereses y carrera.' },
-  { emoji: '🎉', icon: Calendar, color: '#7FE7C4', title: 'Eventos del Campus',   desc: 'Hackathones, charlas empresariales, torneos y actividades con geolocalización en tiempo real.' },
-  { emoji: '🧘', icon: Smile,    color: '#FFB347', title: 'Bienestar 24/7',       desc: 'Chatbot de apoyo, diario emocional con IA, respiración guiada y sonidos de relajación.' },
-  { emoji: '🎴', icon: Zap,      color: '#A78BFA', title: 'Álbum de Monas',       desc: '12 personajes coleccionables con 4 rarezas. Gana XP participando y sube en el ranking.' },
-  { emoji: '⚡', icon: Shield,   color: '#00D9FF', title: 'Solo para la ECI',     desc: 'Verificación con correo institucional. Tu comunidad privada y segura.' },
+  { img: monoSocialFImg,    icon: Users,    color: '#6C63FF', title: 'Parches Virtuales',    desc: 'Grupos por intereses con chat, voz, lienzo colaborativo y juegos como Parqués integrados.' },
+  { img: monoCulturaFImg,   icon: Heart,    color: '#FF6B9D', title: 'Matching Inteligente', desc: 'Encuentra estudiantes con tu misma vibra académica. Algoritmo basado en intereses y carrera.' },
+  { img: monoMusicaFImg,    icon: Calendar, color: '#7FE7C4', title: 'Eventos del Campus',   desc: 'Hackathones, charlas empresariales, torneos y actividades con geolocalización en tiempo real.' },
+  { img: monoTranquiloFImg, icon: Smile,    color: '#FFB347', title: 'Bienestar 24/7',       desc: 'Chatbot de apoyo, diario emocional con IA, respiración guiada y sonidos de relajación.' },
+  { img: monoCoderFImg,     icon: Zap,      color: '#A78BFA', title: 'Álbum de Monas',       desc: '12 personajes coleccionables con 4 rarezas. Gana XP participando y sube en el ranking.' },
+  { img: monoEstudioFImg,   icon: Shield,   color: '#00D9FF', title: 'Solo para la ECI',     desc: 'Verificación con correo institucional. Tu comunidad privada y segura.' },
 ];
 
 const STEPS = [
@@ -46,6 +52,15 @@ const GALLERY = [
 
 export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: LandingPageProps) {
   const [featureIdx, setFeatureIdx] = useState(0);
+  const [galleryOrder, setGalleryOrder] = useState([0, 1, 2, 3, 4, 5]);
+
+  const swapWithHero = (pos: number) => {
+    setGalleryOrder(prev => {
+      const next = [...prev];
+      [next[0], next[pos]] = [next[pos], next[0]];
+      return next;
+    });
+  };
 
   useEffect(() => {
     const t = setInterval(() => setFeatureIdx(i => (i + 1) % FEATURES.length), 3800);
@@ -300,28 +315,35 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
             <div className="flex gap-3" style={{ height: 380 }}>
 
               {/* Hero card */}
+              {(() => { const hero = GALLERY[galleryOrder[0]]; return (
               <motion.div
-                initial={{ opacity:0, y:22 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
+                key={hero.label}
+                initial={{ opacity:0, y:22 }} animate={{ opacity:1, y:0 }}
+                transition={{ duration:0.4 }}
                 whileHover={{ scale:1.012, transition:{ duration:0.22 } }}
-                style={{ flex:2, borderRadius:24, overflow:'hidden', position:'relative', cursor:'pointer',
+                style={{ flex:2, borderRadius:24, overflow:'hidden', position:'relative', cursor:'default',
                   boxShadow: dark ? '0 20px 56px rgba(0,0,0,0.5)' : '0 14px 44px rgba(0,0,0,0.18)' }}>
-                <ImageWithFallback src={GALLERY[0].img} alt={GALLERY[0].label}
+                <ImageWithFallback src={hero.img} alt={hero.label}
                   style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s ease' }} />
-                <div style={{ position:'absolute', inset:0, background:`linear-gradient(to top, ${GALLERY[0].color}d0 0%, rgba(0,0,0,0.08) 50%, transparent 100%)` }} />
+                <div style={{ position:'absolute', inset:0, background:`linear-gradient(to top, ${hero.color}d0 0%, rgba(0,0,0,0.08) 50%, transparent 100%)` }} />
                 <div style={{ position:'absolute', bottom:22, left:22 }}>
                   <span style={{ display:'inline-block', padding:'4px 13px', borderRadius:20, background:'rgba(0,0,0,0.35)', backdropFilter:'blur(10px)', border:'1px solid rgba(255,255,255,0.2)', fontSize:'0.65rem', fontWeight:800, color:'white', letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:7 }}>
-                    {GALLERY[0].label}
+                    {hero.label}
                   </span>
-                  <p style={{ fontWeight:700, fontSize:'1.05rem', color:'white', lineHeight:1.2, textShadow:'0 2px 8px rgba(0,0,0,0.4)' }}>{GALLERY[0].desc}</p>
+                  <p style={{ fontWeight:700, fontSize:'1.05rem', color:'white', lineHeight:1.2, textShadow:'0 2px 8px rgba(0,0,0,0.4)' }}>{hero.desc}</p>
                 </div>
               </motion.div>
+              ); })()}
 
               {/* Right stack */}
               <div className="flex flex-col gap-3" style={{ flex:1 }}>
-                {[GALLERY[1], GALLERY[2]].map((item, i) => (
+                {[1, 2].map((pos, i) => {
+                  const item = GALLERY[galleryOrder[pos]];
+                  return (
                   <motion.div key={item.label}
-                    initial={{ opacity:0, y:22 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} transition={{ delay: (i+1)*0.09 }}
+                    initial={{ opacity:0, y:22 }} animate={{ opacity:1, y:0 }} transition={{ delay: (i+1)*0.09, duration:0.35 }}
                     whileHover={{ scale:1.015, transition:{ duration:0.22 } }}
+                    onClick={() => swapWithHero(pos)}
                     style={{ flex:1, borderRadius:20, overflow:'hidden', position:'relative', cursor:'pointer',
                       boxShadow: dark ? '0 12px 36px rgba(0,0,0,0.45)' : '0 10px 32px rgba(0,0,0,0.15)' }}>
                     <ImageWithFallback src={item.img} alt={item.label}
@@ -334,16 +356,20 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                       <p style={{ fontWeight:600, fontSize:'0.78rem', color:'rgba(255,255,255,0.9)' }}>{item.desc}</p>
                     </div>
                   </motion.div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
             {/* Row 2: 3 equal cards */}
             <div className="flex gap-3" style={{ height: 210 }}>
-              {[GALLERY[3], GALLERY[4], GALLERY[5]].map((item, i) => (
+              {[3, 4, 5].map((pos, i) => {
+                const item = GALLERY[galleryOrder[pos]];
+                return (
                 <motion.div key={item.label}
-                  initial={{ opacity:0, y:22 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} transition={{ delay: i*0.09 + 0.18 }}
+                  initial={{ opacity:0, y:22 }} animate={{ opacity:1, y:0 }} transition={{ delay: i*0.09 + 0.18, duration:0.35 }}
                   whileHover={{ scale:1.015, transition:{ duration:0.22 } }}
+                  onClick={() => swapWithHero(pos)}
                   style={{ flex:1, borderRadius:20, overflow:'hidden', position:'relative', cursor:'pointer',
                     boxShadow: dark ? '0 12px 36px rgba(0,0,0,0.45)' : '0 10px 32px rgba(0,0,0,0.15)' }}>
                   <ImageWithFallback src={item.img} alt={item.label}
@@ -356,7 +382,8 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                     <p style={{ fontWeight:600, fontSize:'0.78rem', color:'rgba(255,255,255,0.9)' }}>{item.desc}</p>
                   </div>
                 </motion.div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -414,9 +441,10 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                   className="relative p-8 h-full flex flex-col justify-between">
                   <div>
                     <div className="flex items-center gap-4 mb-5">
-                      <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
+                      <div className="w-24 h-24 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden"
                         style={{ background:`${FEATURES[featureIdx].color}18`, border:`2px solid ${FEATURES[featureIdx].color}35` }}>
-                        {FEATURES[featureIdx].emoji}
+                        <ImageWithFallback src={FEATURES[featureIdx].img} alt={FEATURES[featureIdx].title}
+                          style={{ width:'100%', height:'100%', objectFit:'contain' }} />
                       </div>
                       <div>
                         <span className="text-xs font-bold uppercase tracking-widest mb-1 block" style={{ color:FEATURES[featureIdx].color }}>
@@ -450,7 +478,9 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                   className="rounded-2xl border p-3 text-left transition-all hover:scale-105 relative overflow-hidden"
                   style={{ background:featureIdx===i ? `${f.color}15` : card, borderColor:featureIdx===i ? `${f.color}60` : bord,
                     backdropFilter:'blur(12px)', boxShadow:featureIdx===i ? `0 4px 20px ${f.color}20` : 'none' }}>
-                  <div className="text-xl mb-1.5">{f.emoji}</div>
+                  <div className="w-12 h-12 mb-2">
+                    <ImageWithFallback src={f.img} alt={f.title} style={{ width:'100%', height:'100%', objectFit:'contain' }} />
+                  </div>
                   <p style={{ fontSize:'0.72rem', fontWeight:700, color:featureIdx===i ? f.color : textS, lineHeight:1.3 }}>{f.title}</p>
                   {featureIdx===i && <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background:`linear-gradient(90deg,${f.color},transparent)` }} />}
                 </button>

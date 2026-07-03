@@ -86,11 +86,6 @@ const FEED = [
   },
 ];
 
-const DASH_NOTIFS = [
-  { emoji: '💜', color: '#FF6B9D', text: '¡Nuevo match con Camila Rodríguez!',             time: '2 min',  unread: true  },
-  { emoji: '🎪', color: '#6C63FF', text: 'Tu parche "Cálculo III" tiene 3 mensajes nuevos', time: '15 min', unread: true  },
-  { emoji: '🎉', color: '#FFB347', text: 'El Hackathon ECI 2026 empieza mañana',            time: '1h',     unread: false },
-];
 
 function VibraCard({ vibra, onNavigate }: { vibra: typeof VIBRAS[0]; onNavigate: (v: ViewId) => void }) {
   const [hovered, setHovered] = useState(false);
@@ -275,7 +270,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                   style={{ background: '#6C63FF', color: 'white', fontSize: '0.58rem', fontWeight: 700 }}>12</div>
               </div>
               <div>
-                <p style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: '1.2rem', color: t.text, lineHeight: 1.2 }}>
+                <p style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 800, fontSize: '1.9rem', color: t.text, lineHeight: 1.15 }}>
                   {greeting.emoji} {greeting.text}, Juan
                 </p>
                 <p style={{ fontSize: '0.82rem', color: t.textMuted, marginTop: '4px' }}>
@@ -307,40 +302,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             </div>
           </div>
 
-          {/* Notifications preview card */}
-          <div className="w-full lg:w-80 lg:flex-shrink-0 rounded-2xl border flex flex-col"
-            style={{ background: t.cardBg, borderColor: t.cardBorder }}>
-            <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b"
-              style={{ borderColor: t.cardBorder }}>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#FF4D6A' }} />
-                <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: '0.88rem', color: t.text }}>Notificaciones</span>
-              </div>
-              <button onClick={() => onNavigate('notificaciones')}
-                style={{ fontSize: '0.72rem', color: '#6C63FF' }} className="hover:underline">
-                Ver todas
-              </button>
-            </div>
-            <div className="flex-1 overflow-hidden divide-y" style={{ borderColor: t.cardBorder }}>
-              {DASH_NOTIFS.map((n, i) => (
-                <motion.div key={i}
-                  initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
-                  className="flex items-start gap-3 px-4 py-3 hover:opacity-80 cursor-pointer transition-all">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm"
-                    style={{ background: `${n.color}18` }}>
-                    {n.emoji}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="truncate" style={{ fontSize: '0.8rem', color: t.text, fontWeight: n.unread ? 600 : 400 }}>
-                      {n.text}
-                    </p>
-                    <p style={{ fontSize: '0.68rem', color: t.textMuted, marginTop: '2px' }}>Hace {n.time}</p>
-                  </div>
-                  {n.unread && <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ background: '#6C63FF' }} />}
-                </motion.div>
-              ))}
-            </div>
-          </div>
         </section>
 
         {/* ── 2. FEED ──────────────────────────────────────────────────── */}
