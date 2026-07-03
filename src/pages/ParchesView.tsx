@@ -51,20 +51,20 @@ const INIT_MESSAGES = [
   { id:1, userId:'VT', user:'Valentina T.',  text:'¿Alguien tiene los apuntes del tema 5 de integrales dobles?',    time:'10:23', reactions:[{emoji:'👍',count:3},{emoji:'❤️',count:1}], type:'text' },
   { id:2, userId:'SM', user:'Santiago M.',   text:'¡Yo los tengo! Los subo en un momento 📄',                       time:'10:25', reactions:[], type:'text' },
   { id:3, userId:'ME', user:'Tú',            text:'También tengo los ejercicios del parcial anterior si los necesitan', time:'10:26', reactions:[{emoji:'🙏',count:4}], type:'text' },
-  { id:4, userId:'SM', user:'Santiago M.',   text:'apuntes_calculo3_tema5.pdf',                                      time:'10:28', reactions:[], type:'file' },
+  { id:4, userId:'SM', user:'Santiago M.',   text:'https://drive.google.com/file/apuntes-t5',                      time:'10:28', reactions:[], type:'link' },
   { id:5, userId:'IR', user:'Isabela R.',    text:'¡Gracias Santiago! Justo lo que necesitaba 🙏',                  time:'10:30', reactions:[{emoji:'❤️',count:2}], type:'text' },
   { id:6, userId:'ME', user:'Tú',            text:'¿Hacemos parche de estudio el miércoles en la biblio?',          time:'10:32', reactions:[{emoji:'✅',count:3},{emoji:'🔥',count:2}], type:'text' },
   { id:7, userId:'VT', user:'Valentina T.',  text:'👍 Yo puedo a las 3pm',                                          time:'10:33', reactions:[], type:'text' },
   { id:8, userId:'SM', user:'Santiago M.',   text:'¡Yo llego a las 4! Nos vemos ahí 🎯',                           time:'10:35', reactions:[], type:'text' },
 ];
 
-const FILES_DATA = [
-  { name:'apuntes_calculo3_tema5.pdf',   size:'2.4 MB', date:'Hoy 10:28',    icon:'📄', color:'#FF4D6A', preview: false },
-  { name:'ejercicios_parcial1.pdf',      size:'1.1 MB', date:'Ayer',          icon:'📋', color:'#FFB347', preview: false },
-  { name:'tabla_integrales.png',         size:'340 KB', date:'Hace 3 días',   icon:'🖼️', color:'#6C63FF', preview: true  },
-  { name:'temario_calculo3.docx',        size:'89 KB',  date:'Hace 1 semana', icon:'📝', color:'#7FE7C4', preview: false },
-  { name:'ejercicios_extra.pdf',         size:'560 KB', date:'Hace 1 semana', icon:'📄', color:'#FF4D6A', preview: false },
-  { name:'foto_pizarron_integrales.jpg', size:'1.8 MB', date:'Hace 2 semanas',icon:'🖼️', color:'#6C63FF', preview: true  },
+const LINKS_DATA = [
+  { name:'Apuntes Tema 5 — Integrales Dobles', url:'https://drive.google.com/file/apuntes-t5', sharedBy:'Santiago M.', date:'Hoy 10:28',    icon:'📄', color:'#FF4D6A' },
+  { name:'Ejercicios Parcial 1',               url:'https://docs.google.com/ejercicios-p1',   sharedBy:'Valentina T.', date:'Ayer',          icon:'📋', color:'#FFB347' },
+  { name:'Tabla de Integrales (imagen)',        url:'https://drive.google.com/file/tabla-int', sharedBy:'Isabel R.',    date:'Hace 3 días',   icon:'🖼️', color:'#6C63FF' },
+  { name:'Temario Cálculo III',                url:'https://docs.google.com/temario-calc3',   sharedBy:'Tú',           date:'Hace 1 semana', icon:'📝', color:'#7FE7C4' },
+  { name:'Ejercicios Extra Cap. 4',            url:'https://drive.google.com/file/ej-extra',  sharedBy:'Andrés C.',    date:'Hace 1 semana', icon:'📄', color:'#A78BFA' },
+  { name:'Video clase — Transformada Laplace', url:'https://youtube.com/watch?v=laplace-eci', sharedBy:'Prof. García', date:'Hace 2 semanas',icon:'🎬', color:'#FF6B9D' },
 ];
 
 const MEMBERS_DATA = [
@@ -545,11 +545,13 @@ export function ParchesView({ linkedEvents = [] }: {
                               borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                               border: isMe ? 'none' : '1px solid rgba(108,99,255,0.2)',
                             }}>
-                            {msg.type==='file' ? (
-                              <div className="flex items-center gap-2">
-                                <FileText size={14} style={{ color:'#FFB347' }} />
-                                <span style={{ fontSize:'0.82rem' }}>{msg.text}</span>
-                                <button className="hover:opacity-70"><Download size={12} style={{ color:'var(--p-muted)' }} /></button>
+                            {msg.type==='link' ? (
+                              <div className="flex items-center gap-2 cursor-pointer hover:opacity-80"
+                                onClick={() => window.open(msg.text, '_blank', 'noopener')}>
+                                <FileText size={14} style={{ color:'#FFB347', flexShrink:0 }} />
+                                <span style={{ fontSize:'0.78rem', color:'#6C63FF', textDecoration:'underline', wordBreak:'break-all' }}>
+                                  {msg.text.replace('https://', '')}
+                                </span>
                               </div>
                             ) : (
                               <p style={{ fontSize:'0.85rem', lineHeight:1.55 }}>{msg.text}</p>
@@ -635,31 +637,46 @@ export function ParchesView({ linkedEvents = [] }: {
               </div>
             )}
 
-            {/* ── ARCHIVOS ── */}
+            {/* ── DOCUMENTOS (links) ── */}
             {activeTab==='archivos' && (
               <div className="h-full overflow-y-auto p-5">
                 <div className="flex items-center justify-between mb-5">
-                  <p style={{ fontWeight:600, fontSize:'0.95rem' }}>Archivos compartidos ({FILES_DATA.length})</p>
+                  <div>
+                    <p style={{ fontWeight:700, fontSize:'0.95rem' }}>Links de documentos</p>
+                    <p style={{ fontSize:'0.72rem', color:'var(--p-muted)', marginTop:2 }}>
+                      {LINKS_DATA.length} documentos compartidos
+                    </p>
+                  </div>
                   <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm"
                     style={{ background:'rgba(108,99,255,0.1)', color:'#6C63FF', border:'1px solid rgba(108,99,255,0.2)' }}>
-                    <Plus size={14} /> Subir archivo
+                    <Plus size={14} /> Compartir link
                   </button>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
-                  {FILES_DATA.map((f,i)=>(
-                    <motion.div key={i} whileHover={{ y:-3, boxShadow:'0 8px 24px rgba(108,99,255,0.15)' }}
-                      className="rounded-2xl border overflow-hidden cursor-pointer group"
-                      style={{ background:'var(--p-card)', borderColor:`${f.color}25` }}>
-                      <div className="h-20 flex items-center justify-center relative"
-                        style={{ background:`${f.color}12` }}>
-                        <span style={{ fontSize:'2.5rem' }}>{f.icon}</span>
-                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                          <Download size={18} color="white" />
-                        </div>
+                <div className="space-y-3">
+                  {LINKS_DATA.map((lnk,i)=>(
+                    <motion.div key={i}
+                      whileHover={{ x:4, boxShadow:`0 6px 24px ${lnk.color}20` }}
+                      className="flex items-center gap-4 rounded-2xl border p-4 cursor-pointer group transition-all"
+                      style={{ background:'var(--p-card)', borderColor:`${lnk.color}25` }}
+                      onClick={() => window.open(lnk.url, '_blank', 'noopener')}>
+                      {/* Ícono */}
+                      <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
+                        style={{ background:`${lnk.color}15`, border:`1.5px solid ${lnk.color}30` }}>
+                        {lnk.icon}
                       </div>
-                      <div className="p-3">
-                        <p className="truncate" style={{ fontSize:'0.78rem', fontWeight:600 }}>{f.name}</p>
-                        <p style={{ fontSize:'0.68rem', color:'var(--p-muted)', marginTop:'2px' }}>{f.size} · {f.date}</p>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate" style={{ fontWeight:600, fontSize:'0.88rem', color:'var(--p-text)' }}>{lnk.name}</p>
+                        <p style={{ fontSize:'0.7rem', color:'var(--p-muted)', marginTop:2 }}>
+                          Compartido por <span style={{ color:lnk.color, fontWeight:600 }}>{lnk.sharedBy}</span> · {lnk.date}
+                        </p>
+                      </div>
+                      {/* Abrir */}
+                      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all">
+                        <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold"
+                          style={{ background:`${lnk.color}15`, color:lnk.color }}>
+                          Abrir →
+                        </div>
                       </div>
                     </motion.div>
                   ))}
