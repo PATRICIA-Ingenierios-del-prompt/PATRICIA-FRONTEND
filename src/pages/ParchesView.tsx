@@ -14,6 +14,8 @@ import monoArteImg     from '../assets/monoArteN.png';
 import monoCientImg    from '../assets/monoCientificoN.png';
 import monoCultImg     from '../assets/monoCulturaN.png';
 import monoPatriciaImg from '../assets/monoFondoU.png';
+import { useBoard } from '../hooks/useBoard';
+import { Stroke, Point } from '../types/board';
 
 type InteriorTab = 'chat' | 'archivos' | 'lienzo' | 'juegos' | 'voz';
 type GameId = null | 'parques';
@@ -79,14 +81,50 @@ const MEMBERS_DATA = [
 const STATUS_COLOR: Record<string, string> = { online:'#7FE7C4', away:'#FFB347', offline:'#4A4468' };
 const QUICK_REACTIONS = ['👍','❤️','😂','🔥','🙏','✅','👏','😮'];
 
-function CollabCanvas() {
+function CollabCanvas({ parcheId }: { parcheId: number }) {
+  const { boardId, strokes, remoteCursors, isConnected, sendStroke, sendCursor, clearBoard } = useBoard(parcheId, 'ME');
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState('#6C63FF');
   const [size, setSize] = useState(5);
   const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
+  
   const lastPos = useRef<{ x: number; y: number } | null>(null);
+  const currentPoints = useRef<Point[]>([]);
+  const lastCursorSend = useRef<number>(0);
+  
   const COLORS = ['#6C63FF', '#7FE7C4', '#FF6B9D', '#FFB347', '#5BC8FF', '#E0E0FF', '#FF4D6A', '#A78BFA'];
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    strokes.forEach(s => {
+      if (s.points.length === 0) return;
+      ctx.beginPath();
+      if (s.color === 'eraser') {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.lineWidth = s.width;
+      } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = s.color;
+        ctx.lineWidth = s.width;
+      }
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.moveTo(s.points[0].x, s.points[0].y);
+      for (let i = 1; i < s.points.length; i++) {
+        ctx.lineTo(s.points[i].x, s.points[i].y);
+      }
+      if (s.points.length === 1) {
+        ctx.lineTo(s.points[0].x, s.points[0].y);
+      }
+      ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over';
+    });
+  }, [strokes]);
 
   // Scale from CSS coords to canvas internal coords
   const getPos = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -101,18 +139,18 @@ function CollabCanvas() {
     return { x: (e.clientX - r.left) * sx, y: (e.clientY - r.top) * sy };
   };
 
-  const stroke = (from: { x: number; y: number }, to: { x: number; y: number }) => {
+  const drawSegment = (from: Point, to: Point, isEraser: boolean, pColor: string, pSize: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d')!;
     ctx.beginPath();
-    if (tool === 'eraser') {
+    if (isEraser) {
       ctx.globalCompositeOperation = 'destination-out';
-      ctx.lineWidth = size * 5;
+      ctx.lineWidth = pSize * 5;
     } else {
       ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = color;
-      ctx.lineWidth = size;
+      ctx.strokeStyle = pColor;
+      ctx.lineWidth = pSize;
     }
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -127,27 +165,47 @@ function CollabCanvas() {
     const pos = getPos(e);
     setIsDrawing(true);
     lastPos.current = pos;
-    // Paint a dot on click/tap with no drag
-    stroke(pos, pos);
+    currentPoints.current = [pos];
+    drawSegment(pos, pos, tool === 'eraser', color, size);
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if ('touches' in e) e.preventDefault();
-    if (!isDrawing || !lastPos.current) return;
     const pos = getPos(e);
-    stroke(lastPos.current, pos);
+    
+    const now = Date.now();
+    if (now - lastCursorSend.current > 33) {
+      sendCursor({ userId: 'ME', x: pos.x, y: pos.y });
+      lastCursorSend.current = now;
+    }
+
+    if (!isDrawing || !lastPos.current) return;
+    drawSegment(lastPos.current, pos, tool === 'eraser', color, size);
     lastPos.current = pos;
+    currentPoints.current.push(pos);
   };
 
-  const stopDraw = () => { setIsDrawing(false); lastPos.current = null; };
+  const stopDraw = () => {
+    if (isDrawing && currentPoints.current.length > 0) {
+      const newStroke: Stroke = {
+        id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(),
+        color: tool === 'eraser' ? 'eraser' : color,
+        width: tool === 'eraser' ? size * 5 : size,
+        points: [...currentPoints.current]
+      };
+      sendStroke(newStroke);
+    }
+    setIsDrawing(false); 
+    lastPos.current = null; 
+    currentPoints.current = [];
+  };
 
   const clear = () => {
-    const c = canvasRef.current;
-    if (c) c.getContext('2d')!.clearRect(0, 0, c.width, c.height);
+    clearBoard();
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
       <div className="flex items-center gap-3 p-3 border-b flex-wrap flex-shrink-0"
         style={{ background: 'var(--p-card)', borderColor: 'var(--p-divider)' }}>
         {/* Color palette */}
@@ -173,8 +231,10 @@ function CollabCanvas() {
         </div>
         <div className="ml-auto flex items-center gap-3">
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ background: 'rgba(127,231,196,0.1)' }}>
-            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#7FE7C4' }} />
-            <span style={{ fontSize: '0.7rem', color: '#7FE7C4' }}>3 colaborando</span>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'animate-pulse' : ''}`} style={{ background: isConnected ? '#7FE7C4' : '#FF4D6A' }} />
+            <span style={{ fontSize: '0.7rem', color: isConnected ? '#7FE7C4' : '#FF4D6A' }}>
+              {isConnected ? `${Object.keys(remoteCursors).length + 1} colaborando` : 'Desconectado'}
+            </span>
           </div>
           <button onClick={clear} className="px-3 py-1.5 rounded-lg text-xs hover:opacity-80"
             style={{ background: 'rgba(255,77,106,0.1)', color: '#FF4D6A' }}>
@@ -182,20 +242,41 @@ function CollabCanvas() {
           </button>
         </div>
       </div>
-      <canvas
-        ref={canvasRef}
-        width={1400}
-        height={700}
-        className="flex-1 w-full"
-        style={{ background: 'var(--p-card)', cursor: tool === 'eraser' ? 'cell' : 'crosshair', touchAction: 'none', display: 'block' }}
-        onMouseDown={startDraw}
-        onMouseMove={draw}
-        onMouseUp={stopDraw}
-        onMouseLeave={stopDraw}
-        onTouchStart={startDraw}
-        onTouchMove={draw}
-        onTouchEnd={stopDraw}
-      />
+      <div className="flex-1 relative overflow-hidden" style={{ background: 'var(--p-card)' }}>
+        {Object.values(remoteCursors).map(cursor => (
+          <div key={cursor.userId}
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              transform: `translate(${cursor.x}px, ${cursor.y}px)`,
+              pointerEvents: 'none',
+              zIndex: 10,
+              transition: 'transform 0.05s linear'
+            }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5.65376 21.5034L3 3L21.8496 11.2335L13.1254 13.9234L5.65376 21.5034Z" fill="#FFB347" stroke="white" strokeWidth="1.5" strokeLinejoin="round"/>
+            </svg>
+            <div style={{ background: '#FFB347', color: 'white', fontSize: '10px', padding: '2px 6px', borderRadius: '8px', position: 'absolute', top: 20, left: 10, whiteSpace: 'nowrap' }}>
+              {cursor.userId}
+            </div>
+          </div>
+        ))}
+        <canvas
+          ref={canvasRef}
+          width={1400}
+          height={700}
+          className="w-full h-full"
+          style={{ cursor: tool === 'eraser' ? 'cell' : 'crosshair', touchAction: 'none', display: 'block' }}
+          onMouseDown={startDraw}
+          onMouseMove={draw}
+          onMouseUp={stopDraw}
+          onMouseLeave={stopDraw}
+          onTouchStart={startDraw}
+          onTouchMove={draw}
+          onTouchEnd={stopDraw}
+        />
+      </div>
     </div>
   );
 }
@@ -685,7 +766,7 @@ export function ParchesView({ linkedEvents = [] }: {
             )}
 
             {/* ── LIENZO ── */}
-            {activeTab==='lienzo' && <CollabCanvas />}
+            {activeTab==='lienzo' && <CollabCanvas parcheId={selectedParche.id} />}
 
             {/* ── JUEGOS ── */}
             {activeTab==='juegos' && (
