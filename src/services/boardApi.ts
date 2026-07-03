@@ -3,8 +3,9 @@ import { CreateBoardResponse, BoardResponse } from '../types/board';
 const API_BASE_URL = 'http://localhost:8086/api/boards';
 
 export const boardApi = {
-  createBoard: async (): Promise<CreateBoardResponse> => {
-    const response = await fetch(API_BASE_URL, {
+  createBoard: async (customId?: string): Promise<CreateBoardResponse> => {
+    const url = customId ? `${API_BASE_URL}?customId=${customId}` : API_BASE_URL;
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });

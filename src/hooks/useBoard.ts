@@ -20,31 +20,25 @@ export function useBoard(parcheId: number, userId: string) {
 
     async function initBoard() {
       try {
-        const storageKey = `parche_board_${parcheId}`;
-        let savedBoardId = localStorage.getItem(storageKey);
+        const hexParcheId = parcheId.toString(16).padStart(12, '0');
+        const deterministicId = `00000000-0000-0000-0000-${hexParcheId}`;
 
-        if (!savedBoardId) {
-          const res = await boardApi.createBoard();
-          savedBoardId = res.boardId;
-          localStorage.setItem(storageKey, savedBoardId);
-        }
-        
         if (!active) return;
-        setBoardId(savedBoardId);
+        setBoardId(deterministicId);
 
         // Fetch initial state
         try {
-          const boardState = await boardApi.getBoard(savedBoardId);
+          const boardState = await boardApi.getBoard(deterministicId);
           if (active) setStrokes(boardState.strokes || []);
         } catch (fetchErr) {
-          console.warn('Failed to fetch existing board state (it may have been deleted). Creating new one.');
-          const res = await boardApi.createBoard();
-          savedBoardId = res.boardId;
-          localStorage.setItem(storageKey, savedBoardId);
-          setBoardId(savedBoardId);
-          if (active) setStrokes([]);
+          console.warn('Failed to fetch existing board state. Creating new one with deterministic ID.');
+          try {
+            await boardApi.createBoard(deterministicId);
+            if (active) setStrokes([]);
+          } catch (createErr) {
+            console.error('Failed to create board on backend:', createErr);
+          }
         }
-
       } catch (err: any) {
         if (active) setError(err.message || 'Failed to initialize board');
       }
