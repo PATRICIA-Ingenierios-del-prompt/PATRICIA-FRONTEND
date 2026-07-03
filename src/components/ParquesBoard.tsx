@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
+import { useParquesGame, FrontendPiece } from '../hooks/useParquesGame';
 
 import monoJuegos     from '../assets/monoGamerN.png';
 import monoArte       from '../assets/monoArteN.png';
@@ -8,7 +9,6 @@ import monoCientifico from '../assets/monoCientificoN.png';
 import monoDj         from '../assets/monoDJN.png';
 
 const P_COLORS = ['#7c6cff', '#f25fb0', '#2bd4bd', '#f4b13e'] as const;
-const P_NAMES  = ['Tú', 'Felipe', 'Sofía', 'Andrés'] as const;
 const P_MONKEYS = [monoJuegos, monoArte, monoCientifico, monoDj];
 
 const hexA = (hex: string, a: number) => {
@@ -90,102 +90,56 @@ function DiceFace({ v, rolling, color, isDark }: { v: number; rolling: boolean; 
   );
 }
 
-interface Piece { id: number; player: number; trackPos: number } // -1=home, 0-67=track, 100=done
-
 export function ParquesBoard() {
   const themeColors = useTheme();
-  const [currentPlayer, setCurrentPlayer] = useState(0);
-  const [dice, setDice] = useState<[number, number]>([1, 1]);
-  const [rolling, setRolling] = useState(false);
-  const [hasDiced, setHasDiced] = useState(false);
-  const [winner, setWinner] = useState<number | null>(null);
-  const [log, setLog] = useState<string[]>([`Turno de ${P_NAMES[0]} — tira los dados`]);
+  const isDark = themeColors.darkMode;
+
+  const {
+    pieces,
+    currentPlayer,
+    myPlayerIndex,
+    dice,
+    rolling,
+    hasDiced,
+    isDouble,
+    diceSum,
+    winner,
+    log,
+    error,
+    isMyTurn,
+    playerNames,
+    gameStatus,
+    rollDice,
+    movePiece,
+    skipTurn,
+    resetGame,
+  } = useParquesGame();
+
   const [showRules, setShowRules] = useState(false);
-  const [pieces, setPieces] = useState<Piece[]>(
-    Array.from({ length: 16 }, (_, i) => ({ id: i, player: Math.floor(i / 4), trackPos: -1 }))
-  );
 
-  const diceSum = dice[0] + dice[1];
-  const isDouble = dice[0] === dice[1];
-
-  const addLog = (m: string) => setLog(p => [...p.slice(-12), m]);
-
-  const rollDice = async () => {
-    if (rolling || hasDiced || winner !== null) return;
-    setRolling(true);
-    for (let i = 0; i < 7; i++) {
-      await new Promise(r => setTimeout(r, 60));
-      setDice([Math.ceil(Math.random() * 6) as any, Math.ceil(Math.random() * 6) as any]);
-    }
-    const d1 = (Math.ceil(Math.random() * 6)) as any;
-    const d2 = (Math.ceil(Math.random() * 6)) as any;
-    setDice([d1, d2]);
-    setRolling(false);
-    setHasDiced(true);
-    addLog(`${P_NAMES[currentPlayer]} sacó ${d1}+${d2}=${d1+d2}${d1===d2 ? ' 🎯 ¡Doble!' : ''}`);
-  };
-
-  const movePiece = useCallback((piece: Piece) => {
-    if (!hasDiced || winner !== null || piece.player !== currentPlayer) return;
-    let newPieces = [...pieces];
-
-    if (piece.trackPos === -1) {
-      if (diceSum === 5 || isDouble) {
-        newPieces = newPieces.map(p => p.id === piece.id ? { ...p, trackPos: 0 } : p);
-        addLog(`${P_NAMES[currentPlayer]} saca ficha al inicio`);
-      } else { addLog('Necesitas 5 o dobles para salir de casa'); return; }
-    } else {
-      const newPos = piece.trackPos + diceSum;
-      if (newPos >= 68) {
-        newPieces = newPieces.map(p => p.id === piece.id ? { ...p, trackPos: 100 } : p);
-        addLog(`🏠 Ficha de ${P_NAMES[currentPlayer]} llega a meta!`);
-        if (newPieces.filter(p => p.player === currentPlayer && p.trackPos === 100).length === 4) {
-          setWinner(currentPlayer);
-          setPieces(newPieces);
-          addLog(`🏆 ${P_NAMES[currentPlayer]} GANÓ!`);
-          return;
-        }
-      } else {
-        newPieces = newPieces.map(p => p.id === piece.id ? { ...p, trackPos: newPos } : p);
-        addLog(`${P_NAMES[currentPlayer]} avanza ${diceSum}`);
-      }
-    }
-
-    setPieces(newPieces);
-    if (!isDouble) {
-      const next = (currentPlayer + 1) % 4;
-      setCurrentPlayer(next);
-      addLog(`Turno de ${P_NAMES[next]}`);
-    } else addLog('¡Doble! Tira de nuevo');
-    setHasDiced(false);
-  }, [hasDiced, winner, currentPlayer, pieces, diceSum, isDouble]);
-
-  const skipTurn = () => {
-    if (!hasDiced) return;
-    const next = (currentPlayer + 1) % 4;
-    setCurrentPlayer(next);
-    addLog(`${P_NAMES[currentPlayer]} pasa | Turno de ${P_NAMES[next]}`);
-    setHasDiced(false);
-  };
-
-  const reset = () => {
-    setPieces(Array.from({ length: 16 }, (_, i) => ({ id: i, player: Math.floor(i / 4), trackPos: -1 })));
-    setCurrentPlayer(0); setDice([1, 1]); setHasDiced(false); setWinner(null);
-    setLog([`Turno de ${P_NAMES[0]}`]);
-  };
-
-  // Get board position of a piece
-  const getBoardPos = (piece: Piece): [number, number] | null => {
-    if (piece.trackPos === 100) return null;
-    if (piece.trackPos === -1) return null; // Displayed inside jail/corner slots instead
+  // Get board position of a piece — only renders pieces on the common 68-cell track
+  const getBoardPos = (piece: FrontendPiece): [number, number] | null => {
+    if (piece.trackPos === 100 || piece.trackPos === -1 || piece.trackPos === -2) return null;
     return TRACK[(START_POS[piece.player] + piece.trackPos) % 68];
   };
 
-  const isDark = themeColors.darkMode;
+  // A piece is interactable only when it belongs to the human player on their turn
+  const isMovable = useCallback(
+    (p: FrontendPiece) =>
+      p.player === myPlayerIndex && isMyTurn && hasDiced && winner === null,
+    [myPlayerIndex, isMyTurn, hasDiced, winner]
+  );
+
+  const cornerThemesMeta = [
+    { key: 'violet', emoji: '🎮', dur: 4.2, origin: '12% 12%', mascot: { top: '7%', left: '1%' }, label: { top: '6%', right: '6%' }, turn: { bottom: '6%', right: '6%' }, slots: { bottom: '8%', left: '7%' } },
+    { key: 'pink',   emoji: '🎨', dur: 4.8, origin: '88% 12%', mascot: { top: '7%', right: '1%' }, label: { top: '6%', left: '6%' }, turn: { bottom: '6%', left: '6%' }, slots: { bottom: '8%', right: '7%' } },
+    { key: 'teal',   emoji: '🔬', dur: 4.5, origin: '12% 88%', mascot: { bottom: '7%', left: '1%' }, label: { bottom: '6%', right: '6%' }, turn: { top: '6%', right: '6%' }, slots: { top: '8%', left: '7%' } },
+    { key: 'gold',   emoji: '🎧', dur: 5.1, origin: '88% 88%', mascot: { bottom: '7%', right: '1%' }, label: { bottom: '6%', left: '6%' }, turn: { top: '6%', left: '6%' }, slots: { top: '8%', right: '7%' } },
+  ];
 
   // Render slots for jailed pieces inside corner bases
-  const renderSlotPiece = (piece: Piece) => {
-    const movable = piece.player === currentPlayer && hasDiced && winner === null;
+  const renderSlotPiece = (piece: FrontendPiece) => {
+    const movable = isMovable(piece);
     return (
       <motion.div
         key={piece.id}
@@ -224,39 +178,33 @@ export function ParquesBoard() {
     );
   };
 
-  const renderEmptySlot = (col: string) => {
-    return (
-      <div
-        style={{
-          width: '65%',
-          height: '65%',
-          aspectRatio: '1 / 1',
-          borderRadius: '50%',
-          background: 'rgba(0,0,0,0.28)',
-          boxShadow: `inset 0 0 0 2px ${hexA(col, 0.5)}, 0 0 10px ${hexA(col, 0.22)}`
-        }}
-      />
-    );
-  };
-
-  const cornerThemes = [
-    { key: 'violet', col: '#7c6cff', name: P_NAMES[0], emoji: '🎮', img: monoJuegos, dur: 4.2, origin: '12% 12%', mascot: { top: '7%', left: '1%' }, label: { top: '6%', right: '6%' }, turn: { bottom: '6%', right: '6%' }, slots: { bottom: '8%', left: '7%' } },
-    { key: 'pink', col: '#f25fb0', name: P_NAMES[1], emoji: '🎨', img: monoArte, dur: 4.8, origin: '88% 12%', mascot: { top: '7%', right: '1%' }, label: { top: '6%', left: '6%' }, turn: { bottom: '6%', left: '6%' }, slots: { bottom: '8%', right: '7%' } },
-    { key: 'teal', col: '#2bd4bd', name: P_NAMES[2], emoji: '🔬', img: monoCientifico, dur: 4.5, origin: '12% 88%', mascot: { bottom: '7%', left: '1%' }, label: { bottom: '6%', right: '6%' }, turn: { top: '6%', right: '6%' }, slots: { top: '8%', left: '7%' } },
-    { key: 'gold', col: '#f4b13e', name: P_NAMES[3], emoji: '🎧', img: monoDj, dur: 5.1, origin: '88% 88%', mascot: { bottom: '7%', right: '1%' }, label: { bottom: '6%', left: '6%' }, turn: { top: '6%', left: '6%' }, slots: { top: '8%', right: '7%' } }
-  ];
+  const renderEmptySlot = (col: string) => (
+    <div
+      style={{
+        width: '65%',
+        height: '65%',
+        aspectRatio: '1 / 1',
+        borderRadius: '50%',
+        background: 'rgba(0,0,0,0.28)',
+        boxShadow: `inset 0 0 0 2px ${hexA(col, 0.5)}, 0 0 10px ${hexA(col, 0.22)}`
+      }}
+    />
+  );
 
   const renderCorner = (pi: number) => {
-    const th = cornerThemes[pi];
+    const meta = cornerThemesMeta[pi];
+    const col = P_COLORS[pi];
+    const name = playerNames[pi] ?? `Jugador ${pi + 1}`;
+    const img = P_MONKEYS[pi];
     const isActive = currentPlayer === pi;
     const playerJailedPieces = pieces.filter(p => p.player === pi && p.trackPos === -1);
-    
+
     const slots = [];
     for (let i = 0; i < 4; i++) {
       const piece = playerJailedPieces[i];
       slots.push(
         <div key={i} style={{ width: '100%', aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {piece ? renderSlotPiece(piece) : renderEmptySlot(th.col)}
+          {piece ? renderSlotPiece(piece) : renderEmptySlot(col)}
         </div>
       );
     }
@@ -267,64 +215,58 @@ export function ParquesBoard() {
       { r: '12 / 20', c: '1 / 9', rad: '0 0 0 14px' },
       { r: '12 / 20', c: '12 / 20', rad: '0 0 14px 0' }
     ];
-    
     const area = gridAreas[pi];
 
     return (
-      <div key={th.key} style={{
+      <div key={meta.key} style={{
         gridRow: area.r, gridColumn: area.c, position: 'relative', overflow: 'hidden',
-        background: `radial-gradient(125% 125% at ${th.origin}, ${hexA(th.col, isDark ? 0.30 : 0.20)} 0%, ${hexA(th.col, isDark ? 0.07 : 0.04)} 52%, ${isDark ? 'rgba(255,255,255,0.012)' : 'rgba(0,0,0,0.005)'} 100%)`,
+        background: `radial-gradient(125% 125% at ${meta.origin}, ${hexA(col, isDark ? 0.30 : 0.20)} 0%, ${hexA(col, isDark ? 0.07 : 0.04)} 52%, ${isDark ? 'rgba(255,255,255,0.012)' : 'rgba(0,0,0,0.005)'} 100%)`,
         borderRadius: area.rad
       }}>
-        {/* ambient glow ring (animated if active) */}
         <div style={{
           position: 'absolute', inset: 0,
-          boxShadow: `inset 0 0 60px ${hexA(th.col, isActive ? 0.4 : 0.18)}`,
+          boxShadow: `inset 0 0 60px ${hexA(col, isActive ? 0.4 : 0.18)}`,
           animation: isActive ? 'cornerGlow 2s ease-in-out infinite' : 'none',
           pointerEvents: 'none'
         }} />
-        
-        {/* mascot */}
+
         <motion.img
-          src={th.img} alt={th.name}
+          src={img} alt={name}
           animate={{ y: [0, -7, 0] }}
-          transition={{ duration: th.dur, repeat: Infinity, ease: 'easeInOut' }}
+          transition={{ duration: meta.dur, repeat: Infinity, ease: 'easeInOut' }}
           style={{
-            position: 'absolute', width: '60%', ...th.mascot,
+            position: 'absolute', width: '60%', ...meta.mascot,
             filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.5))',
             pointerEvents: 'none'
           }}
         />
-        
-        {/* label chip */}
+
         <div style={{
-          position: 'absolute', ...th.label,
+          position: 'absolute', ...meta.label,
           display: 'flex', alignItems: 'center', gap: '6px',
           padding: '5px 12px', borderRadius: '999px',
-          background: hexA(th.col, 0.16), border: `1px solid ${hexA(th.col, 0.5)}`,
+          background: hexA(col, 0.16), border: `1px solid ${hexA(col, 0.5)}`,
           backdropFilter: 'blur(4px)', whiteSpace: 'nowrap'
         }}>
-          <span style={{ fontSize: '15px' }}>{th.emoji}</span>
-          <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 700, fontSize: '14px', color: '#fff' }}>{th.name}</span>
+          <span style={{ fontSize: '15px' }}>{meta.emoji}</span>
+          <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 700, fontSize: '14px', color: '#fff' }}>{name}</span>
         </div>
-        
-        {/* turn indicator */}
+
         {isActive && (
           <div style={{
-            position: 'absolute', ...th.turn,
+            position: 'absolute', ...meta.turn,
             display: 'flex', alignItems: 'center', gap: '6px',
             padding: '4px 10px', borderRadius: '999px',
-            background: th.col, boxShadow: `0 0 16px ${hexA(th.col, 0.7)}`,
+            background: col, boxShadow: `0 0 16px ${hexA(col, 0.7)}`,
             zIndex: 5
           }}>
             <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#fff', animation: 'pulseDot 1.3s infinite' }} />
             <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '.5px', color: '#fff' }}>SU TURNO</span>
           </div>
         )}
-        
-        {/* slots cluster */}
+
         <div style={{
-          position: 'absolute', ...th.slots, width: '36%',
+          position: 'absolute', ...meta.slots, width: '36%',
           display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8%'
         }}>
           {slots}
@@ -381,8 +323,6 @@ export function ParquesBoard() {
       const pos = getBoardPos(p);
       return pos && pos[0] === r && pos[1] === c;
     });
-
-    const isMovable = (p: Piece) => p.player === currentPlayer && hasDiced && winner === null;
 
     const style: React.CSSProperties = {
       boxSizing: 'border-box',
@@ -452,31 +392,22 @@ export function ParquesBoard() {
     );
   };
 
-  const renderMedallion = () => {
-    return (
-      <div key="med" style={{ gridRow: '9 / 12', gridColumn: '9 / 12', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 6, pointerEvents: 'none' }}>
-        <div style={{ width: '52%', aspectRatio: '1/1', borderRadius: '50%', background: 'linear-gradient(145deg,#8a7bff,#5b46e0)', border: '3px solid rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'medPulse 2.8s ease-in-out infinite' }}>
-          <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 800, fontSize: '30px', color: '#fff', lineHeight: 1 }}>P</span>
-        </div>
+  const renderMedallion = () => (
+    <div key="med" style={{ gridRow: '9 / 12', gridColumn: '9 / 12', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 6, pointerEvents: 'none' }}>
+      <div style={{ width: '52%', aspectRatio: '1/1', borderRadius: '50%', background: 'linear-gradient(145deg,#8a7bff,#5b46e0)', border: '3px solid rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'medPulse 2.8s ease-in-out infinite' }}>
+        <span style={{ fontFamily: "'Baloo 2', cursive", fontWeight: 800, fontSize: '30px', color: '#fff', lineHeight: 1 }}>P</span>
       </div>
-    );
-  };
+    </div>
+  );
 
   const renderBoardGrid = () => {
     const pathCells = [];
     for (let r = 0; r < 19; r++) {
       for (let c = 0; c < 19; c++) {
         const arm = inArm(r, c);
-        if (arm) {
-          pathCells.push(renderPathCell(r, c, arm));
-        }
+        if (arm) pathCells.push(renderPathCell(r, c, arm));
       }
     }
-
-    const corners = [0, 1, 2, 3].map(pi => renderCorner(pi));
-    const center = renderCenterPyramid();
-    const medallion = renderMedallion();
-
     return (
       <div style={{
         width: '100%', aspectRatio: '1 / 1',
@@ -487,12 +418,21 @@ export function ParquesBoard() {
         position: 'relative'
       }}>
         {pathCells}
-        {corners}
-        {center}
-        {medallion}
+        {[0, 1, 2, 3].map(pi => renderCorner(pi))}
+        {renderCenterPyramid()}
+        {renderMedallion()}
       </div>
     );
   };
+
+  // Status bar text
+  const statusText = (() => {
+    if (gameStatus === 'WAITING_FOR_PLAYERS') return '⏳ Preparando la partida…';
+    if (winner !== null) return `🏆 ${playerNames[winner]} ganó`;
+    if (!isMyTurn) return `Turno de ${playerNames[currentPlayer] ?? '?'}…`;
+    if (hasDiced) return `Click en ficha para mover ${diceSum}`;
+    return 'Tú — tira los dados';
+  })();
 
   return (
     <div className="flex gap-5 h-full overflow-auto p-4 justify-center items-center">
@@ -515,14 +455,14 @@ export function ParquesBoard() {
       <div className="flex-shrink-0 flex flex-col items-center gap-3">
         {/* Player tabs */}
         <div className="flex gap-2 flex-wrap justify-center">
-          {P_NAMES.map((name, i) => {
+          {playerNames.map((name, i) => {
             const done = pieces.filter(p => p.player === i && p.trackPos === 100).length;
             return (
-              <div key={name} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all"
+              <div key={i} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all"
                 style={{ background: currentPlayer === i ? `${P_COLORS[i]}18` : 'transparent', borderColor: currentPlayer === i ? P_COLORS[i] : 'var(--p-divider)' }}>
                 <div className="w-3 h-3 rounded-full" style={{ background: P_COLORS[i] }} />
                 <span style={{ fontSize: '0.7rem', color: currentPlayer === i ? P_COLORS[i] : 'var(--p-muted)', fontWeight: currentPlayer === i ? 700 : 400 }}>
-                  {name}{i === 0 ? ' (Tú)' : ''}
+                  {name}{i === myPlayerIndex ? ' (Tú)' : ''}
                 </span>
                 {done > 0 && <span style={{ fontSize: '0.6rem', color: P_COLORS[i] }}>{done}/4✓</span>}
               </div>
@@ -530,12 +470,8 @@ export function ParquesBoard() {
           })}
         </div>
 
-        {/* Grid Container Wrapper */}
-        <div style={{
-          width: 494,
-          height: 494,
-          position: 'relative'
-        }}>
+        {/* Grid Container */}
+        <div style={{ width: 494, height: 494, position: 'relative' }}>
           {renderBoardGrid()}
         </div>
 
@@ -543,9 +479,17 @@ export function ParquesBoard() {
         <div className="px-4 py-1.5 rounded-full text-center"
           style={{ background: `${P_COLORS[currentPlayer]}15`, border: `1px solid ${P_COLORS[currentPlayer]}40` }}>
           <span style={{ fontSize: '0.75rem', color: P_COLORS[currentPlayer], fontWeight: 600 }}>
-            {winner !== null ? `🏆 ${P_NAMES[winner]} ganó` : hasDiced ? `Click en ficha para mover ${diceSum}` : `Turno de ${P_NAMES[currentPlayer]} — tira`}
+            {statusText}
           </span>
         </div>
+
+        {/* Error toast */}
+        {error && (
+          <div className="px-4 py-1.5 rounded-full text-center"
+            style={{ background: 'rgba(255,77,106,0.12)', border: '1px solid rgba(255,77,106,0.3)' }}>
+            <span style={{ fontSize: '0.7rem', color: '#FF4D6A' }}>⚠️ {error}</span>
+          </div>
+        )}
       </div>
 
       {/* Side panel */}
@@ -558,20 +502,20 @@ export function ParquesBoard() {
           </div>
           {isDouble && hasDiced && <p className="text-center mb-2" style={{ fontSize: '0.7rem', color: '#FFB347', fontWeight: 700 }}>🎯 ¡Doble! +1 turno</p>}
           <motion.button onClick={rollDice}
-            disabled={rolling || hasDiced || winner !== null}
-            whileHover={!rolling && !hasDiced ? { scale: 1.03 } : {}}
-            whileTap={!rolling && !hasDiced ? { scale: 0.97 } : {}}
+            disabled={rolling || !isMyTurn || hasDiced || winner !== null || gameStatus !== 'IN_PROGRESS'}
+            whileHover={!rolling && isMyTurn && !hasDiced ? { scale: 1.03 } : {}}
+            whileTap={!rolling && isMyTurn && !hasDiced ? { scale: 0.97 } : {}}
             className="w-full py-2.5 rounded-xl text-sm font-semibold mb-2 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             style={{
-              background: !hasDiced && winner === null
+              background: isMyTurn && !hasDiced && winner === null && gameStatus === 'IN_PROGRESS'
                 ? `linear-gradient(135deg,${P_COLORS[currentPlayer]},${P_COLORS[currentPlayer]}CC)`
                 : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'),
-              color: !hasDiced && winner === null ? 'white' : 'var(--p-muted)',
-              border: !hasDiced && winner === null ? 'none' : '1px solid var(--p-divider)'
+              color: isMyTurn && !hasDiced && winner === null && gameStatus === 'IN_PROGRESS' ? 'white' : 'var(--p-muted)',
+              border: isMyTurn && !hasDiced && winner === null && gameStatus === 'IN_PROGRESS' ? 'none' : '1px solid var(--p-divider)'
             }}>
-            {rolling ? '🎲 Tirando…' : hasDiced ? '✓ Tirado' : '🎲 Tirar dados'}
+            {rolling ? '🎲 Tirando…' : hasDiced && isMyTurn ? '✓ Tirado' : '🎲 Tirar dados'}
           </motion.button>
-          {hasDiced && winner === null && (
+          {isMyTurn && hasDiced && winner === null && (
             <button onClick={skipTurn} className="w-full py-1.5 rounded-xl text-xs transition-all hover:opacity-95"
               style={{ background: 'rgba(255,179,71,0.12)', color: '#FFB347', border: '1px solid rgba(255,179,71,0.25)' }}>
               Pasar turno →
@@ -585,7 +529,8 @@ export function ParquesBoard() {
           <div className="overflow-y-auto space-y-1" style={{ maxHeight: 180 }}>
             {log.map((m, i) => (
               <p key={i} style={{
-                fontSize: '0.65rem', color: m.includes('Turno') ? '#7FE7C4' : m.includes('🏆') ? '#FFB347' : 'var(--p-sub)',
+                fontSize: '0.65rem',
+                color: m.includes('Turno') ? '#7FE7C4' : m.includes('🏆') ? '#FFB347' : 'var(--p-sub)',
                 padding: '3px 6px', borderRadius: 6, background: 'rgba(108,99,255,0.05)', lineHeight: 1.4
               }}>
                 {m}
@@ -594,9 +539,9 @@ export function ParquesBoard() {
           </div>
         </div>
 
-        <button onClick={reset} className="py-2 rounded-xl text-sm font-medium"
+        <button onClick={resetGame} className="py-2 rounded-xl text-sm font-medium"
           style={{ background: winner !== null ? '#7FE7C4' : 'rgba(108,99,255,0.1)', color: winner !== null ? '#0F0E1A' : 'var(--p-muted)' }}>
-          {winner !== null ? '🎮 Nueva partida' : '🔄 Reiniciar'}
+          {winner !== null ? '🎮 Nueva partida' : '🔄 Nueva partida'}
         </button>
 
         <button onClick={() => setShowRules(true)} className="py-2 rounded-xl text-sm font-medium"
@@ -627,7 +572,7 @@ export function ParquesBoard() {
                 { emoji: '⭐', title: 'Casillas seguras', body: 'Las casillas con estrella son seguras. Tu ficha no puede ser comida estando en ellas. También los puntos de salida de cada jugador son seguros.' },
                 { emoji: '🍽️', title: 'Comer una ficha', body: 'Si caes en una casilla ocupada por una ficha rival (y NO es casilla segura), la comes: esa ficha vuelve a casa del rival. Ganas 20 pasos de premio.' },
                 { emoji: '🏆', title: 'Ganar el juego', body: 'El primero en llevar sus 4 fichas hasta el centro del tablero (cruzando todo el recorrido) gana la partida.' },
-                { emoji: '🔢', title: 'Cómo mover', body: 'Haz click en "Tirar dados" y luego click sobre la ficha que quieras mover con el valor del dado. Si no puedes mover ninguna, usa "Pasar turno".' },
+                { emoji: '🔢', title: 'Cómo mover', body: 'Haz click en "Tirar dados" y luego click sobre la ficha que quieras mover. Si no puedes mover ninguna, usa "Pasar turno".' },
               ].map(rule => (
                 <div key={rule.title} className="mb-4 flex gap-3">
                   <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>{rule.emoji}</span>
@@ -656,9 +601,11 @@ export function ParquesBoard() {
               className="text-center p-8 rounded-3xl border"
               style={{ background: 'rgba(26,24,41,0.98)', borderColor: P_COLORS[winner], boxShadow: `0 0 60px ${P_COLORS[winner]}40` }}>
               <div className="text-5xl mb-3">🏆</div>
-              <h2 style={{ fontWeight: 800, fontSize: '1.6rem', color: P_COLORS[winner], marginBottom: 6 }}>¡{P_NAMES[winner]} ganó!</h2>
+              <h2 style={{ fontWeight: 800, fontSize: '1.6rem', color: P_COLORS[winner], marginBottom: 6 }}>
+                ¡{playerNames[winner]} ganó!
+              </h2>
               <p style={{ color: 'var(--p-muted)', marginBottom: 16, fontSize: '0.85rem' }}>Todas las fichas llegaron a la meta</p>
-              <button onClick={reset} className="px-8 py-3 rounded-2xl font-semibold"
+              <button onClick={resetGame} className="px-8 py-3 rounded-2xl font-semibold"
                 style={{ background: P_COLORS[winner], color: 'white' }}>
                 🎮 Nueva partida
               </button>
