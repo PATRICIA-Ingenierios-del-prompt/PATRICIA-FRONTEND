@@ -17,6 +17,12 @@ function figmaAssetResolver() {
 }
 
 export default defineConfig({
+  server: {
+    proxy: {
+      '/api/games': { target: 'http://localhost:8085', changeOrigin: true },
+      '/parques-ws': { target: 'http://localhost:8085', changeOrigin: true, ws: true },
+    },
+  },
   plugins: [
     figmaAssetResolver(),
     // The React and Tailwind plugins are both required for Make, even if
