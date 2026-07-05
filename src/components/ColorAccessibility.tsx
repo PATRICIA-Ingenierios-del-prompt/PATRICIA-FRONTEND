@@ -250,7 +250,7 @@ export function AccessibilityPanel({ mode, setMode, dyslexia, setDyslexia }: Acc
                 }}>
                 <span style={{ fontSize: '1.1rem' }}>{vm.icon}</span>
                 <div className="min-w-0">
-                  <p style={{ fontSize: '0.78rem', fontWeight: mode === vm.id ? 700 : 500, color: mode === vm.id ? '#6C63FF' : '#E0E0FF' }}>
+                  <p style={{ fontSize: '0.78rem', fontWeight: mode === vm.id ? 700 : 500, color: mode === vm.id ? '#6C63FF' : 'var(--p-text)' }}>
                     {vm.label}
                   </p>
                   <p style={{ fontSize: '0.6rem', color: 'var(--p-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '1px' }}>
@@ -313,7 +313,7 @@ export function AccessibilityPanel({ mode, setMode, dyslexia, setDyslexia }: Acc
             <div className="flex items-center gap-2.5">
               <Type size={16} style={{ color: dyslexia ? '#7FE7C4' : '#8B85B0' }} />
               <div>
-                <p style={{ fontSize: '0.85rem', fontWeight: dyslexia ? 700 : 500, color: dyslexia ? '#7FE7C4' : '#E0E0FF' }}>
+                <p style={{ fontSize: '0.85rem', fontWeight: dyslexia ? 700 : 500, color: dyslexia ? '#7FE7C4' : 'var(--p-text)' }}>
                   Modo lectura fácil
                 </p>
                 <p style={{ fontSize: '0.68rem', color: 'var(--p-muted)', marginTop: '1px' }}>
@@ -336,7 +336,7 @@ export function AccessibilityPanel({ mode, setMode, dyslexia, setDyslexia }: Acc
           {/* Token comparison table */}
           <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'rgba(108,99,255,0.1)' }}>
             <div className="grid grid-cols-3 px-3 py-2 border-b" style={{ borderColor: 'rgba(108,99,255,0.1)', background: 'rgba(108,99,255,0.06)' }}>
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--p-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Token</span>
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--p-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Propiedad</span>
               <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--p-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Estándar</span>
               <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#7FE7C4', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Dislexia</span>
             </div>

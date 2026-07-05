@@ -87,12 +87,12 @@ const DARK_MAP_STYLES = [
 
 function pinSvg(color: string) {
   const c = color.replace('#', '%23');
-  return `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='36' viewBox='0 0 28 36'><path fill='${c}' stroke='white' stroke-width='2' d='M14 1C7.4 1 2 6.4 2 14c0 9 12 21 12 21S26 23 26 14C26 6.4 20.6 1 14 1z'/><circle cx='14' cy='14' r='5.5' fill='white' opacity='0.85'/></svg>`;
+  return `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='38' viewBox='0 0 30 38'><path d='M15 2C7.8 2 2 7.8 2 15c0 9.5 13 20 13 20s13-10.5 13-20C28 7.8 22.2 2 15 2z' fill='rgba(13,11,30,0.55)' transform='translate(1,1)'/><path fill='${c}' stroke='%230D0B1E' stroke-width='2.5' d='M15 1C7.8 1 2 6.8 2 14c0 9 13 21 13 21s13-12 13-21C28 6.8 22.2 1 15 1z'/><path stroke='white' stroke-width='1.5' fill='none' d='M15 1C7.8 1 2 6.8 2 14c0 9 13 21 13 21s13-12 13-21C28 6.8 22.2 1 15 1z'/><circle cx='15' cy='14' r='6' fill='white'/></svg>`;
 }
 
 function pinSvgSelected(color: string) {
   const c = color.replace('#', '%23');
-  return `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='36' height='46' viewBox='0 0 28 36'><path fill='${c}' stroke='white' stroke-width='2.5' d='M14 1C7.4 1 2 6.4 2 14c0 9 12 21 12 21S26 23 26 14C26 6.4 20.6 1 14 1z'/><circle cx='14' cy='14' r='6' fill='white'/></svg>`;
+  return `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='38' height='48' viewBox='0 0 30 38'><path fill='${c}' stroke='%230D0B1E' stroke-width='3' d='M15 1C7.8 1 2 6.8 2 14c0 9 13 21 13 21s13-12 13-21C28 6.8 22.2 1 15 1z'/><path stroke='white' stroke-width='2' fill='none' d='M15 1C7.8 1 2 6.8 2 14c0 9 13 21 13 21s13-12 13-21C28 6.8 22.2 1 15 1z'/><circle cx='15' cy='14' r='6.5' fill='white'/></svg>`;
 }
 
 type EventCoord = { id: number; lat: number; lng: number; color: string; title: string; location: string; address: string; emoji: string };
@@ -164,7 +164,7 @@ function CampusMap({
         <Marker
           key={ev.id}
           position={{ lat: ev.lat, lng: ev.lng }}
-          icon={selectedId === ev.id ? pinSvgSelected(ev.color) : pinSvg(ev.color)}
+          icon={selectedId === ev.id ? pinSvgSelected('#FF2D2D') : pinSvg('#FF2D2D')}
           zIndex={selectedId === ev.id ? 10 : 1}
           onClick={() => onSelect?.(ev.id === selectedId ? null : ev.id)}
         />

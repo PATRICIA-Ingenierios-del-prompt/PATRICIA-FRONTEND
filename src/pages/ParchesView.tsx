@@ -4,7 +4,7 @@ import {
   Plus, Users, Lock, Globe, Mic, MicOff, Send, Smile,
   Settings, Search, Crown, Shield, X, MessageCircle, FileText,
   Layers, Gamepad2, Volume2, VolumeX, MoreHorizontal,
-  Phone, PhoneOff, Download, Video, VideoOff, Monitor, MonitorOff, ArrowLeft,
+  Phone, PhoneOff, Download, Video, VideoOff, Monitor, MonitorOff, ArrowLeft, ChevronRight, ChevronLeft,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ParquesBoard } from '../components/ParquesBoard';
@@ -364,12 +364,32 @@ export function ParchesView({ linkedEvents = [] }: {
   const [showSidebar, setShowSidebar] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
+  const [categoryCanScrollRight, setCategoryCanScrollRight] = useState(false);
+  const [categoryCanScrollLeft, setCategoryCanScrollLeft] = useState(false);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+  useEffect(() => {
+    const el = categoryScrollRef.current;
+    if (!el) return;
+    const updateScrollState = () => {
+      setCategoryCanScrollRight(el.scrollWidth - el.clientWidth - el.scrollLeft > 8);
+      setCategoryCanScrollLeft(el.scrollLeft > 8);
+    };
+    updateScrollState();
+    el.addEventListener('scroll', updateScrollState);
+    window.addEventListener('resize', updateScrollState);
+    return () => { el.removeEventListener('scroll', updateScrollState); window.removeEventListener('resize', updateScrollState); };
+  }, []);
+
+  const scrollCategories = (dir: 1 | -1) => {
+    categoryScrollRef.current?.scrollBy({ left: 120 * dir, behavior: 'smooth' });
+  };
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
 
@@ -467,19 +487,43 @@ export function ParchesView({ linkedEvents = [] }: {
             ))}
           </div>
           {/* Category filter chips */}
-          <div className="flex gap-1.5 overflow-x-auto mt-2 pb-0.5" style={{ scrollbarWidth:'none' }}>
-            <button onClick={()=>setSidebarCategory('')}
-              className="flex-shrink-0 px-2 py-0.5 rounded-full transition-all"
-              style={{ background: sidebarCategory==='' ? '#6C63FF' : 'var(--p-input)', color: sidebarCategory==='' ? 'white' : 'var(--p-muted)', fontSize:'0.6rem', fontWeight: sidebarCategory==='' ? 700 : 400 }}>
-              Todos
-            </button>
-            {PARCHE_CATEGORIES.map(cat => (
-              <button key={cat.id} onClick={()=>setSidebarCategory(sidebarCategory===cat.id ? '' : cat.id)}
-                className="flex-shrink-0 flex items-center gap-0.5 px-2 py-0.5 rounded-full transition-all"
-                style={{ background: sidebarCategory===cat.id ? cat.color : 'var(--p-input)', color: sidebarCategory===cat.id ? 'white' : 'var(--p-muted)', fontSize:'0.6rem', fontWeight: sidebarCategory===cat.id ? 700 : 400 }}>
-                {cat.emoji} {cat.label}
+          <div className="relative mt-2">
+            <div ref={categoryScrollRef} className="flex gap-1.5 overflow-x-auto pb-0.5 px-6" style={{ scrollbarWidth:'none' }}>
+              <button onClick={()=>setSidebarCategory('')}
+                className="flex-shrink-0 px-2 py-0.5 rounded-full transition-all"
+                style={{ background: sidebarCategory==='' ? '#6C63FF' : 'var(--p-input)', color: sidebarCategory==='' ? 'white' : 'var(--p-muted)', fontSize:'0.6rem', fontWeight: sidebarCategory==='' ? 700 : 400 }}>
+                Todos
               </button>
-            ))}
+              {PARCHE_CATEGORIES.map(cat => (
+                <button key={cat.id} onClick={()=>setSidebarCategory(sidebarCategory===cat.id ? '' : cat.id)}
+                  className="flex-shrink-0 flex items-center gap-0.5 px-2 py-0.5 rounded-full transition-all"
+                  style={{ background: sidebarCategory===cat.id ? cat.color : 'var(--p-input)', color: sidebarCategory===cat.id ? 'white' : 'var(--p-muted)', fontSize:'0.6rem', fontWeight: sidebarCategory===cat.id ? 700 : 400 }}>
+                  {cat.emoji} {cat.label}
+                </button>
+              ))}
+            </div>
+            {categoryCanScrollLeft && (
+              <>
+                <div className="absolute top-0 bottom-0.5 left-6 w-6 pointer-events-none"
+                  style={{ background: 'linear-gradient(to left, transparent, var(--p-card))' }} />
+                <button onClick={()=>scrollCategories(-1)}
+                  className="absolute top-1/2 -translate-y-1/2 left-0 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'var(--p-card)', border: '1px solid rgba(108,99,255,0.3)', boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }}>
+                  <ChevronLeft size={12} style={{ color: '#6C63FF' }} />
+                </button>
+              </>
+            )}
+            {categoryCanScrollRight && (
+              <>
+                <div className="absolute top-0 bottom-0.5 right-6 w-6 pointer-events-none"
+                  style={{ background: 'linear-gradient(to right, transparent, var(--p-card))' }} />
+                <button onClick={()=>scrollCategories(1)}
+                  className="absolute top-1/2 -translate-y-1/2 right-0 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'var(--p-card)', border: '1px solid rgba(108,99,255,0.3)', boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }}>
+                  <ChevronRight size={12} style={{ color: '#6C63FF' }} />
+                </button>
+              </>
+            )}
           </div>
         </div>
 

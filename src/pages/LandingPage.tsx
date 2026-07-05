@@ -17,6 +17,7 @@ import monoMusicaFImg    from '../assets/monoMusicaN.png';
 import monoTranquiloFImg from '../assets/monoTranquiloN.png';
 import monoCoderFImg     from '../assets/monoCoderN.png';
 import monoEstudioFImg   from '../assets/monoEstudiosoN.png';
+import monoCoderNewImg   from '../assets/monoCoderNew.png';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface LandingPageProps {
@@ -42,17 +43,18 @@ const STEPS = [
 ];
 
 const GALLERY = [
-  { img: lp1,         label: 'Comunidad',  desc: 'Parches y grupos de interés',   color: '#6C63FF' },
-  { img: lp3,         label: 'Innovación', desc: 'Hackathones y proyectos',        color: '#FFB347' },
-  { img: concurso1Img,label: 'Concursos',  desc: 'Talento y competencias ECI',    color: '#FF6B9D' },
-  { img: lp2,         label: 'Campus',     desc: 'Tu ECI en digital',              color: '#7FE7C4' },
-  { img: lp4,         label: 'Identidad',  desc: 'Orgullosamente ECI',             color: '#A78BFA' },
-  { img: concurso2Img,label: 'Vida ECI',   desc: 'Eventos y vida universitaria',   color: '#5BC8FF' },
+  { img: lp1,         label: 'Comunidad',  desc: 'Parches y grupos de interés',   color: '#6C63FF', info: 'Encuentra tu gente: parches de estudio, deporte, arte y más, siempre activos en el campus.' },
+  { img: lp3,         label: 'Innovación', desc: 'Hackathones y proyectos',        color: '#FFB347', info: 'Hackathones, retos de innovación y proyectos colaborativos entre distintas carreras de la ECI.' },
+  { img: concurso1Img,label: 'Concursos',  desc: 'Talento y competencias ECI',    color: '#FF6B9D', info: 'Concursos y competencias donde la comunidad ECI muestra su talento académico y creativo.' },
+  { img: lp2,         label: 'Campus',     desc: 'Tu ECI en digital',              color: '#7FE7C4', info: 'Toda la vida del campus, ahora también en digital: eventos, espacios y actividades al alcance de un clic.' },
+  { img: lp4,         label: 'Identidad',  desc: 'Orgullosamente ECI',             color: '#A78BFA', info: 'Una comunidad orgullosa de su identidad, construida por y para estudiantes de la Escuela.' },
+  { img: concurso2Img,label: 'Vida ECI',   desc: 'Eventos y vida universitaria',   color: '#5BC8FF', info: 'Eventos, celebraciones y momentos que hacen parte del día a día de la vida universitaria en la ECI.' },
 ];
 
 export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: LandingPageProps) {
   const [featureIdx, setFeatureIdx] = useState(0);
   const [galleryOrder, setGalleryOrder] = useState([0, 1, 2, 3, 4, 5]);
+  const [mobileExpandedIdx, setMobileExpandedIdx] = useState<number | null>(null);
 
   const swapWithHero = (pos: number) => {
     setGalleryOrder(prev => {
@@ -63,7 +65,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
   };
 
   useEffect(() => {
-    const t = setInterval(() => setFeatureIdx(i => (i + 1) % FEATURES.length), 3800);
+    const t = setInterval(() => setFeatureIdx(i => (i + 1) % FEATURES.length), 7000);
     return () => clearInterval(t);
   }, []);
 
@@ -161,7 +163,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
             </h1>
 
             <p style={{ fontSize:'1.05rem', color:'rgba(255,255,255,0.82)', lineHeight:1.78, marginBottom:'36px', maxWidth:460, textShadow:'0 1px 8px rgba(0,0,0,0.4)' }}>
-              La plataforma social construida 100% para estudiantes de la ECI. Parches, matching inteligente, eventos y bienestar — todo en un lugar.
+              La plataforma social construida 100% para estudiantes de la ECI. Parches, matching inteligente, eventos y bienestar, todo en un lugar.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 mb-8">
@@ -189,96 +191,129 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
             </div>
           </motion.div>
 
-          {/* RIGHT — Floating app preview cards */}
-          <div className="relative hidden lg:block" style={{ height:530 }}>
+          {/* RIGHT — Floating app preview cards, two aligned columns (stretched to equal height) */}
+          <div className="hidden lg:flex" style={{ gap:20 }}>
 
-            {/* MATCH CARD */}
-            <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.35, duration:0.7 }}
-              style={{ position:'absolute', top:0, left:'4%', width:232, borderRadius:20, overflow:'hidden',
-                background: dark ? 'rgba(13,11,30,0.88)' : 'rgba(255,255,255,0.94)',
-                backdropFilter:'blur(24px)',
-                border: dark ? '1px solid rgba(108,99,255,0.38)' : '1px solid rgba(108,99,255,0.22)',
-                boxShadow: dark ? '0 28px 70px rgba(0,0,0,0.65)' : '0 20px 60px rgba(108,99,255,0.18)' }}>
-              <motion.div animate={{ y:[0,-11,0] }} transition={{ duration:4, repeat:Infinity, ease:'easeInOut' }}>
-                <div style={{ height:68, background:'linear-gradient(135deg,#6C63FF,#FF6B9D)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <div style={{ width:44, height:44, borderRadius:'50%', background:'rgba(255,255,255,0.18)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, color:'white', fontSize:'0.92rem', border:'2px solid rgba(255,255,255,0.28)' }}>CR</div>
-                </div>
-                <div style={{ padding:'11px 15px 15px' }}>
-                  <span style={{ fontSize:'0.58rem', fontWeight:800, color:'#FF6B9D', letterSpacing:'0.07em', textTransform:'uppercase' }}>¡Match!</span>
-                  <p style={{ fontWeight:700, fontSize:'0.88rem', color: dark ? 'white' : '#1A1829', marginTop:4, marginBottom:2 }}>Camila Rodríguez</p>
-                  <p style={{ fontSize:'0.72rem', color: dark ? 'rgba(255,255,255,0.5)' : 'rgba(26,24,41,0.52)', marginBottom:9 }}>Ing. de Sistemas · 7mo sem.</p>
-                  <div style={{ background:'rgba(108,99,255,0.15)', borderRadius:8, padding:'4px 9px', display:'inline-flex', gap:4 }}>
-                    <span style={{ fontSize:'0.64rem', color:'#6C63FF', fontWeight:700 }}>⚡ 96% compatibilidad</span>
+            {/* Column 1 — Match, Bienestar, Active parche, XP */}
+            <div className="flex flex-col items-start" style={{ width:222, gap:16 }}>
+
+              {/* MATCH CARD */}
+              <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.35, duration:0.7 }}
+                style={{ width:'100%', borderRadius:20, overflow:'hidden',
+                  background: dark ? 'rgba(13,11,30,0.88)' : 'rgba(255,255,255,0.94)',
+                  backdropFilter:'blur(24px)',
+                  border: dark ? '1px solid rgba(108,99,255,0.38)' : '1px solid rgba(108,99,255,0.22)',
+                  boxShadow: dark ? '0 28px 70px rgba(0,0,0,0.65)' : '0 20px 60px rgba(108,99,255,0.18)' }}>
+                <motion.div animate={{ y:[0,-11,0] }} transition={{ duration:4, repeat:Infinity, ease:'easeInOut' }}>
+                  <div style={{ height:68, background:'linear-gradient(135deg,#6C63FF,#FF6B9D)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <div style={{ width:44, height:44, borderRadius:'50%', background:'rgba(255,255,255,0.18)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, color:'white', fontSize:'0.92rem', border:'2px solid rgba(255,255,255,0.28)' }}>CR</div>
                   </div>
-                </div>
-              </motion.div>
-            </motion.div>
-
-            {/* LIVE EVENT CARD */}
-            <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.55, duration:0.7 }}
-              style={{ position:'absolute', top:'20%', right:'2%', width:215, borderRadius:18,
-                background: dark ? 'rgba(13,11,30,0.88)' : 'rgba(255,255,255,0.94)',
-                backdropFilter:'blur(22px)',
-                border: dark ? '1px solid rgba(255,179,71,0.32)' : '1px solid rgba(255,179,71,0.4)',
-                boxShadow: dark ? '0 18px 52px rgba(0,0,0,0.55)' : '0 16px 48px rgba(0,0,0,0.12)',
-                padding:'14px 16px' }}>
-              <motion.div animate={{ y:[0,9,0] }} transition={{ duration:3.5, repeat:Infinity, ease:'easeInOut', delay:0.6 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:10 }}>
-                  <div style={{ width:7, height:7, borderRadius:'50%', background:'#FF4D6A', boxShadow:'0 0 8px #FF4D6A' }} />
-                  <span style={{ fontSize:'0.58rem', fontWeight:800, color:'#FF4D6A', textTransform:'uppercase', letterSpacing:'0.09em' }}>En vivo</span>
-                </div>
-                <p style={{ fontWeight:700, fontSize:'0.86rem', color: dark ? 'white' : '#1A1829', marginBottom:3 }}>Hackathon ECI 2026 💻</p>
-                <p style={{ fontSize:'0.7rem', color: dark ? 'rgba(255,255,255,0.47)' : 'rgba(26,24,41,0.5)', marginBottom:11 }}>Sáb 20 Jun · Auditorio Ppal.</p>
-                <div style={{ height:4, background: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', borderRadius:2, overflow:'hidden', marginBottom:5 }}>
-                  <div style={{ width:'78%', height:'100%', background:'linear-gradient(90deg,#FFB347,#FF6B9D)', borderRadius:2 }} />
-                </div>
-                <p style={{ fontSize:'0.64rem', color: dark ? 'rgba(255,255,255,0.38)' : 'rgba(26,24,41,0.42)' }}>156 / 200 inscritos</p>
-              </motion.div>
-            </motion.div>
-
-            {/* MESSAGE NOTIFICATION */}
-            <motion.div initial={{ opacity:0, scale:0.88 }} animate={{ opacity:1, scale:1 }} transition={{ delay:0.75, duration:0.6 }}
-              style={{ position:'absolute', top:'52%', right:'10%', borderRadius:14,
-                background:'linear-gradient(135deg,rgba(108,99,255,0.92),rgba(139,127,255,0.9))',
-                backdropFilter:'blur(14px)',
-                boxShadow:'0 10px 32px rgba(108,99,255,0.45)', padding:'10px 15px', maxWidth:196 }}>
-              <motion.div animate={{ y:[0,-6,0] }} transition={{ duration:3, repeat:Infinity, ease:'easeInOut', delay:1 }}>
-                <p style={{ fontSize:'0.75rem', fontWeight:800, color:'white', marginBottom:3 }}>Camila te escribió</p>
-                <p style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.8)', lineHeight:1.45 }}>¿Hacemos parche de estudio mañana?</p>
-              </motion.div>
-            </motion.div>
-
-            {/* ACTIVE PARCHE */}
-            <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.95, duration:0.7 }}
-              style={{ position:'absolute', bottom:'9%', left:'7%', borderRadius:16,
-                background: dark ? 'rgba(13,11,30,0.88)' : 'rgba(255,255,255,0.94)',
-                backdropFilter:'blur(22px)',
-                border: dark ? '1px solid rgba(127,231,196,0.28)' : '1px solid rgba(127,231,196,0.45)',
-                boxShadow: dark ? '0 14px 40px rgba(0,0,0,0.45)' : '0 12px 36px rgba(0,0,0,0.12)',
-                padding:'10px 15px', display:'flex', alignItems:'center', gap:11 }}>
-              <motion.div animate={{ y:[0,7,0] }} transition={{ duration:5, repeat:Infinity, ease:'easeInOut', delay:1.5 }}
-                style={{ display:'flex', alignItems:'center', gap:11 }}>
-                <div style={{ width:38, height:38, borderRadius:11, background:'rgba(108,99,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.1rem', flexShrink:0 }}>📐</div>
-                <div>
-                  <p style={{ fontWeight:700, fontSize:'0.78rem', color: dark ? 'white' : '#1A1829', lineHeight:1.2 }}>Cálculo III Survivors</p>
-                  <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:3 }}>
-                    <div style={{ width:6, height:6, borderRadius:'50%', background:'#7FE7C4' }} />
-                    <span style={{ fontSize:'0.64rem', color:'#0D9D74', fontWeight:600 }}>7 activos ahora</span>
+                  <div style={{ padding:'11px 15px 15px' }}>
+                    <span style={{ fontSize:'0.58rem', fontWeight:800, color:'#FF6B9D', letterSpacing:'0.07em', textTransform:'uppercase' }}>¡Match!</span>
+                    <p style={{ fontWeight:700, fontSize:'0.88rem', color: dark ? 'white' : '#1A1829', marginTop:4, marginBottom:2 }}>Camila Rodríguez</p>
+                    <p style={{ fontSize:'0.72rem', color: dark ? 'rgba(255,255,255,0.5)' : 'rgba(26,24,41,0.52)', marginBottom:9 }}>Ing. de Sistemas · 7mo sem.</p>
+                    <div style={{ background:'rgba(108,99,255,0.15)', borderRadius:8, padding:'4px 9px', display:'inline-flex', gap:4 }}>
+                      <span style={{ fontSize:'0.64rem', color:'#6C63FF', fontWeight:700 }}>⚡ 96% compatibilidad</span>
+                    </div>
                   </div>
-                </div>
+                </motion.div>
               </motion.div>
-            </motion.div>
 
-            {/* XP BADGE */}
-            <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:1.1, duration:0.6 }}
-              style={{ position:'absolute', bottom:'32%', left:'2%', borderRadius:12, padding:'8px 12px',
-                background: dark ? 'rgba(255,179,71,0.15)' : 'rgba(255,179,71,0.18)',
-                border:'1px solid rgba(255,179,71,0.45)',
-                backdropFilter:'blur(12px)' }}>
-              <motion.div animate={{ scale:[1,1.06,1] }} transition={{ duration:2.5, repeat:Infinity, ease:'easeInOut' }}>
-                <p style={{ fontSize:'0.7rem', fontWeight:800, color:'#C47D00' }}>⭐ +120 XP ganados hoy</p>
+              {/* BIENESTAR CARD */}
+              <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.5, duration:0.7 }}
+                style={{ width:'100%', borderRadius:16,
+                  background: dark ? 'rgba(13,11,30,0.88)' : 'rgba(255,255,255,0.94)',
+                  backdropFilter:'blur(22px)',
+                  border: dark ? '1px solid rgba(91,200,255,0.3)' : '1px solid rgba(91,200,255,0.45)',
+                  boxShadow: dark ? '0 14px 40px rgba(0,0,0,0.45)' : '0 12px 36px rgba(0,0,0,0.12)',
+                  padding:'12px 15px', display:'flex', alignItems:'center', gap:11 }}>
+                <motion.div animate={{ y:[0,-7,0] }} transition={{ duration:4.5, repeat:Infinity, ease:'easeInOut', delay:0.3 }}
+                  style={{ display:'flex', alignItems:'center', gap:11 }}>
+                  <div style={{ width:38, height:38, borderRadius:11, background:'rgba(91,200,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.1rem', flexShrink:0 }}>🧘</div>
+                  <div>
+                    <p style={{ fontWeight:700, fontSize:'0.78rem', color: dark ? 'white' : '#1A1829', lineHeight:1.2 }}>Momento de pausa</p>
+                    <p style={{ fontSize:'0.64rem', color:'#0A8FCC', fontWeight:600, marginTop:3 }}>🌿 Bienestar 24/7</p>
+                  </div>
+                </motion.div>
               </motion.div>
-            </motion.div>
+
+              {/* ACTIVE PARCHE */}
+              <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.65, duration:0.7 }}
+                style={{ width:'100%', borderRadius:16,
+                  background: dark ? 'rgba(13,11,30,0.88)' : 'rgba(255,255,255,0.94)',
+                  backdropFilter:'blur(22px)',
+                  border: dark ? '1px solid rgba(127,231,196,0.28)' : '1px solid rgba(127,231,196,0.45)',
+                  boxShadow: dark ? '0 14px 40px rgba(0,0,0,0.45)' : '0 12px 36px rgba(0,0,0,0.12)',
+                  padding:'10px 15px', display:'flex', alignItems:'center', gap:11 }}>
+                <motion.div animate={{ y:[0,7,0] }} transition={{ duration:5, repeat:Infinity, ease:'easeInOut', delay:1.5 }}
+                  style={{ display:'flex', alignItems:'center', gap:11 }}>
+                  <div style={{ width:38, height:38, borderRadius:11, background:'rgba(108,99,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.1rem', flexShrink:0 }}>📐</div>
+                  <div>
+                    <p style={{ fontWeight:700, fontSize:'0.78rem', color: dark ? 'white' : '#1A1829', lineHeight:1.2 }}>Cálculo III Survivors</p>
+                    <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:3 }}>
+                      <div style={{ width:6, height:6, borderRadius:'50%', background:'#7FE7C4' }} />
+                      <span style={{ fontSize:'0.64rem', color:'#0D9D74', fontWeight:600 }}>7 activos ahora</span>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+
+              {/* XP BADGE */}
+              <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.85, duration:0.6 }}
+                style={{ width:'100%', borderRadius:12, padding:'8px 12px', textAlign:'center',
+                  background: dark ? 'rgba(255,179,71,0.15)' : 'rgba(255,179,71,0.18)',
+                  border:'1px solid rgba(255,179,71,0.45)',
+                  backdropFilter:'blur(12px)' }}>
+                <motion.div animate={{ scale:[1,1.06,1] }} transition={{ duration:2.5, repeat:Infinity, ease:'easeInOut' }}>
+                  <p style={{ fontSize:'0.7rem', fontWeight:800, color:'#C47D00', whiteSpace:'nowrap' }}>⭐ +120 XP ganados hoy</p>
+                </motion.div>
+              </motion.div>
+            </div>
+
+            {/* Column 2 — Live event, Message, Álbum de Monas (stretched to match column 1's height) */}
+            <div className="flex flex-col items-start" style={{ width:200, gap:16 }}>
+
+              {/* LIVE EVENT CARD */}
+              <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.4, duration:0.7 }}
+                style={{ width:'100%', borderRadius:18,
+                  background: dark ? 'rgba(13,11,30,0.88)' : 'rgba(255,255,255,0.94)',
+                  backdropFilter:'blur(22px)',
+                  border: dark ? '1px solid rgba(255,179,71,0.32)' : '1px solid rgba(255,179,71,0.4)',
+                  boxShadow: dark ? '0 18px 52px rgba(0,0,0,0.55)' : '0 16px 48px rgba(0,0,0,0.12)',
+                  padding:'14px 16px' }}>
+                <motion.div animate={{ y:[0,9,0] }} transition={{ duration:3.5, repeat:Infinity, ease:'easeInOut', delay:0.6 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:10 }}>
+                    <div style={{ width:7, height:7, borderRadius:'50%', background:'#FF4D6A', boxShadow:'0 0 8px #FF4D6A' }} />
+                    <span style={{ fontSize:'0.58rem', fontWeight:800, color:'#FF4D6A', textTransform:'uppercase', letterSpacing:'0.09em' }}>En vivo</span>
+                  </div>
+                  <p style={{ fontWeight:700, fontSize:'0.86rem', color: dark ? 'white' : '#1A1829', marginBottom:3 }}>Hackathon ECI 2026 💻</p>
+                  <p style={{ fontSize:'0.7rem', color: dark ? 'rgba(255,255,255,0.47)' : 'rgba(26,24,41,0.5)', marginBottom:11 }}>Sáb 20 Jun · Auditorio Ppal.</p>
+                  <div style={{ height:4, background: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', borderRadius:2, overflow:'hidden', marginBottom:5 }}>
+                    <div style={{ width:'78%', height:'100%', background:'linear-gradient(90deg,#FFB347,#FF6B9D)', borderRadius:2 }} />
+                  </div>
+                  <p style={{ fontSize:'0.64rem', color: dark ? 'rgba(255,255,255,0.38)' : 'rgba(26,24,41,0.42)' }}>156 / 200 inscritos</p>
+                </motion.div>
+              </motion.div>
+
+              {/* ALBUM DE MONAS CARD — grows to exactly fill remaining column height (basis:0 so it never overshoots) */}
+              <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.75, duration:0.7 }}
+                style={{ width:'100%', flex:'1 1 0%', minHeight:0, overflow:'hidden', borderRadius:18,
+                  background: dark ? 'rgba(13,11,30,0.88)' : 'rgba(255,255,255,0.94)',
+                  backdropFilter:'blur(22px)',
+                  border: dark ? '1px solid rgba(167,139,250,0.32)' : '1px solid rgba(167,139,250,0.4)',
+                  boxShadow: dark ? '0 18px 52px rgba(0,0,0,0.55)' : '0 16px 48px rgba(0,0,0,0.12)',
+                  padding:'14px', display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', gap:6 }}>
+                <motion.div animate={{ y:[0,-8,0] }} transition={{ duration:3.2, repeat:Infinity, ease:'easeInOut', delay:0.4 }}
+                  style={{ flex:'1 1 0%', minHeight:0, width:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <ImageWithFallback src={monoCoderNewImg} alt="Mona coleccionable" style={{ maxWidth:'70%', maxHeight:'100%', objectFit:'contain' }} />
+                </motion.div>
+                <div style={{ flexShrink:0 }}>
+                  <p style={{ fontWeight:700, fontSize:'0.8rem', color: dark ? 'white' : '#1A1829', lineHeight:1.25 }}>¡Nueva mona desbloqueada! 🎉</p>
+                  <p style={{ fontSize:'0.65rem', color: dark ? 'rgba(255,255,255,0.47)' : 'rgba(26,24,41,0.5)', marginTop:3 }}>Álbum de Monas · Edición Coder</p>
+                </div>
+                <span style={{ flexShrink:0, background:'rgba(167,139,250,0.15)', color:'#A78BFA', padding:'3px 10px', borderRadius:20, fontSize:'0.62rem', fontWeight:700 }}>🟣 Legendario</span>
+              </motion.div>
+            </div>
           </div>
         </div>
 
@@ -326,11 +361,12 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                 <ImageWithFallback src={hero.img} alt={hero.label}
                   style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s ease' }} />
                 <div style={{ position:'absolute', inset:0, background:`linear-gradient(to top, ${hero.color}d0 0%, rgba(0,0,0,0.08) 50%, transparent 100%)` }} />
-                <div style={{ position:'absolute', bottom:22, left:22 }}>
+                <div style={{ position:'absolute', bottom:22, left:22, right:22 }}>
                   <span style={{ display:'inline-block', padding:'4px 13px', borderRadius:20, background:'rgba(0,0,0,0.35)', backdropFilter:'blur(10px)', border:'1px solid rgba(255,255,255,0.2)', fontSize:'0.65rem', fontWeight:800, color:'white', letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:7 }}>
                     {hero.label}
                   </span>
-                  <p style={{ fontWeight:700, fontSize:'1.05rem', color:'white', lineHeight:1.2, textShadow:'0 2px 8px rgba(0,0,0,0.4)' }}>{hero.desc}</p>
+                  <p style={{ fontWeight:700, fontSize:'1.05rem', color:'white', lineHeight:1.2, textShadow:'0 2px 8px rgba(0,0,0,0.4)', marginBottom:6 }}>{hero.desc}</p>
+                  <p style={{ fontWeight:400, fontSize:'0.8rem', color:'rgba(255,255,255,0.88)', lineHeight:1.5, maxWidth:440, textShadow:'0 2px 8px rgba(0,0,0,0.4)' }}>{hero.info}</p>
                 </div>
               </motion.div>
               ); })()}
@@ -387,21 +423,35 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
             </div>
           </div>
 
-          {/* ── Mobile 2-col ── */}
+          {/* ── Mobile 2-col — tap a tile to expand it and reveal more info ── */}
           <div className="md:hidden grid grid-cols-2 gap-3">
-            {GALLERY.map((item, i) => (
-              <motion.div key={item.label}
-                initial={{ opacity:0, y:18 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} transition={{ delay: i*0.07 }}
-                style={{ height:158, borderRadius:16, overflow:'hidden', position:'relative', cursor:'pointer',
+            {GALLERY.map((item, i) => {
+              const expanded = mobileExpandedIdx === i;
+              return (
+              <motion.div key={item.label} layout
+                initial={{ opacity:0, y:18 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
+                transition={{ delay: i*0.07, layout:{ duration:0.35, ease:[0.4,0,0.2,1] } }}
+                onClick={() => setMobileExpandedIdx(expanded ? null : i)}
+                style={{ gridColumn: expanded ? '1 / -1' : undefined, height: expanded ? 240 : 158,
+                  borderRadius:16, overflow:'hidden', position:'relative', cursor:'pointer',
                   boxShadow:'0 8px 24px rgba(0,0,0,0.3)' }}>
                 <ImageWithFallback src={item.img} alt={item.label} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                <div style={{ position:'absolute', inset:0, background:`linear-gradient(to top, ${item.color}cc 0%, transparent 55%)` }} />
-                <div style={{ position:'absolute', bottom:10, left:10 }}>
-                  <p style={{ fontWeight:700, fontSize:'0.78rem', color:'white', lineHeight:1.2 }}>{item.label}</p>
-                  <p style={{ fontSize:'0.62rem', color:'rgba(255,255,255,0.78)' }}>{item.desc}</p>
+                <div style={{ position:'absolute', inset:0, background:`linear-gradient(to top, ${item.color}${expanded ? 'e0' : 'cc'} 0%, transparent ${expanded ? '65%' : '55%'})` }} />
+                <div style={{ position:'absolute', bottom:12, left:12, right:12 }}>
+                  <span style={{ display:'inline-block', padding:'3px 10px', borderRadius:20, background:'rgba(0,0,0,0.32)', backdropFilter:'blur(8px)', fontSize:'0.58rem', fontWeight:800, color:'white', letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:4 }}>
+                    {item.label}
+                  </span>
+                  <p style={{ fontWeight:700, fontSize:'0.78rem', color:'white', lineHeight:1.2 }}>{item.desc}</p>
+                  {expanded && (
+                    <motion.p initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.15 }}
+                      style={{ fontSize:'0.68rem', color:'rgba(255,255,255,0.9)', lineHeight:1.5, marginTop:6 }}>
+                      {item.info}
+                    </motion.p>
+                  )}
                 </div>
               </motion.div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -424,7 +474,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
               </span>
             </h2>
             <p style={{ fontSize:'1.05rem', color:textB, maxWidth:520, margin:'0 auto', lineHeight:1.75 }}>
-              U•link no es otra red social — es la plataforma que la comunidad ECI siempre necesitó.
+              U•link no es otra red social. Es la plataforma que la comunidad ECI siempre necesitó.
             </p>
           </motion.div>
 
@@ -438,10 +488,10 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                 <motion.div key={featureIdx}
                   initial={{ opacity:0, x:24 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:-24 }}
                   transition={{ duration:0.4, ease:[0.4,0,0.2,1] }}
-                  className="relative p-8 h-full flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center gap-4 mb-5">
-                      <div className="w-24 h-24 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+                  className="relative p-8 h-full flex flex-col justify-between items-center text-center">
+                  <div className="flex flex-col items-center">
+                    <div className="flex flex-col items-center gap-4 mb-5">
+                      <div className="w-28 h-28 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden"
                         style={{ background:`${FEATURES[featureIdx].color}18`, border:`2px solid ${FEATURES[featureIdx].color}35` }}>
                         <ImageWithFallback src={FEATURES[featureIdx].img} alt={FEATURES[featureIdx].title}
                           style={{ width:'100%', height:'100%', objectFit:'contain' }} />
@@ -450,21 +500,21 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                         <span className="text-xs font-bold uppercase tracking-widest mb-1 block" style={{ color:FEATURES[featureIdx].color }}>
                           Funcionalidad
                         </span>
-                        <h3 style={{ fontWeight:800, fontSize:'1.35rem', color:textH, lineHeight:1.2 }}>
+                        <h3 style={{ fontWeight:800, fontSize:'1.6rem', color:textH, lineHeight:1.2 }}>
                           {FEATURES[featureIdx].title}
                         </h3>
                       </div>
                     </div>
-                    <p style={{ fontSize:'0.95rem', color:textB, lineHeight:1.8, maxWidth:520 }}>
+                    <p style={{ fontSize:'1.08rem', color:textB, lineHeight:1.8, maxWidth:520, margin:'0 auto' }}>
                       {FEATURES[featureIdx].desc}
                     </p>
                   </div>
-                  <div className="mt-6">
+                  <div className="mt-6 w-full">
                     <div className="h-0.5 rounded-full overflow-hidden" style={{ background:`${FEATURES[featureIdx].color}20` }}>
                       <motion.div key={featureIdx} className="h-full rounded-full"
                         style={{ background:FEATURES[featureIdx].color }}
                         initial={{ width:'0%' }} animate={{ width:'100%' }}
-                        transition={{ duration:3.8, ease:'linear' }} />
+                        transition={{ duration:7, ease:'linear' }} />
                     </div>
                   </div>
                 </motion.div>
