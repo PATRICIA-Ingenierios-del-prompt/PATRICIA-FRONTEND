@@ -178,10 +178,10 @@ export function useParquesGame() {
     clientRef.current = client;
 
     const subscribeAndHandle = (gameId: string) => {
-      client.subscribe(`/topic/game/${gameId}`, msg => {
+      client.subscribe(`/exchange/amq.topic/game.${gameId}`, msg => {
         if (msg.body) handleGameState(JSON.parse(msg.body) as BackendGameState);
       });
-      client.subscribe('/topic/errors', msg => {
+      client.subscribe('/exchange/amq.topic/errors', msg => {
         if (msg.body) {
           try { setError((JSON.parse(msg.body) as { error: string }).error); }
           catch { /* ignore */ }
