@@ -53,7 +53,7 @@ export class BoardWebSocketService {
   }
 
   private subscribeToBoard() {
-    const strokeSub = this.client.subscribe(`/topic/board/${this.boardId}`, (message: IMessage) => {
+    const strokeSub = this.client.subscribe(`/exchange/amq.topic/board.${this.boardId}`, (message: IMessage) => {
       if (message.body) {
         const stroke: Stroke = JSON.parse(message.body);
         this.onStrokeReceived(stroke);
@@ -61,12 +61,12 @@ export class BoardWebSocketService {
     });
     this.subscriptions.set('stroke', strokeSub);
 
-    const clearSub = this.client.subscribe(`/topic/board/${this.boardId}/clear`, () => {
+    const clearSub = this.client.subscribe(`/exchange/amq.topic/board.${this.boardId}.clear`, () => {
       this.onClearReceived();
     });
     this.subscriptions.set('clear', clearSub);
 
-    const cursorSub = this.client.subscribe(`/topic/board/${this.boardId}/cursor`, (message: IMessage) => {
+    const cursorSub = this.client.subscribe(`/exchange/amq.topic/board.${this.boardId}.cursor`, (message: IMessage) => {
       if (message.body) {
         const cursor: CursorMessage = JSON.parse(message.body);
         this.onCursorReceived(cursor);
