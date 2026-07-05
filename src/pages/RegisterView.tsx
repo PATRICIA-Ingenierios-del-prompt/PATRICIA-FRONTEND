@@ -7,7 +7,6 @@ import logoNuevoOscuroImg from '../assets/logoNuevoOscuro.png';
 import logoNuevoClaroImg from '../assets/logoNuevoClaro.png';
 import monoImg from '../assets/monoULink.png';
 import { motion, AnimatePresence } from 'motion/react';
-
 interface RegisterViewProps {
   onRegister: () => void;
   onGoLogin: () => void;
@@ -627,6 +626,7 @@ export function RegisterView({ onRegister, onGoLogin, darkMode = true, setDarkMo
   const mutedColor = darkMode ? '#999'    : '#6B6490';
   const [step, setStep] = useState<0 | 1 | 2 | 3 | 4>(0); // 0 = microsoft, 1-4 = onboarding
   const [loading, setLoading] = useState(false);
+  const [globalError, setGlobalError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nombre: '', apellidos: '',
     email: 'usuario@mail.escuelaing.edu.co',
@@ -637,10 +637,20 @@ export function RegisterView({ onRegister, onGoLogin, darkMode = true, setDarkMo
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleMicrosoft = async () => {
+    setGlobalError(null);
+    if (!navigator.onLine) {
+      setGlobalError('Sin conexión a internet. Verifica tu red e inténtalo de nuevo.');
+      return;
+    }
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1600));
-    setLoading(false);
-    setStep(1);
+    try {
+      await new Promise(r => setTimeout(r, 1600));
+      setLoading(false);
+      setStep(1);
+    } catch {
+      setLoading(false);
+      setGlobalError('No se pudo conectar con Microsoft. Inténtalo de nuevo.');
+    }
   };
 
   const validateStep1 = () => {
@@ -656,10 +666,20 @@ export function RegisterView({ onRegister, onGoLogin, darkMode = true, setDarkMo
   const handleNext2 = () => setStep(4); // Perfil → Intereses
 
   const handleFinish = async () => {
+    setGlobalError(null);
+    if (!navigator.onLine) {
+      setGlobalError('Sin conexión a internet. Verifica tu red e inténtalo de nuevo.');
+      return;
+    }
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1400));
-    setLoading(false);
-    onRegister();
+    try {
+      await new Promise(r => setTimeout(r, 1400));
+      setLoading(false);
+      onRegister();
+    } catch {
+      setLoading(false);
+      setGlobalError('Ocurrió un error al crear tu cuenta. Inténtalo de nuevo.');
+    }
   };
 
   const meta = step >= 1 ? STEP_META[Math.min(step - 1, 3)] : null;
@@ -727,6 +747,19 @@ export function RegisterView({ onRegister, onGoLogin, darkMode = true, setDarkMo
                 Usa tu cuenta <span style={{ color: '#7FE7C4' }}>@mail.escuelaing.edu.co</span>
               </p>
 
+              {/* Error message */}
+              <AnimatePresence>
+                {globalError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    className="flex items-center gap-2 px-4 py-3 rounded-xl mt-3"
+                    style={{ background: 'rgba(255,77,106,0.1)', border: '1px solid rgba(255,77,106,0.3)' }}>
+                    <span style={{ fontSize: '1rem', flexShrink: 0 }}>⚠️</span>
+                    <p style={{ fontSize: '0.8rem', color: '#FF4D6A', lineHeight: 1.4 }}>{globalError}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <div className="flex items-center gap-3 my-5">
                 <div className="flex-1 h-px" style={{ background: 'rgba(108,99,255,0.12)' }} />
                 <span style={{ fontSize: '0.72rem', color: '#444' }}>o</span>
@@ -785,6 +818,19 @@ export function RegisterView({ onRegister, onGoLogin, darkMode = true, setDarkMo
                   ← Volver al paso anterior
                 </button>
               )}
+
+              {/* Global error for steps */}
+              <AnimatePresence>
+                {globalError && step >= 1 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    className="flex items-center gap-2 px-4 py-3 rounded-xl mt-3"
+                    style={{ background: 'rgba(255,77,106,0.1)', border: '1px solid rgba(255,77,106,0.3)' }}>
+                    <span style={{ fontSize: '1rem', flexShrink: 0 }}>⚠️</span>
+                    <p style={{ fontSize: '0.8rem', color: '#FF4D6A', lineHeight: 1.4 }}>{globalError}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </>
           )}
         </div>

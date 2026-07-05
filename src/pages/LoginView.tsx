@@ -4,7 +4,8 @@ import { AnimatedBackground } from '../components/AnimatedBackground';
 import logoNuevoOscuroImg from '../assets/logoNuevoOscuro.png';
 import logoNuevoClaroImg from '../assets/logoNuevoClaro.png';
 import monoImg from '../assets/monoULink.png';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
+import { addToast } from '../components/ToastSystem';
 
 interface LoginViewProps {
   onLogin: () => void;
@@ -27,16 +28,30 @@ function MicrosoftLogo({ size = 20 }: { size?: number }) {
 
 export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode }: LoginViewProps) {
   const [loading, setLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const cardBg  = darkMode ? '#1A1A2E' : '#FFFFFF';
   const textCol = darkMode ? '#E0E0FF' : '#1A1829';
   const mutedCol = darkMode ? '#999'    : '#6B6490';
 
   const handleMicrosoft = async () => {
+    setLoginError(null);
+    if (!navigator.onLine) {
+      setLoginError('Sin conexión a internet. Verifica tu red e inténtalo de nuevo.');
+      addToast({ type: 'reporte', title: 'Sin conexión', message: 'Verifica tu conexión a internet' });
+      return;
+    }
     setLoading(true);
-    // Simulate Microsoft OAuth flow
-    await new Promise(r => setTimeout(r, 1800));
-    setLoading(false);
-    onLogin();
+    try {
+      // Simulate Microsoft OAuth flow
+      await new Promise(r => setTimeout(r, 1800));
+      setLoading(false);
+      onLogin();
+    } catch {
+      setLoading(false);
+      const msg = 'No se pudo conectar con Microsoft. Inténtalo de nuevo.';
+      setLoginError(msg);
+      addToast({ type: 'reporte', title: 'Error al iniciar sesión', message: msg });
+    }
   };
 
   return (
@@ -114,6 +129,19 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
           <p className="text-center mt-3" style={{ fontSize: '0.78rem', color: mutedCol }}>
             Usa tu cuenta <span style={{ color: darkMode ? '#7FE7C4' : '#0D9D74', fontWeight: 600 }}>@mail.escuelaing.edu.co</span>
           </p>
+
+          {/* Error message */}
+          <AnimatePresence>
+            {loginError && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl mt-3"
+                style={{ background: 'rgba(255,77,106,0.1)', border: '1px solid rgba(255,77,106,0.3)' }}>
+                <span style={{ fontSize: '1rem', flexShrink: 0 }}>⚠️</span>
+                <p style={{ fontSize: '0.8rem', color: '#FF4D6A', lineHeight: 1.4 }}>{loginError}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Divider */}
           <div className="flex items-center gap-3 my-6">

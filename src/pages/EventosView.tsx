@@ -3,6 +3,7 @@ import { MapPin, Calendar, Clock, Users, Plus, Lock, Globe, Bookmark, Filter, Ch
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import { addToast } from '../components/ToastSystem';
 
 const EVENTOS = [
   {
@@ -431,9 +432,21 @@ export function EventosView({ onLinkEvent }: {
   const [linkedParcheIds, setLinkedParcheIds] = useState<number[]>([]);
   const [createTitle, setCreateTitle] = useState('');
   const [createDate, setCreateDate] = useState('');
-
+  const [createEventError, setCreateEventError] = useState<string | null>(null);
   const toggleEnroll = (id: number) => {
+    const ev = eventos.find(e => e.id === id);
+    if (!ev) return;
+    const isFull = ev.enrolled >= ev.capacity && !ev.enrolled_me;
+    if (isFull) {
+      addToast({ type: 'reporte', title: 'Sin cupos', message: 'Este evento ya no tiene cupos disponibles.' });
+      return;
+    }
     setEventos(prev => prev.map(e => e.id === id ? { ...e, enrolled_me: !e.enrolled_me, enrolled: e.enrolled_me ? e.enrolled - 1 : e.enrolled + 1 } : e));
+    if (!ev.enrolled_me) {
+      addToast({ type: 'evento', title: '¡Inscripción confirmada!', message: `Te inscribiste a "${ev.title}"` });
+    } else {
+      addToast({ type: 'info', title: 'Inscripción cancelada', message: `Saliste de "${ev.title}"` });
+    }
   };
 
   const toggleSave = (id: number) => {
@@ -536,13 +549,13 @@ export function EventosView({ onLinkEvent }: {
             onClick={e => e.stopPropagation()}>
             <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '20px', color: t.text }}>Crear Evento</h3>
             <div className="space-y-4">
-              <input value={createTitle} onChange={e => setCreateTitle(e.target.value)} placeholder="Título del evento..." className="w-full rounded-xl px-4 py-3 text-sm outline-none"
-                style={{ background: t.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text }} />
+              <input value={createTitle} onChange={e => { setCreateTitle(e.target.value); setCreateEventError(null); }} placeholder="Título del evento..." className="w-full rounded-xl px-4 py-3 text-sm outline-none"
+                style={{ background: t.inputBg, border: `1px solid ${createEventError && !createTitle.trim() ? '#FF4D6A' : 'rgba(108,99,255,0.2)'}`, color: t.text }} />
               <textarea placeholder="Descripción..." rows={3} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
                 style={{ background: t.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text }} />
               <div className="grid grid-cols-2 gap-3">
-                <input type="date" value={createDate} onChange={e => setCreateDate(e.target.value)} className="rounded-xl px-4 py-3 text-sm outline-none"
-                  style={{ background: t.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text }} />
+                <input type="date" value={createDate} onChange={e => { setCreateDate(e.target.value); setCreateEventError(null); }} className="rounded-xl px-4 py-3 text-sm outline-none"
+                  style={{ background: t.inputBg, border: `1px solid ${createEventError && !createDate ? '#FF4D6A' : 'rgba(108,99,255,0.2)'}`, color: t.text }} />
                 <input type="time" className="rounded-xl px-4 py-3 text-sm outline-none"
                   style={{ background: t.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text }} />
               </div>
@@ -609,22 +622,36 @@ export function EventosView({ onLinkEvent }: {
               </div>
 
               <div className="flex gap-3">
-                <button onClick={() => { setShowCreate(false); setLinkedParcheIds([]); setCreateTitle(''); setCreateDate(''); }}
+                <button onClick={() => { setShowCreate(false); setLinkedParcheIds([]); setCreateTitle(''); setCreateDate(''); setCreateEventError(null); }}
                   className="flex-1 py-2.5 rounded-xl text-sm"
                   style={{ background: 'rgba(108,99,255,0.1)', color: 'var(--p-muted)' }}>Cancelar</button>
                 <button onClick={() => {
+                    if (!createTitle.trim()) { setCreateEventError('El título del evento es obligatorio.'); return; }
+                    if (!createDate) { setCreateEventError('La fecha del evento es obligatoria.'); return; }
                     if (onLinkEvent && linkedParcheIds.length > 0) {
-                      const ev = { eventTitle: createTitle || 'Nuevo Evento', eventEmoji: '📅', eventDate: createDate || new Date().toISOString().split('T')[0] };
+                      const ev = { eventTitle: createTitle.trim(), eventEmoji: '📅', eventDate: createDate };
                       linkedParcheIds.forEach(parcheId => onLinkEvent(parcheId, ev));
                     }
+                    addToast({ type: 'evento', title: '¡Evento publicado!', message: `"${createTitle.trim()}" ya está visible.` });
                     setShowCreate(false);
                     setLinkedParcheIds([]);
                     setCreateTitle('');
                     setCreateDate('');
+                    setCreateEventError(null);
                   }}
                   className="flex-1 py-2.5 rounded-xl text-sm font-medium"
                   style={{ background: '#6C63FF', color: 'white' }}>Publicar Evento</button>
               </div>
+              <AnimatePresence>
+                {createEventError && (
+                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl mt-1"
+                    style={{ background: 'rgba(255,77,106,0.1)', border: '1px solid rgba(255,77,106,0.3)' }}>
+                    <span style={{ fontSize: '0.85rem' }}>⚠️</span>
+                    <p style={{ fontSize: '0.78rem', color: '#FF4D6A' }}>{createEventError}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>
