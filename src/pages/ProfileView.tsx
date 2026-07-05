@@ -4,6 +4,7 @@ import { Edit2, Camera, X } from 'lucide-react';
 import { InteresesPicker, CATEGORIAS } from '../components/InteresesPicker';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
+import { addToast } from '../components/ToastSystem';
 
 const DEFAULT_INTEREST_IDS = ['ia', 'webdev', 'grupos-estudio', 'videojuegos', 'foto', 'cine', 'tutorias', 'hackathones'];
 
@@ -36,7 +37,28 @@ function EditModal({ onClose, intereses, onSaveIntereses }: { onClose: () => voi
   const [form, setForm] = useState({ nombre:'Juan Carlos Leal Cruz', bio:'Apasionado por la IA y el desarrollo de software 🤖 Busco parches de estudio y amigos para explorar Bogotá.', carrera:'Ingeniería de Sistemas', segundaCarrera:'', semestre:'7', genero:'N/D', privacidad:'publico' });
   const [localIntereses, setLocalIntereses] = useState<string[]>(intereses);
   const [tab, setTab] = useState<'datos'|'intereses'>('datos');
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const set = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setFormError(null); };
+
+  const handleSave = async () => {
+    if (!form.nombre.trim()) { setFormError('El nombre no puede estar vacío.'); return; }
+    if (form.nombre.trim().length < 3) { setFormError('El nombre debe tener al menos 3 caracteres.'); return; }
+    if (!navigator.onLine) {
+      setFormError('Sin conexión a internet. Verifica tu red e inténtalo de nuevo.');
+      return;
+    }
+    setSaveLoading(true);
+    try {
+      await new Promise(r => setTimeout(r, 800));
+      setSaveLoading(false);
+      addToast({ type: 'info', title: 'Perfil actualizado', message: 'Tus cambios fueron guardados correctamente.' });
+      onClose();
+    } catch {
+      setSaveLoading(false);
+      setFormError('No se pudieron guardar los cambios. Inténtalo de nuevo.');
+    }
+  };
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -122,11 +144,22 @@ function EditModal({ onClose, intereses, onSaveIntereses }: { onClose: () => voi
             </div>
             <div className="flex gap-3 pt-2">
               <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm" style={{ background: t.inputBg, color: t.textMuted }}>Cancelar</button>
-              <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+              <button onClick={handleSave} disabled={saveLoading}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60"
                 style={{ background:'linear-gradient(135deg,#6C63FF,#8B7FFF)', color:'white' }}>
-                Guardar cambios
+                {saveLoading ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" /> Guardando...</span> : 'Guardar cambios'}
               </button>
             </div>
+            <AnimatePresence>
+              {formError && (
+                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl mt-2"
+                  style={{ background: 'rgba(255,77,106,0.1)', border: '1px solid rgba(255,77,106,0.3)' }}>
+                  <span style={{ fontSize: '0.9rem' }}>⚠️</span>
+                  <p style={{ fontSize: '0.78rem', color: '#FF4D6A' }}>{formError}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </>}
           {tab === 'intereses' && (
             <div className="space-y-5">

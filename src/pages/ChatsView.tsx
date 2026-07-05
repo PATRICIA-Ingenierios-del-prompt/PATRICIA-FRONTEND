@@ -3,6 +3,7 @@ import { Search, Send, Smile, Paperclip, MoreHorizontal, Check, CheckCheck, X, A
 import { createPortal } from 'react-dom';
 import { useTheme } from '../store/ThemeContext';
 import { motion, AnimatePresence } from 'motion/react';
+import { addToast } from '../components/ToastSystem';
 
 interface Contact {
   id: number;
@@ -93,6 +94,10 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
 
   const send = () => {
     if (!input.trim()) return;
+    if (!navigator.onLine) {
+      addToast({ type: 'reporte', title: 'Sin conexión', message: 'Verifica tu conexión a internet para enviar mensajes.' });
+      return;
+    }
     const now = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
     setMessages(p => [...p, { id: p.length + 1, text: input, time: now, isMe: true, read: false }]);
     setInput('');
@@ -123,7 +128,12 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
         </div>
 
         <div className="flex-1 overflow-y-auto py-1">
-          {filtered.map(contact => {
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32 gap-2 px-4 text-center">
+              <span style={{ fontSize: '1.5rem' }}>🔍</span>
+              <p style={{ fontSize: '0.78rem', color: t.textMuted }}>No se encontraron chats con "{search}"</p>
+            </div>
+          ) : filtered.map(contact => {
             const isActive = selected.id === contact.id;
             return (
               <button key={contact.id} onClick={() => setSelected(contact)}

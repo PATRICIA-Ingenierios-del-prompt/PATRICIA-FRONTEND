@@ -245,6 +245,10 @@ export function MatchingView() {
       setVerifyError('El archivo debe ser una imagen (JPG, PNG, etc.)');
       return;
     }
+    if (file.size > 10 * 1024 * 1024) {
+      setVerifyError('La imagen es demasiado grande. El máximo es 10 MB.');
+      return;
+    }
     setVerifyError(null);
     const url = URL.createObjectURL(file);
     setPhotoPreview(url);
@@ -252,10 +256,21 @@ export function MatchingView() {
 
   const handleVerify = () => {
     if (!photoPreview) return;
+    if (!navigator.onLine) {
+      setVerifyError('Sin conexión a internet. Verifica tu red e inténtalo de nuevo.');
+      return;
+    }
     setVerifying(true);
     setVerifyError(null);
     setTimeout(() => {
       setVerifying(false);
+      // Simulate backend response: randomly fail ~30% of the time for demo
+      // In production this would be the actual API response
+      const faceDetected = Math.random() > 0.3;
+      if (!faceDetected) {
+        setVerifyError('No detectamos una cara de persona en la foto. Por favor sube una foto tuya, de frente y bien iluminada.');
+        return;
+      }
       setHasPhoto(true);
     }, 2200);
   };
@@ -349,7 +364,16 @@ export function MatchingView() {
             )}
 
             {verifyError && (
-              <p className="text-center mb-4" style={{ fontSize:'0.8rem', color:'#FF4D6A' }}>{verifyError}</p>
+              <motion.div
+                initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+                className="flex items-start gap-3 px-4 py-3 rounded-2xl mb-4"
+                style={{ background: 'rgba(255,77,106,0.1)', border: '1px solid rgba(255,77,106,0.3)' }}>
+                <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>❌</span>
+                <div>
+                  <p style={{ fontSize: '0.82rem', color: '#FF4D6A', fontWeight: 600, marginBottom: 2 }}>Verificación fallida</p>
+                  <p style={{ fontSize: '0.78rem', color: '#FF4D6A', lineHeight: 1.5 }}>{verifyError}</p>
+                </div>
+              </motion.div>
             )}
 
             <motion.button

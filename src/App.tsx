@@ -21,6 +21,7 @@ import { AccessibilityPanel, ColorBlindFilters, applyDyslexiaMode, getVisionFilt
 import { ImageWithFallback } from './components/ImageWithFallback';
 import logoNuevoOscuroImg from './assets/logoNuevoOscuro.png';
 import logoNuevoClaroImg from './assets/logoNuevoClaro.png';
+import { useLocation, useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 
 type AuthState = 'login' | 'loginform' | 'register' | 'app';
@@ -35,6 +36,36 @@ const NAV_ITEMS: { id: ViewId; label: string; icon: React.ComponentType<any>; ba
   { id: 'album',         label: 'Álbum de Monas',   icon: Image },
   { id: 'ajustes',       label: 'Ajustes',          icon: Settings },
 ];
+
+const APP_VIEW_PATHS: Record<ViewId, string> = {
+  home: '/app/home',
+  matching: '/app/matching',
+  parches: '/app/parches',
+  chats: '/app/chats',
+  eventos: '/app/eventos',
+  bienestar: '/app/bienestar',
+  album: '/app/album',
+  notificaciones: '/app/notificaciones',
+  ajustes: '/app/ajustes',
+  perfil: '/app/perfil',
+};
+
+const APP_ROUTE_SET = new Set(Object.values(APP_VIEW_PATHS));
+const AUTH_STORAGE_KEY = 'ulink-authenticated';
+
+function normalizePathname(pathname: string) {
+  const normalized = pathname.replace(/\/+$/, '');
+  return normalized === '' ? '/' : normalized;
+}
+
+function getViewFromPath(pathname: string): ViewId {
+  const normalized = normalizePathname(pathname);
+  if (normalized === '/app') return 'home';
+  if (!normalized.startsWith('/app/')) return 'home';
+
+  const view = normalized.slice('/app/'.length) as ViewId;
+  return view in APP_VIEW_PATHS ? view : 'home';
+}
 
 const VIEW_LABELS: Record<ViewId, string> = {
   home:           'Descubrir',
@@ -916,12 +947,19 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
 }
 
 export default function App() {
-  const [authState, setAuthState] = useState<AuthState>('login');
+  const [authState, setAuthState] = useState<AuthState>(() => {
+    if (typeof window === 'undefined') return 'login';
+    return window.localStorage.getItem(AUTH_STORAGE_KEY) === 'true' ? 'app' : 'login';
+  });
   const [activeView, setActiveView] = useState<ViewId>('home');
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [darkMode, setDarkMode] = useState(true);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const currentPath = normalizePathname(location.pathname);
+  const isAppRoute = currentPath === '/app' || currentPath.startsWith('/app/');
 
   const setLandingTarget = (target: 'login' | 'register') => {
     setAuthState(target === 'login' ? 'loginform' : 'register');
@@ -930,6 +968,47 @@ export default function App() {
   const [dyslexiaMode, setDyslexiaMode] = useState(false);
   const [linkedEvents, setLinkedEvents] = useState<Array<{parcheId: number; eventTitle: string; eventEmoji: string; eventDate: string}>>([]);
   const theme = getTheme(darkMode);
+
+  useEffect(() => {
+    if (authState !== 'app') return;
+
+    if (!isAppRoute) {
+      navigate('/app/home', { replace: true });
+      return;
+    }
+
+    const viewFromPath = getViewFromPath(currentPath);
+    if (activeView !== viewFromPath) {
+      setActiveView(viewFromPath);
+    }
+
+    if (!APP_ROUTE_SET.has(currentPath)) {
+      navigate('/app/home', { replace: true });
+    }
+  }, [authState, activeView, currentPath, isAppRoute, navigate]);
+
+  const goToAppView = (view: ViewId) => {
+    setActiveView(view);
+    setMobileMenuOpen(false);
+    navigate(APP_VIEW_PATHS[view]);
+  };
+
+  const handleLoginSuccess = () => {
+    window.localStorage.setItem(AUTH_STORAGE_KEY, 'true');
+    setAuthState('app');
+    navigate('/app/home', { replace: true });
+  };
+
+  const handleLogout = () => {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    setAuthState('login');
+    setMobileMenuOpen(false);
+    navigate('/', { replace: true });
+  };
+
+  const handleEditProfile = () => {
+    goToAppView('perfil');
+  };
 
   // Welcome + demo toasts on login
   useEffect(() => {
@@ -943,23 +1022,23 @@ export default function App() {
   if (authState === 'login')
     return <LandingPage onLogin={() => setLandingTarget('login')} onRegister={() => setLandingTarget('register')} darkMode={darkMode} setDarkMode={setDarkMode} />;
   if (authState === 'loginform')
-    return <LoginView onLogin={() => setAuthState('app')} onGoRegister={() => setAuthState('register')} darkMode={darkMode} setDarkMode={setDarkMode} />;
+    return <LoginView onLogin={handleLoginSuccess} onGoRegister={() => setAuthState('register')} darkMode={darkMode} setDarkMode={setDarkMode} />;
   if (authState === 'register')
-    return <RegisterView onRegister={() => setAuthState('app')} onGoLogin={() => setAuthState('loginform')} darkMode={darkMode} setDarkMode={setDarkMode} />;
+    return <RegisterView onRegister={handleLoginSuccess} onGoLogin={() => setAuthState('loginform')} darkMode={darkMode} setDarkMode={setDarkMode} />;
 
   const renderView = () => {
     switch (activeView) {
-      case 'home':           return <HomeView onNavigate={setActiveView} />;
+      case 'home':           return <HomeView onNavigate={goToAppView} />;
       case 'parches':        return <ParchesView linkedEvents={linkedEvents} />;
-      case 'chats':          return <ChatsView onNavigate={setActiveView} />;
+      case 'chats':          return <ChatsView onNavigate={goToAppView} />;
       case 'eventos':        return <EventosView onLinkEvent={(parcheId, ev) => setLinkedEvents(prev => [...prev, {parcheId, ...ev}])} />;
       case 'matching':       return <MatchingView />;
       case 'bienestar':      return <BienestarView />;
       case 'perfil':         return <ProfileView />;
       case 'notificaciones': return <NotificationsView />;
       case 'album':          return <AlbumView />;
-      case 'ajustes':        return <AjustesView onLogout={() => setAuthState('login')} onEditProfile={() => setActiveView('perfil')} visionMode={visionMode} setVisionMode={setVisionMode} dyslexiaMode={dyslexiaMode} setDyslexiaMode={(v) => { setDyslexiaMode(v); applyDyslexiaMode(v); }} />;
-      default:               return <HomeView onNavigate={setActiveView} />;
+      case 'ajustes':        return <AjustesView onLogout={handleLogout} onEditProfile={handleEditProfile} visionMode={visionMode} setVisionMode={setVisionMode} dyslexiaMode={dyslexiaMode} setDyslexiaMode={(v) => { setDyslexiaMode(v); applyDyslexiaMode(v); }} />;
+      default:               return <HomeView onNavigate={goToAppView} />;
     }
   };
 
@@ -1043,7 +1122,7 @@ export default function App() {
 
               {/* User pill */}
               <div className="px-2 mb-3 flex-shrink-0">
-                <button onClick={() => { setActiveView('perfil'); setMobileMenuOpen(false); }}
+                <button onClick={() => goToAppView('perfil')}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left"
                   style={{ background: activeView === 'perfil' ? 'rgba(108,99,255,0.18)' : 'rgba(108,99,255,0.06)', border: '1px solid rgba(108,99,255,0.12)' }}>
                   <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
@@ -1065,7 +1144,7 @@ export default function App() {
                 {NAV_ITEMS.map(item => {
                   const isActive = activeView === item.id;
                   return (
-                    <button key={item.id} onClick={() => { setActiveView(item.id); setMobileMenuOpen(false); }}
+                    <button key={item.id} onClick={() => goToAppView(item.id)}
                       className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all text-left"
                       style={{
                         background: isActive ? 'rgba(108,99,255,0.15)' : 'transparent',
@@ -1091,7 +1170,7 @@ export default function App() {
 
               {/* Logout */}
               <div className="px-3 py-3 border-t flex-shrink-0" style={{ borderColor: 'var(--p-divider)' }}>
-                <button onClick={() => setAuthState('login')}
+                <button onClick={handleLogout}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all hover:opacity-80"
                   style={{ background: 'rgba(255,77,106,0.08)', border: '1px solid rgba(255,77,106,0.15)', color: '#FF4D6A' }}>
                   <LogOut size={15} />
@@ -1127,14 +1206,14 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            <button onClick={() => setActiveView('chats')}
+            <button onClick={() => goToAppView('chats')}
               className="relative w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-70 transition-all"
               style={{ background: 'rgba(108,99,255,0.1)' }}
               title="Chats">
               <MessageSquare size={17} style={{ color: 'var(--p-muted)' }} />
               <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: '#FF4D6A' }} />
             </button>
-            <button onClick={() => setActiveView('notificaciones')}
+            <button onClick={() => goToAppView('notificaciones')}
               className="relative w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-70 transition-all"
               style={{ background: 'rgba(108,99,255,0.1)' }}>
               <Bell size={17} style={{ color: 'var(--p-muted)' }} />
@@ -1149,7 +1228,7 @@ export default function App() {
                 ? <Sun size={17} style={{ color: '#FFB347' }} />
                 : <Moon size={17} style={{ color: '#6C63FF' }} />}
             </button>
-            <button onClick={() => setActiveView('perfil')}
+            <button onClick={() => goToAppView('perfil')}
               className="w-9 h-9 rounded-full flex items-center justify-center hover:scale-105 transition-all"
               style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)', fontSize: '0.65rem', fontWeight: 800, color: 'white' }}>
               TU

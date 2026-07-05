@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
 import { useParquesGame, FrontendPiece } from '../hooks/useParquesGame';
@@ -93,6 +93,13 @@ function DiceFace({ v, rolling, color, isDark }: { v: number; rolling: boolean; 
 export function ParquesBoard() {
   const themeColors = useTheme();
   const isDark = themeColors.darkMode;
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const {
     pieces,
@@ -410,7 +417,7 @@ export function ParquesBoard() {
     }
     return (
       <div style={{
-        width: '100%', aspectRatio: '1 / 1',
+        width: '100%', height: '100%', aspectRatio: '1 / 1',
         display: 'grid', gridTemplateColumns: `repeat(19, 1fr)`, gridTemplateRows: `repeat(19, 1fr)`,
         borderRadius: '18px', overflow: 'hidden', padding: '0',
         background: isDark ? 'radial-gradient(130% 130% at 50% 50%, #211c46 0%, #0f0c24 70%)' : 'radial-gradient(130% 130% at 50% 50%, #f7f6ff 0%, #e8e6f8 70%)',
@@ -434,8 +441,70 @@ export function ParquesBoard() {
     return 'Tú — tira los dados';
   })();
 
+  // ── Shared side-panel content (dice + buttons + optional log) ──────────
+  const renderSidePanel = (mobile = false) => (
+    <>
+      {/* Dice card */}
+      <div className={`rounded-2xl p-4 border ${mobile ? 'flex-1' : ''}`}
+        style={{ background: 'var(--p-card)', borderColor: isDark ? 'rgba(108,99,255,0.25)' : 'rgba(108,99,255,0.18)', minWidth: mobile ? 150 : 'auto' }}>
+        <div className="flex gap-2 justify-center mb-3">
+          <DiceFace v={dice[0]} rolling={rolling} color={P_COLORS[currentPlayer]} isDark={isDark} />
+          <DiceFace v={dice[1]} rolling={rolling} color={P_COLORS[currentPlayer]} isDark={isDark} />
+        </div>
+        {isDouble && hasDiced && <p className="text-center mb-2" style={{ fontSize: '0.7rem', color: '#FFB347', fontWeight: 700 }}>🎯 ¡Doble! +1 turno</p>}
+        <motion.button onClick={rollDice}
+          disabled={rolling || !isMyTurn || hasDiced || winner !== null || gameStatus !== 'IN_PROGRESS'}
+          whileHover={!rolling && isMyTurn && !hasDiced ? { scale: 1.03 } : {}}
+          whileTap={!rolling && isMyTurn && !hasDiced ? { scale: 0.97 } : {}}
+          className="w-full py-2.5 rounded-xl text-sm font-semibold mb-2 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          style={{
+            background: isMyTurn && !hasDiced && winner === null && gameStatus === 'IN_PROGRESS'
+              ? `linear-gradient(135deg,${P_COLORS[currentPlayer]},${P_COLORS[currentPlayer]}CC)`
+              : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'),
+            color: isMyTurn && !hasDiced && winner === null && gameStatus === 'IN_PROGRESS' ? 'white' : 'var(--p-muted)',
+            border: isMyTurn && !hasDiced && winner === null && gameStatus === 'IN_PROGRESS' ? 'none' : '1px solid var(--p-divider)',
+          }}>
+          {rolling ? '🎲 Tirando…' : hasDiced && isMyTurn ? '✓ Tirado' : '🎲 Tirar dados'}
+        </motion.button>
+        {isMyTurn && hasDiced && winner === null && (
+          <button onClick={skipTurn} className="w-full py-1.5 rounded-xl text-xs transition-all hover:opacity-95"
+            style={{ background: 'rgba(255,179,71,0.12)', color: '#FFB347', border: '1px solid rgba(255,179,71,0.25)' }}>
+            Pasar turno →
+          </button>
+        )}
+      </div>
+
+      {/* Log — desktop only */}
+      {!mobile && (
+        <div className="rounded-2xl p-3 border overflow-hidden flex flex-col" style={{ background: 'var(--p-card)', borderColor: 'var(--p-divider)' }}>
+          <p style={{ fontWeight: 600, fontSize: '0.75rem', marginBottom: '6px', color: 'var(--p-muted)' }}>Historial</p>
+          <div className="overflow-y-auto space-y-1" style={{ maxHeight: 180 }}>
+            {log.map((m, i) => (
+              <p key={i} style={{
+                fontSize: '0.65rem',
+                color: m.includes('Turno') ? '#7FE7C4' : m.includes('🏆') ? '#FFB347' : 'var(--p-sub)',
+                padding: '3px 6px', borderRadius: 6, background: 'rgba(108,99,255,0.05)', lineHeight: 1.4,
+              }}>{m}</p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Buttons */}
+      <button onClick={resetGame} className={`py-2 rounded-xl text-sm font-medium ${mobile ? 'flex-1' : 'w-full'}`}
+        style={{ background: winner !== null ? '#7FE7C4' : 'rgba(108,99,255,0.1)', color: winner !== null ? '#0F0E1A' : 'var(--p-muted)', minWidth: mobile ? 100 : 'auto' }}>
+        {winner !== null ? '🎮 Nueva' : '🔄 Nueva'}
+      </button>
+
+      <button onClick={() => setShowRules(true)} className={`py-2 rounded-xl text-sm font-medium ${mobile ? 'flex-1' : 'w-full'}`}
+        style={{ background: 'rgba(127,231,196,0.12)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.25)', minWidth: mobile ? 100 : 'auto' }}>
+        📖 Reglas
+      </button>
+    </>
+  );
+
   return (
-    <div className="flex gap-5 h-full overflow-auto p-4 justify-center items-center">
+    <div className="h-full overflow-auto relative" style={{ background: 'var(--p-bg)' }}>
       <style>{`
         @keyframes cornerGlow {
           0%, 100% { opacity: .5; }
@@ -451,17 +520,61 @@ export function ParquesBoard() {
         }
       `}</style>
 
-      {/* Board */}
-      <div className="flex-shrink-0 flex flex-col items-center gap-3">
+      {/* ── Desktop layout: row, board 494px + side panel 192px ── */}
+      <div style={{ display: isMobile ? 'none' : 'flex' }} className="gap-5 p-4 justify-center items-start min-h-full">
+
+        {/* Board column */}
+        <div className="flex-shrink-0 flex flex-col items-center gap-3">
+          {/* Player tabs */}
+          <div className="flex gap-2 flex-wrap justify-center">
+            {playerNames.map((name, i) => {
+              const done = pieces.filter(p => p.player === i && p.trackPos === 100).length;
+              return (
+                <div key={i} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all"
+                  style={{ background: currentPlayer === i ? `${P_COLORS[i]}18` : 'transparent', borderColor: currentPlayer === i ? P_COLORS[i] : 'var(--p-divider)' }}>
+                  <div className="w-3 h-3 rounded-full" style={{ background: P_COLORS[i] }} />
+                  <span style={{ fontSize: '0.7rem', color: currentPlayer === i ? P_COLORS[i] : 'var(--p-muted)', fontWeight: currentPlayer === i ? 700 : 400 }}>
+                    {name}{i === myPlayerIndex ? ' (Tú)' : ''}
+                  </span>
+                  {done > 0 && <span style={{ fontSize: '0.6rem', color: P_COLORS[i] }}>{done}/4✓</span>}
+                </div>
+              );
+            })}
+          </div>
+          {/* Fixed 494×494 board */}
+          <div style={{ width: 494, height: 494, position: 'relative', flexShrink: 0 }}>
+            {renderBoardGrid()}
+          </div>
+          {/* Status */}
+          <div className="px-4 py-1.5 rounded-full text-center"
+            style={{ background: `${P_COLORS[currentPlayer]}15`, border: `1px solid ${P_COLORS[currentPlayer]}40` }}>
+            <span style={{ fontSize: '0.75rem', color: P_COLORS[currentPlayer], fontWeight: 600 }}>{statusText}</span>
+          </div>
+          {error && (
+            <div className="px-4 py-1.5 rounded-full text-center"
+              style={{ background: 'rgba(255,77,106,0.12)', border: '1px solid rgba(255,77,106,0.3)' }}>
+              <span style={{ fontSize: '0.7rem', color: '#FF4D6A' }}>⚠️ {error}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Side panel — desktop */}
+        <div className="flex flex-col gap-3 w-48 flex-shrink-0 pt-8">
+          {renderSidePanel()}
+        </div>
+      </div>
+
+      {/* ── Mobile layout: column, board fills width ── */}
+      <div style={{ display: isMobile ? 'flex' : 'none' }} className="flex-col gap-4 p-3">
         {/* Player tabs */}
         <div className="flex gap-2 flex-wrap justify-center">
           {playerNames.map((name, i) => {
             const done = pieces.filter(p => p.player === i && p.trackPos === 100).length;
             return (
-              <div key={i} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all"
+              <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-full border transition-all"
                 style={{ background: currentPlayer === i ? `${P_COLORS[i]}18` : 'transparent', borderColor: currentPlayer === i ? P_COLORS[i] : 'var(--p-divider)' }}>
-                <div className="w-3 h-3 rounded-full" style={{ background: P_COLORS[i] }} />
-                <span style={{ fontSize: '0.7rem', color: currentPlayer === i ? P_COLORS[i] : 'var(--p-muted)', fontWeight: currentPlayer === i ? 700 : 400 }}>
+                <div className="w-2.5 h-2.5 rounded-full" style={{ background: P_COLORS[i] }} />
+                <span style={{ fontSize: '0.65rem', color: currentPlayer === i ? P_COLORS[i] : 'var(--p-muted)', fontWeight: currentPlayer === i ? 700 : 400 }}>
                   {name}{i === myPlayerIndex ? ' (Tú)' : ''}
                 </span>
                 {done > 0 && <span style={{ fontSize: '0.6rem', color: P_COLORS[i] }}>{done}/4✓</span>}
@@ -470,92 +583,35 @@ export function ParquesBoard() {
           })}
         </div>
 
-        {/* Grid Container */}
-        <div style={{ width: 494, height: 494, position: 'relative' }}>
+        {/* Board — fills container width, square aspect ratio */}
+        <div style={{ width: '100%', aspectRatio: '1 / 1', position: 'relative' }}>
           {renderBoardGrid()}
         </div>
 
         {/* Status */}
-        <div className="px-4 py-1.5 rounded-full text-center"
+        <div className="px-3 py-1.5 rounded-full text-center self-center"
           style={{ background: `${P_COLORS[currentPlayer]}15`, border: `1px solid ${P_COLORS[currentPlayer]}40` }}>
-          <span style={{ fontSize: '0.75rem', color: P_COLORS[currentPlayer], fontWeight: 600 }}>
-            {statusText}
-          </span>
+          <span style={{ fontSize: '0.72rem', color: P_COLORS[currentPlayer], fontWeight: 600 }}>{statusText}</span>
         </div>
-
-        {/* Error toast */}
         {error && (
-          <div className="px-4 py-1.5 rounded-full text-center"
+          <div className="px-3 py-1.5 rounded-full text-center self-center"
             style={{ background: 'rgba(255,77,106,0.12)', border: '1px solid rgba(255,77,106,0.3)' }}>
-            <span style={{ fontSize: '0.7rem', color: '#FF4D6A' }}>⚠️ {error}</span>
+            <span style={{ fontSize: '0.68rem', color: '#FF4D6A' }}>⚠️ {error}</span>
           </div>
         )}
-      </div>
 
-      {/* Side panel */}
-      <div className="flex flex-col gap-3 w-48">
-        {/* Dice */}
-        <div className="rounded-2xl p-4 border" style={{ background: 'var(--p-card)', borderColor: isDark ? 'rgba(108,99,255,0.25)' : 'rgba(108,99,255,0.18)' }}>
-          <div className="flex gap-2 justify-center mb-3">
-            <DiceFace v={dice[0]} rolling={rolling} color={P_COLORS[currentPlayer]} isDark={isDark} />
-            <DiceFace v={dice[1]} rolling={rolling} color={P_COLORS[currentPlayer]} isDark={isDark} />
-          </div>
-          {isDouble && hasDiced && <p className="text-center mb-2" style={{ fontSize: '0.7rem', color: '#FFB347', fontWeight: 700 }}>🎯 ¡Doble! +1 turno</p>}
-          <motion.button onClick={rollDice}
-            disabled={rolling || !isMyTurn || hasDiced || winner !== null || gameStatus !== 'IN_PROGRESS'}
-            whileHover={!rolling && isMyTurn && !hasDiced ? { scale: 1.03 } : {}}
-            whileTap={!rolling && isMyTurn && !hasDiced ? { scale: 0.97 } : {}}
-            className="w-full py-2.5 rounded-xl text-sm font-semibold mb-2 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-            style={{
-              background: isMyTurn && !hasDiced && winner === null && gameStatus === 'IN_PROGRESS'
-                ? `linear-gradient(135deg,${P_COLORS[currentPlayer]},${P_COLORS[currentPlayer]}CC)`
-                : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'),
-              color: isMyTurn && !hasDiced && winner === null && gameStatus === 'IN_PROGRESS' ? 'white' : 'var(--p-muted)',
-              border: isMyTurn && !hasDiced && winner === null && gameStatus === 'IN_PROGRESS' ? 'none' : '1px solid var(--p-divider)'
-            }}>
-            {rolling ? '🎲 Tirando…' : hasDiced && isMyTurn ? '✓ Tirado' : '🎲 Tirar dados'}
-          </motion.button>
-          {isMyTurn && hasDiced && winner === null && (
-            <button onClick={skipTurn} className="w-full py-1.5 rounded-xl text-xs transition-all hover:opacity-95"
-              style={{ background: 'rgba(255,179,71,0.12)', color: '#FFB347', border: '1px solid rgba(255,179,71,0.25)' }}>
-              Pasar turno →
-            </button>
-          )}
+        {/* Side panel — mobile (dice + controls row, log hidden) */}
+        <div className="flex flex-row gap-3 flex-wrap">
+          {renderSidePanel(true)}
         </div>
-
-        {/* Log */}
-        <div className="rounded-2xl p-3 border flex-1 overflow-hidden" style={{ background: 'var(--p-card)', borderColor: 'var(--p-divider)' }}>
-          <p style={{ fontWeight: 600, fontSize: '0.75rem', marginBottom: '6px', color: 'var(--p-muted)' }}>Historial</p>
-          <div className="overflow-y-auto space-y-1" style={{ maxHeight: 180 }}>
-            {log.map((m, i) => (
-              <p key={i} style={{
-                fontSize: '0.65rem',
-                color: m.includes('Turno') ? '#7FE7C4' : m.includes('🏆') ? '#FFB347' : 'var(--p-sub)',
-                padding: '3px 6px', borderRadius: 6, background: 'rgba(108,99,255,0.05)', lineHeight: 1.4
-              }}>
-                {m}
-              </p>
-            ))}
-          </div>
-        </div>
-
-        <button onClick={resetGame} className="py-2 rounded-xl text-sm font-medium"
-          style={{ background: winner !== null ? '#7FE7C4' : 'rgba(108,99,255,0.1)', color: winner !== null ? '#0F0E1A' : 'var(--p-muted)' }}>
-          {winner !== null ? '🎮 Nueva partida' : '🔄 Nueva partida'}
-        </button>
-
-        <button onClick={() => setShowRules(true)} className="py-2 rounded-xl text-sm font-medium"
-          style={{ background: 'rgba(127,231,196,0.12)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.25)' }}>
-          📖 Ver reglas
-        </button>
       </div>
 
       {/* Rules overlay */}
       <AnimatePresence>
         {showRules && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="absolute inset-0 flex items-center justify-center"
-            style={{ background: 'rgba(0,0,0,0.72)', zIndex: 60, borderRadius: 16 }}
+            className="fixed inset-0 flex items-center justify-center"
+            style={{ background: 'rgba(0,0,0,0.72)', zIndex: 200 }}
             onClick={() => setShowRules(false)}>
             <motion.div initial={{ scale: 0.92, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92 }}
               onClick={e => e.stopPropagation()}
@@ -595,8 +651,8 @@ export function ParquesBoard() {
       <AnimatePresence>
         {winner !== null && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="absolute inset-0 flex items-center justify-center"
-            style={{ background: 'rgba(0,0,0,0.6)', zIndex: 50, borderRadius: 16 }}>
+            className="fixed inset-0 flex items-center justify-center"
+            style={{ background: 'rgba(0,0,0,0.6)', zIndex: 200 }}>
             <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 300 }}
               className="text-center p-8 rounded-3xl border"
               style={{ background: 'rgba(26,24,41,0.98)', borderColor: P_COLORS[winner], boxShadow: `0 0 60px ${P_COLORS[winner]}40` }}>
