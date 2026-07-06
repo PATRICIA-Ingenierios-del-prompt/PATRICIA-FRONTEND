@@ -10,6 +10,7 @@ import monoJuegos    from '../assets/monoGamerN.png';
 import monoArte      from '../assets/monoArteN.png';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
+import { useAuth } from '../store/AuthContext';
 
 type ViewId = 'home' | 'matching' | 'parches' | 'campus' | 'eventos' | 'bienestar' | 'album' | 'notificaciones' | 'ranking' | 'ajustes' | 'perfil';
 interface HomeViewProps { onNavigate: (v: ViewId) => void; }
