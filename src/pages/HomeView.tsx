@@ -251,6 +251,10 @@ function FeedSection() {
 export function HomeView({ onNavigate }: HomeViewProps) {
   const t = useTheme();
   const greeting = getGreeting();
+  const { userName, userEmail } = useAuth();
+  const firstName = (userName ?? userEmail ?? 'Explorador').split(' ')[0];
+  const initials  = (userName ?? userEmail ?? '?')
+    .split(' ').filter(Boolean).slice(0, 2).map((w: string) => w[0].toUpperCase()).join('');
   const [joinedParches, setJoinedParches] = useState<number[]>([]);
 
   return (
@@ -269,17 +273,17 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               <div className="relative flex-shrink-0">
                 <div className="w-16 h-16 rounded-full flex items-center justify-center border-2"
                   style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)', borderColor: 'rgba(108,99,255,0.4)', fontSize: '1.3rem', fontWeight: 800, color: 'white' }}>
-                  JL
+                  {initials}
                 </div>
                 <div className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full"
                   style={{ background: '#6C63FF', color: 'white', fontSize: '0.58rem', fontWeight: 700 }}>12</div>
               </div>
               <div>
                 <p style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: '1.2rem', color: t.text, lineHeight: 1.2 }}>
-                  {greeting.emoji} {greeting.text}, Juan
+                  {greeting.emoji} {greeting.text}, {firstName}
                 </p>
                 <p style={{ fontSize: '0.82rem', color: t.textMuted, marginTop: '4px' }}>
-                  Ing. Sistemas · 7mo semestre
+                  {userEmail ?? 'ECI'}
                 </p>
               </div>
             </div>

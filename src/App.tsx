@@ -14,6 +14,8 @@ import { ProfileView } from './pages/ProfileView';
 import { LoginView } from './pages/LoginView';
 import { RegisterView } from './pages/RegisterView';
 import { LandingPage } from './pages/LandingPage';
+import { MicrosoftCallback } from './pages/MicrosoftCallback';
+import { AuthProvider, useAuth } from './store/AuthContext';
 import { ToastContainer, addToast } from './components/ToastSystem';
 import { AnimatedBackground } from './components/AnimatedBackground';
 import { ThemeContext, getTheme, useTheme } from './store/ThemeContext';
@@ -23,7 +25,7 @@ import logoNuevoOscuroImg from './assets/logoNuevoOscuro.png';
 import logoNuevoClaroImg from './assets/logoNuevoClaro.png';
 import { motion, AnimatePresence } from 'motion/react';
 
-type AuthState = 'login' | 'loginform' | 'register' | 'app';
+type AuthState = 'login' | 'loginform' | 'register' | 'callback' | 'app';
 type ViewId = 'home' | 'matching' | 'parches' | 'chats' | 'eventos' | 'bienestar' | 'album' | 'notificaciones' | 'ajustes' | 'perfil';
 
 const NAV_ITEMS: { id: ViewId; label: string; icon: React.ComponentType<any>; badge?: number }[] = [
@@ -823,13 +825,27 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
   );
 }
 
-export default function App() {
-  const [authState, setAuthState] = useState<AuthState>('login');
+function AppCore() {
+  // Detect Microsoft OAuth callback before any other state
+  const isMsCallback =
+    window.location.pathname === '/auth/callback' &&
+    new URLSearchParams(window.location.search).has('code');
+
+  const [authState, setAuthState] = useState<AuthState>(() =>
+    isMsCallback ? 'callback' : 'login',
+  );
   const [activeView, setActiveView] = useState<ViewId>('home');
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [darkMode, setDarkMode] = useState(true);
+
+  // Auth — name derived from JWT email claim (karol.estupinan-v@ → "Karol Estupinan")
+  const { userName, userEmail } = useAuth();
+  const displayName = userName ?? userEmail ?? 'Usuario';
+  const initials = displayName
+    .split(' ').filter(Boolean).slice(0, 2)
+    .map((w: string) => w[0].toUpperCase()).join('');
 
   const setLandingTarget = (target: 'login' | 'register') => {
     setAuthState(target === 'login' ? 'loginform' : 'register');
@@ -848,6 +864,14 @@ export default function App() {
     return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2); };
   }, [authState]);
 
+  if (authState === 'callback')
+    return (
+      <MicrosoftCallback
+        onSuccess={() => setAuthState('app')}
+        onError={() => setAuthState('loginform')}
+        darkMode={darkMode}
+      />
+    );
   if (authState === 'login')
     return <LandingPage onLogin={() => setLandingTarget('login')} onRegister={() => setLandingTarget('register')} darkMode={darkMode} setDarkMode={setDarkMode} />;
   if (authState === 'loginform')
@@ -956,10 +980,10 @@ export default function App() {
                   style={{ background: activeView === 'perfil' ? 'rgba(108,99,255,0.18)' : 'rgba(108,99,255,0.06)', border: '1px solid rgba(108,99,255,0.12)' }}>
                   <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
                     style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)', fontSize: '0.65rem', fontWeight: 800, color: 'white' }}>
-                    TU
+                    {initials}
                   </div>
                   <div className="text-left overflow-hidden">
-                    <p style={{ fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: theme.text }}>Tu Perfil</p>
+                    <p style={{ fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: theme.text }}>{displayName}</p>
                     <div className="flex items-center gap-1">
                       <Zap size={9} style={{ color: '#FFB347' }} />
                       <span style={{ fontSize: '0.62rem', color: '#FFB347' }}>Nv. 12 · 2,340 XP</span>
@@ -1060,7 +1084,7 @@ export default function App() {
             <button onClick={() => setActiveView('perfil')}
               className="w-9 h-9 rounded-full flex items-center justify-center hover:scale-105 transition-all"
               style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)', fontSize: '0.65rem', fontWeight: 800, color: 'white' }}>
-              TU
+              {initials}
             </button>
           </div>
         </header>
@@ -1085,5 +1109,14 @@ export default function App() {
       </div>
     </div>
     </ThemeContext.Provider>
+  );
+}
+
+// ── Root export — wraps everything in AuthProvider ────────────────────────────
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppCore />
+    </AuthProvider>
   );
 }
