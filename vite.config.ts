@@ -1,13 +1,12 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
-
 function figmaAssetResolver() {
   return {
     name: 'figma-asset-resolver',
-    resolveId(id) {
+    resolveId(id: string) {
       if (id.startsWith('figma:asset/')) {
         const filename = id.replace('figma:asset/', '')
         return path.resolve(__dirname, 'src/assets', filename)
@@ -16,27 +15,46 @@ function figmaAssetResolver() {
   }
 }
 
-export default defineConfig({
-  server: {
-    proxy: {
-      '/api/games': { target: 'http://localhost:8085', changeOrigin: true },
-      '/parques-ws': { target: 'http://localhost:8085', changeOrigin: true, ws: true },
-    },
-  },
-  plugins: [
-    figmaAssetResolver(),
-    // The React and Tailwind plugins are both required for Make, even if
-    // Tailwind is not being actively used – do not remove them
-    react(),
-    tailwindcss(),
-  ],
-  resolve: {
-    alias: {
-      // Alias @ to the src directory
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const gatewayUrl = env.VITE_API_URL || 'http://localhost:8080';
 
-  // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
-  assetsInclude: ['**/*.svg', '**/*.csv'],
-})
+  return {
+    plugins: [
+      figmaAssetResolver(),
+      react(),
+      tailwindcss(),
+    ],
+    server: {
+      port: 3000,
+      proxy: {
+        // /auth/** → Gateway → Auth Backend (8081)
+        // EXCEPT /auth/callback which is a frontend SPA route
+        '/auth': {
+          target: gatewayUrl,
+          changeOrigin: true,
+          bypass(req) {
+            const url = req.url ?? '';
+            if (url === '/auth/callback' || url.startsWith('/auth/callback?')) {
+              return url; // serve the SPA, don't proxy
+            }
+          },
+        },
+        // /api/v1/** → Gateway → User Backend (8082)
+        '/api/v1': {
+          target: gatewayUrl,
+          changeOrigin: true,
+        },
+        // Parqués game backend (8085)
+        '/api/games': { target: 'http://localhost:8085', changeOrigin: true },
+        '/parques-ws': { target: 'http://localhost:8085', changeOrigin: true, ws: true },
+      },
+    },
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+      },
+    },
+    assetsInclude: ['**/*.svg', '**/*.csv'],
+  };
+});
