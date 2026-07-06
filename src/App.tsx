@@ -23,6 +23,7 @@ import { AccessibilityPanel, ColorBlindFilters, applyDyslexiaMode, getVisionFilt
 import { ImageWithFallback } from './components/ImageWithFallback';
 import logoNuevoOscuroImg from './assets/logoNuevoOscuro.png';
 import logoNuevoClaroImg from './assets/logoNuevoClaro.png';
+import { useLocation, useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 
 type AuthState = 'login' | 'loginform' | 'register' | 'callback' | 'app';
@@ -37,6 +38,36 @@ const NAV_ITEMS: { id: ViewId; label: string; icon: React.ComponentType<any>; ba
   { id: 'album',         label: 'Álbum de Monas',   icon: Image },
   { id: 'ajustes',       label: 'Ajustes',          icon: Settings },
 ];
+
+const APP_VIEW_PATHS: Record<ViewId, string> = {
+  home: '/app/home',
+  matching: '/app/matching',
+  parches: '/app/parches',
+  chats: '/app/chats',
+  eventos: '/app/eventos',
+  bienestar: '/app/bienestar',
+  album: '/app/album',
+  notificaciones: '/app/notificaciones',
+  ajustes: '/app/ajustes',
+  perfil: '/app/perfil',
+};
+
+const APP_ROUTE_SET = new Set(Object.values(APP_VIEW_PATHS));
+const AUTH_STORAGE_KEY = 'ulink-authenticated';
+
+function normalizePathname(pathname: string) {
+  const normalized = pathname.replace(/\/+$/, '');
+  return normalized === '' ? '/' : normalized;
+}
+
+function getViewFromPath(pathname: string): ViewId {
+  const normalized = normalizePathname(pathname);
+  if (normalized === '/app') return 'home';
+  if (!normalized.startsWith('/app/')) return 'home';
+
+  const view = normalized.slice('/app/'.length) as ViewId;
+  return view in APP_VIEW_PATHS ? view : 'home';
+}
 
 const VIEW_LABELS: Record<ViewId, string> = {
   home:           'Descubrir',
@@ -223,7 +254,20 @@ function ScratchCanvas({ onComplete }: { onComplete: () => void }) {
 
 function AlbumView() {
   const t = useTheme();
+  const ad = t.darkMode;
+  const aText    = ad ? 'white'                        : '#2A1F6E';
+  const aSub     = ad ? 'rgba(255,255,255,0.52)'       : 'rgba(42,31,110,0.6)';
+  const aNumBg   = ad ? 'rgba(0,0,0,0.65)'             : 'rgba(255,255,255,0.8)';
+  const aNumTxt  = ad ? 'rgba(255,255,255,0.88)'       : '#2A1F6E';
+  const aNavBg   = ad ? 'rgba(255,255,255,0.1)'        : 'rgba(42,31,110,0.1)';
+  const aNavTxt  = ad ? 'rgba(255,255,255,0.85)'       : '#2A1F6E';
+  const aNavBord = ad ? 'rgba(255,255,255,0.15)'       : 'rgba(42,31,110,0.25)';
+  const aDotOff  = ad ? 'rgba(255,255,255,0.25)'       : 'rgba(42,31,110,0.3)';
+  const aCnt     = ad ? 'rgba(255,255,255,0.45)'       : 'rgba(42,31,110,0.45)';
+  const aDotTex  = ad ? 'rgba(255,255,255,0.06)'       : 'rgba(42,31,110,0.06)';
+
   const [showMonasGuide, setShowMonasGuide] = useState(false);
+  const [guidePage, setGuidePage] = useState(0);
   const [unlockedByUser, setUnlockedByUser] = useState(new Set<number>());
   const [justUnlocked, setJustUnlocked] = useState<null | { id: number; name: string; rarity: string; xp: number; color: string; img: string; how: string }>(null);
   const [albumPage, setAlbumPage] = useState(0);
@@ -291,7 +335,7 @@ function AlbumView() {
               <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={{ background: 'rgba(255,179,71,0.28)', color: '#FFD95A', backdropFilter: 'blur(8px)' }}>
                 ⚡ {xpEarned.toLocaleString()} XP
               </span>
-              <button onClick={() => setShowMonasGuide(true)}
+              <button onClick={() => { setShowMonasGuide(true); setGuidePage(0); }}
                 className="px-2.5 py-1 rounded-full text-xs font-semibold transition-all hover:opacity-85"
                 style={{ background: 'rgba(127,231,196,0.22)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.4)', backdropFilter: 'blur(8px)' }}>
                 🗺️ ¿Cómo se ganan?
@@ -326,7 +370,7 @@ function AlbumView() {
 
       {/* ── Album pages ── */}
       <div className="rounded-3xl overflow-hidden mb-2 relative" style={{
-        background: t.darkMode ? '#0E0C22' : '#2B1F6E',
+        background: t.darkMode ? '#0E0C22' : '#EDE9FF',
         boxShadow: '0 12px 56px rgba(108,99,255,0.3)',
         border: t.darkMode ? '2px solid rgba(108,99,255,0.35)' : '2px solid rgba(108,99,255,0.4)',
       }}>
@@ -337,7 +381,7 @@ function AlbumView() {
           <div style={{ position:'absolute', top:'40%', left:'30%', width:160, height:160, borderRadius:'50%', background:'rgba(255,107,157,0.07)', filter:'blur(40px)' }} />
           {/* Dot texture */}
           <div className="absolute inset-0" style={{
-            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
+            backgroundImage: `radial-gradient(circle, ${aDotTex} 1px, transparent 1px)`,
             backgroundSize: '18px 18px',
           }} />
         </div>
@@ -345,10 +389,10 @@ function AlbumView() {
         {/* Page header strip */}
         <div className="relative z-10 flex items-center justify-between px-5 pt-4 pb-3">
           <div>
-            <p style={{ fontWeight: 900, fontSize: '1.1rem', color: 'white', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+            <p style={{ fontWeight: 900, fontSize: '1.1rem', color: aText, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
               MONAS U•LINK
             </p>
-            <p style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 }}>
+            <p style={{ fontSize: '0.62rem', color: aSub, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 }}>
               Colección ECI · {albumPage === 0 ? '#01 — #08' : '#09 — #14'}
             </p>
           </div>
@@ -358,7 +402,7 @@ function AlbumView() {
                 style={{
                   height: 7, borderRadius: 4, transition: 'all 0.2s',
                   width: albumPage === i ? 28 : 8,
-                  background: albumPage === i ? '#7FE7C4' : 'rgba(255,255,255,0.25)',
+                  background: albumPage === i ? '#7FE7C4' : aDotOff,
                   border: 'none', cursor: 'pointer',
                 }} />
             ))}
@@ -411,7 +455,7 @@ function AlbumView() {
 
                     {/* #number badge */}
                     <div style={{ position:'absolute', top:9, left:7, zIndex:4 }}>
-                      <span style={{ display:'block', padding:'2px 5px', borderRadius:4, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(6px)', color:'rgba(255,255,255,0.88)', fontSize:'0.42rem', fontFamily:'monospace', fontWeight:900, letterSpacing:'0.04em' }}>
+                      <span style={{ display:'block', padding:'2px 5px', borderRadius:4, background:aNumBg, backdropFilter:'blur(6px)', color:aNumTxt, fontSize:'0.42rem', fontFamily:'monospace', fontWeight:900, letterSpacing:'0.04em' }}>
                         #{String(mona.id).padStart(2,'0')}
                       </span>
                     </div>
@@ -470,15 +514,15 @@ function AlbumView() {
         <div className="relative z-10 flex items-center justify-between px-5 pb-4">
           <button onClick={() => setAlbumPage(0)} disabled={albumPage === 0}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-25"
-            style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)' }}>
+            style={{ background: aNavBg, color: aNavTxt, border: `1px solid ${aNavBord}`, backdropFilter: 'blur(8px)' }}>
             ← Anterior
           </button>
-          <span style={{ fontSize:'0.68rem', color:'rgba(255,255,255,0.45)', fontWeight:600 }}>
+          <span style={{ fontSize:'0.68rem', color: aCnt, fontWeight:600 }}>
             {albumPage + 1} / 2
           </span>
           <button onClick={() => setAlbumPage(1)} disabled={albumPage === 1}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-25"
-            style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)' }}>
+            style={{ background: aNavBg, color: aNavTxt, border: `1px solid ${aNavBord}`, backdropFilter: 'blur(8px)' }}>
             Siguiente →
           </button>
         </div>
@@ -518,7 +562,7 @@ function AlbumView() {
 
               {/* Scratch area */}
               <div className="relative mx-6 mb-4 rounded-2xl overflow-hidden"
-                style={{ width: 320, height: 320, background: t.darkMode ? '#12102A' : '#EDE9FF' }}>
+                style={{ width: 320, height: 320, background: t.darkMode ? '#12102A' : '#D8D1FF' }}>
                 {/* Mona visible underneath */}
                 <div className="absolute inset-0 flex items-center justify-center">
                   <ImageWithFallback
@@ -598,87 +642,166 @@ function AlbumView() {
         )}
       </AnimatePresence>
 
-      {/* ── Monas Guide Popup ── */}
-      <AnimatePresence>
-        {showMonasGuide && (
-          <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
-            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
-            style={{ background:'rgba(0,0,0,0.8)' }}
-            onClick={() => setShowMonasGuide(false)}>
-            <motion.div initial={{ scale:0.92, y:20 }} animate={{ scale:1, y:0 }} exit={{ scale:0.92 }}
-              className="rounded-3xl w-full max-w-3xl overflow-hidden flex flex-col"
-              style={{ background: t.darkMode ? '#1A1829' : '#F4F2FF', border:'1px solid rgba(108,99,255,0.3)', maxHeight:'85vh' }}
-              onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0"
-                style={{ borderColor:'rgba(108,99,255,0.2)', background:'rgba(108,99,255,0.06)' }}>
-                <div>
-                  <h3 style={{ fontWeight:800, fontSize:'1.15rem', color: t.text }}>🗺️ Guía de Monas</h3>
-                  <p style={{ fontSize:'0.78rem', color: t.textMuted, marginTop:'2px' }}>Cómo desbloquear cada personaje</p>
-                </div>
-                <button onClick={() => setShowMonasGuide(false)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center hover:opacity-70 transition-all"
-                  style={{ background:'rgba(108,99,255,0.15)' }}>
-                  <span style={{ fontSize:'1rem', color:'var(--p-muted)' }}>✕</span>
-                </button>
-              </div>
-              <div className="flex gap-3 px-6 py-3 border-b flex-shrink-0 flex-wrap"
-                style={{ borderColor:'rgba(108,99,255,0.1)', background: t.darkMode ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.4)' }}>
-                {[
-                  { rarity:'Común',      color:'#8B85B0', xp:100,  emoji:'⚪' },
-                  { rarity:'Rara',       color:'#7FE7C4', xp:300,  emoji:'🟢' },
-                  { rarity:'Épica',      color:'#6C63FF', xp:500,  emoji:'🔵' },
-                  { rarity:'Legendaria', color:'#FFB347', xp:1000, emoji:'🟡' },
-                ].map(r => (
-                  <div key={r.rarity} className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl"
-                    style={{ background:`${r.color}15`, border:`1px solid ${r.color}30` }}>
-                    <span style={{ fontSize:'0.75rem' }}>{r.emoji}</span>
-                    <span style={{ fontSize:'0.72rem', fontWeight:700, color:r.color }}>{r.rarity}</span>
-                    <span className="px-1.5 py-0.5 rounded-full text-xs font-bold"
-                      style={{ background:'rgba(255,179,71,0.15)', color:'#FFB347', fontSize:'0.62rem' }}>
-                      +{r.xp} XP
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className="overflow-y-auto flex-1 p-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {ALL_MONAS.map(mona => {
-                    const unlk = isUnlocked(mona);
-                    const rc = rarityColor[mona.rarity as keyof typeof rarityColor];
-                    return (
-                      <div key={mona.id} className="flex items-center gap-3 rounded-2xl p-3 border transition-all"
-                        style={{ background: unlk ? `${mona.color}10` : (t.darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'), borderColor: unlk ? `${mona.color}35` : 'rgba(108,99,255,0.12)' }}>
-                        <div className={`flex-shrink-0 ${unlk ? '' : 'grayscale opacity-40'}`} style={{ width:52, height:52 }}>
-                          <ImageWithFallback src={mona.img} alt={mona.name}
-                            className="w-full h-full object-contain"
-                            style={{ filter: unlk ? `drop-shadow(0 2px 8px ${mona.color}50)` : 'none' }} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span style={{ fontWeight:700, fontSize:'0.85rem', color: unlk ? mona.color : t.textMuted }}>{mona.name}</span>
-                            {unlk && <span style={{ fontSize:'0.7rem' }}>✅</span>}
-                          </div>
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <span className="px-1.5 py-0.5 rounded-full"
-                              style={{ fontSize:'0.58rem', color:rc, background:`${rc}18`, fontWeight:600 }}>
-                              {mona.rarity}
-                            </span>
-                            <span className="px-1.5 py-0.5 rounded-full"
-                              style={{ fontSize:'0.58rem', color:'#FFB347', background:'rgba(255,179,71,0.12)', fontWeight:700 }}>
-                              +{mona.xp} XP
-                            </span>
-                          </div>
-                          <p style={{ fontSize:'0.7rem', color: t.textSub, lineHeight:1.4 }}>{mona.how}</p>
-                        </div>
+      {/* ── Monas Guide Popup — libro por rareza ── */}
+      {(() => {
+        const GUIDE_PAGES = [
+          { rarity:'Común',      color:'#8B85B0', xp:100,  gradient:'linear-gradient(135deg,#4A4470 0%,#8B85B0 100%)' },
+          { rarity:'Rara',       color:'#7FE7C4', xp:300,  gradient:'linear-gradient(135deg,#1A5C4C 0%,#7FE7C4 100%)' },
+          { rarity:'Épica',      color:'#6C63FF', xp:500,  gradient:'linear-gradient(135deg,#3B2F8E 0%,#6C63FF 60%,#9B55D4 100%)' },
+          { rarity:'Legendaria', color:'#FFB347', xp:1000, gradient:'linear-gradient(135deg,#7A4A00 0%,#FFB347 100%)' },
+        ];
+        const pg = GUIDE_PAGES[guidePage];
+        const pageMonas = ALL_MONAS.filter(m => m.rarity === pg.rarity);
+        return (
+          <AnimatePresence>
+            {showMonasGuide && (
+              <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+                className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-6"
+                style={{ background:'rgba(0,0,0,0.88)', backdropFilter:'blur(10px)' }}
+                onClick={() => setShowMonasGuide(false)}>
+                <motion.div initial={{ scale:0.88, y:30 }} animate={{ scale:1, y:0 }} exit={{ scale:0.88, y:30 }}
+                  transition={{ type:'spring', stiffness:260, damping:22 }}
+                  className="rounded-3xl w-full overflow-hidden flex flex-col"
+                  style={{ background: t.darkMode ? '#0F0D22' : '#F0EEFF', maxWidth:680, maxHeight:'92vh',
+                    boxShadow:'0 32px 80px rgba(0,0,0,0.65)', border:'2px solid rgba(108,99,255,0.3)' }}
+                  onClick={e => e.stopPropagation()}>
+
+                  {/* ── Portada / encabezado de página ── */}
+                  <div className="relative flex-shrink-0 overflow-hidden" style={{ background: pg.gradient, padding:'24px 22px 20px' }}>
+                    <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage:'radial-gradient(circle,rgba(255,255,255,0.07) 1px,transparent 1px)', backgroundSize:'14px 14px' }} />
+                    <div className="relative z-10 flex items-start justify-between gap-4">
+                      <div>
+                        <p style={{ fontSize:'0.58rem', fontWeight:800, color:'rgba(255,255,255,0.55)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom:5 }}>
+                          Álbum U•link · Guía Oficial · Página {guidePage + 1} de {GUIDE_PAGES.length}
+                        </p>
+                        <h3 style={{ fontWeight:900, fontSize:'1.55rem', color:'white', letterSpacing:'-0.02em', lineHeight:1.1 }}>
+                          {pg.rarity}
+                        </h3>
+                        <p style={{ fontSize:'0.78rem', color:'rgba(255,255,255,0.72)', marginTop:5 }}>
+                          +{pg.xp} XP por mona desbloqueada · {pageMonas.length} personaje{pageMonas.length !== 1 ? 's' : ''}
+                        </p>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                      <button onClick={() => setShowMonasGuide(false)}
+                        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 hover:opacity-70 transition-all mt-1"
+                        style={{ background:'rgba(255,255,255,0.18)', border:'1px solid rgba(255,255,255,0.25)' }}>
+                        <span style={{ fontSize:'0.9rem', color:'white' }}>✕</span>
+                      </button>
+                    </div>
+                    {/* Tabs de rareza como pestañas */}
+                    <div className="relative z-10 flex gap-1.5 mt-4">
+                      {GUIDE_PAGES.map((gp, i) => (
+                        <button key={gp.rarity} onClick={() => setGuidePage(i)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                          style={{
+                            background: guidePage === i ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.12)',
+                            color: guidePage === i ? gp.color : 'rgba(255,255,255,0.65)',
+                            border: guidePage === i ? 'none' : '1px solid rgba(255,255,255,0.15)',
+                          }}>
+                          {gp.rarity}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* ── Contenido de la página ── */}
+                  <div className="overflow-y-auto flex-1 p-5" style={{ scrollbarWidth:'thin' }}>
+                    <AnimatePresence mode="wait">
+                      <motion.div key={guidePage}
+                        initial={{ opacity:0, x:30 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:-30 }}
+                        transition={{ duration:0.28, ease:'easeOut' }}
+                        className="grid grid-cols-1 gap-4">
+                        {pageMonas.map(mona => {
+                          const unlk = isUnlocked(mona);
+                          return (
+                            <div key={mona.id} className="rounded-2xl border overflow-hidden"
+                              style={{
+                                background: unlk
+                                  ? (t.darkMode ? `linear-gradient(135deg,${mona.color}18,${mona.color}06)` : `linear-gradient(135deg,${mona.color}10,${mona.color}04)`)
+                                  : (t.darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(108,99,255,0.04)'),
+                                borderColor: unlk ? `${mona.color}50` : 'rgba(108,99,255,0.14)',
+                              }}>
+                              <div style={{ height:3, background: unlk ? mona.color : pg.color }} />
+                              <div className="flex gap-5 p-5">
+                                {/* Imagen grande */}
+                                <div className="flex-shrink-0 flex items-center justify-center rounded-2xl"
+                                  style={{ width:110, height:110,
+                                    background: unlk ? `${mona.color}15` : (t.darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(108,99,255,0.07)'),
+                                    border:`2px solid ${unlk ? mona.color+'45' : 'rgba(108,99,255,0.14)'}` }}>
+                                  <ImageWithFallback src={mona.img} alt={mona.name}
+                                    style={{ width:96, height:96, objectFit:'contain',
+                                      opacity: unlk ? 1 : 0.22,
+                                      filter: unlk ? `drop-shadow(0 4px 14px ${mona.color}60)` : 'grayscale(1)' }} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  {/* Nombre + estado */}
+                                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                    <span style={{ fontWeight:800, fontSize:'1.05rem', color: unlk ? mona.color : t.text }}>
+                                      {mona.name}
+                                    </span>
+                                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold"
+                                      style={{ background: unlk ? 'rgba(127,231,196,0.18)' : 'rgba(139,133,176,0.15)',
+                                        color: unlk ? '#7FE7C4' : t.textMuted }}>
+                                      {unlk ? 'Obtenida' : 'Bloqueada'}
+                                    </span>
+                                  </div>
+                                  {/* XP */}
+                                  <p className="mb-3" style={{ fontSize:'0.72rem', color: t.textMuted }}>
+                                    +{mona.xp} XP al desbloquear
+                                  </p>
+                                  {/* Cómo ganarla */}
+                                  <div className="rounded-xl px-4 py-3"
+                                    style={{ background: t.darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(108,99,255,0.07)',
+                                      border:`1px solid ${t.darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(108,99,255,0.13)'}` }}>
+                                    <p style={{ fontSize:'0.62rem', fontWeight:800, color: unlk ? mona.color : pg.color,
+                                      textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:5 }}>
+                                      Cómo ganarla
+                                    </p>
+                                    <p style={{ fontSize:'0.82rem', color: t.textSub, lineHeight:1.6 }}>{mona.how}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
+
+                  {/* ── Navegación entre páginas ── */}
+                  <div className="flex-shrink-0 flex items-center justify-between px-5 py-4 border-t"
+                    style={{ borderColor: t.darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(108,99,255,0.12)' }}>
+                    <button
+                      onClick={() => setGuidePage(p => Math.max(0, p - 1))}
+                      disabled={guidePage === 0}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-30"
+                      style={{ background: t.darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(108,99,255,0.1)',
+                        color: t.darkMode ? 'rgba(255,255,255,0.8)' : '#6C63FF',
+                        border: `1px solid ${t.darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(108,99,255,0.2)'}` }}>
+                      ← Anterior
+                    </button>
+                    <div className="flex items-center gap-2">
+                      {GUIDE_PAGES.map((gp, i) => (
+                        <button key={i} onClick={() => setGuidePage(i)}
+                          style={{ width: guidePage === i ? 24 : 8, height:8, borderRadius:4, border:'none', cursor:'pointer', transition:'all 0.2s',
+                            background: guidePage === i ? pg.color : (t.darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(108,99,255,0.25)') }} />
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setGuidePage(p => Math.min(GUIDE_PAGES.length - 1, p + 1))}
+                      disabled={guidePage === GUIDE_PAGES.length - 1}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-30"
+                      style={{ background: t.darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(108,99,255,0.1)',
+                        color: t.darkMode ? 'rgba(255,255,255,0.8)' : '#6C63FF',
+                        border: `1px solid ${t.darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(108,99,255,0.2)'}` }}>
+                      Siguiente →
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        );
+      })()}
     </div>
   );
 }
@@ -839,6 +962,10 @@ function AppCore() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [darkMode, setDarkMode] = useState(true);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const currentPath = normalizePathname(location.pathname);
+  const isAppRoute = currentPath === '/app' || currentPath.startsWith('/app/');
 
   // Auth — name derived from JWT email claim (karol.estupinan-v@ → "Karol Estupinan")
   const { userName, userEmail } = useAuth();
@@ -854,6 +981,47 @@ function AppCore() {
   const [dyslexiaMode, setDyslexiaMode] = useState(false);
   const [linkedEvents, setLinkedEvents] = useState<Array<{parcheId: number; eventTitle: string; eventEmoji: string; eventDate: string}>>([]);
   const theme = getTheme(darkMode);
+
+  useEffect(() => {
+    if (authState !== 'app') return;
+
+    if (!isAppRoute) {
+      navigate('/app/home', { replace: true });
+      return;
+    }
+
+    const viewFromPath = getViewFromPath(currentPath);
+    if (activeView !== viewFromPath) {
+      setActiveView(viewFromPath);
+    }
+
+    if (!APP_ROUTE_SET.has(currentPath)) {
+      navigate('/app/home', { replace: true });
+    }
+  }, [authState, activeView, currentPath, isAppRoute, navigate]);
+
+  const goToAppView = (view: ViewId) => {
+    setActiveView(view);
+    setMobileMenuOpen(false);
+    navigate(APP_VIEW_PATHS[view]);
+  };
+
+  const handleLoginSuccess = () => {
+    window.localStorage.setItem(AUTH_STORAGE_KEY, 'true');
+    setAuthState('app');
+    navigate('/app/home', { replace: true });
+  };
+
+  const handleLogout = () => {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    setAuthState('login');
+    setMobileMenuOpen(false);
+    navigate('/', { replace: true });
+  };
+
+  const handleEditProfile = () => {
+    goToAppView('perfil');
+  };
 
   // Welcome + demo toasts on login
   useEffect(() => {
@@ -875,23 +1043,23 @@ function AppCore() {
   if (authState === 'login')
     return <LandingPage onLogin={() => setLandingTarget('login')} onRegister={() => setLandingTarget('register')} darkMode={darkMode} setDarkMode={setDarkMode} />;
   if (authState === 'loginform')
-    return <LoginView onLogin={() => setAuthState('app')} onGoRegister={() => setAuthState('register')} darkMode={darkMode} setDarkMode={setDarkMode} />;
+    return <LoginView onLogin={handleLoginSuccess} onGoRegister={() => setAuthState('register')} darkMode={darkMode} setDarkMode={setDarkMode} />;
   if (authState === 'register')
-    return <RegisterView onRegister={() => setAuthState('app')} onGoLogin={() => setAuthState('loginform')} darkMode={darkMode} setDarkMode={setDarkMode} />;
+    return <RegisterView onRegister={handleLoginSuccess} onGoLogin={() => setAuthState('loginform')} darkMode={darkMode} setDarkMode={setDarkMode} />;
 
   const renderView = () => {
     switch (activeView) {
-      case 'home':           return <HomeView onNavigate={setActiveView} />;
+      case 'home':           return <HomeView onNavigate={goToAppView} />;
       case 'parches':        return <ParchesView linkedEvents={linkedEvents} />;
-      case 'chats':          return <ChatsView onNavigate={setActiveView} />;
+      case 'chats':          return <ChatsView onNavigate={goToAppView} />;
       case 'eventos':        return <EventosView onLinkEvent={(parcheId, ev) => setLinkedEvents(prev => [...prev, {parcheId, ...ev}])} />;
       case 'matching':       return <MatchingView />;
       case 'bienestar':      return <BienestarView />;
       case 'perfil':         return <ProfileView />;
       case 'notificaciones': return <NotificationsView />;
       case 'album':          return <AlbumView />;
-      case 'ajustes':        return <AjustesView onLogout={() => setAuthState('login')} onEditProfile={() => setActiveView('perfil')} visionMode={visionMode} setVisionMode={setVisionMode} dyslexiaMode={dyslexiaMode} setDyslexiaMode={(v) => { setDyslexiaMode(v); applyDyslexiaMode(v); }} />;
-      default:               return <HomeView onNavigate={setActiveView} />;
+      case 'ajustes':        return <AjustesView onLogout={handleLogout} onEditProfile={handleEditProfile} visionMode={visionMode} setVisionMode={setVisionMode} dyslexiaMode={dyslexiaMode} setDyslexiaMode={(v) => { setDyslexiaMode(v); applyDyslexiaMode(v); }} />;
+      default:               return <HomeView onNavigate={goToAppView} />;
     }
   };
 
@@ -975,7 +1143,7 @@ function AppCore() {
 
               {/* User pill */}
               <div className="px-2 mb-3 flex-shrink-0">
-                <button onClick={() => { setActiveView('perfil'); setMobileMenuOpen(false); }}
+                <button onClick={() => goToAppView('perfil')}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left"
                   style={{ background: activeView === 'perfil' ? 'rgba(108,99,255,0.18)' : 'rgba(108,99,255,0.06)', border: '1px solid rgba(108,99,255,0.12)' }}>
                   <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
@@ -997,7 +1165,7 @@ function AppCore() {
                 {NAV_ITEMS.map(item => {
                   const isActive = activeView === item.id;
                   return (
-                    <button key={item.id} onClick={() => { setActiveView(item.id); setMobileMenuOpen(false); }}
+                    <button key={item.id} onClick={() => goToAppView(item.id)}
                       className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all text-left"
                       style={{
                         background: isActive ? 'rgba(108,99,255,0.15)' : 'transparent',
@@ -1023,7 +1191,7 @@ function AppCore() {
 
               {/* Logout */}
               <div className="px-3 py-3 border-t flex-shrink-0" style={{ borderColor: 'var(--p-divider)' }}>
-                <button onClick={() => setAuthState('login')}
+                <button onClick={handleLogout}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all hover:opacity-80"
                   style={{ background: 'rgba(255,77,106,0.08)', border: '1px solid rgba(255,77,106,0.15)', color: '#FF4D6A' }}>
                   <LogOut size={15} />
@@ -1059,14 +1227,14 @@ function AppCore() {
             </div>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            <button onClick={() => setActiveView('chats')}
+            <button onClick={() => goToAppView('chats')}
               className="relative w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-70 transition-all"
               style={{ background: 'rgba(108,99,255,0.1)' }}
               title="Chats">
               <MessageSquare size={17} style={{ color: 'var(--p-muted)' }} />
               <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: '#FF4D6A' }} />
             </button>
-            <button onClick={() => setActiveView('notificaciones')}
+            <button onClick={() => goToAppView('notificaciones')}
               className="relative w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-70 transition-all"
               style={{ background: 'rgba(108,99,255,0.1)' }}>
               <Bell size={17} style={{ color: 'var(--p-muted)' }} />
@@ -1081,7 +1249,7 @@ function AppCore() {
                 ? <Sun size={17} style={{ color: '#FFB347' }} />
                 : <Moon size={17} style={{ color: '#6C63FF' }} />}
             </button>
-            <button onClick={() => setActiveView('perfil')}
+            <button onClick={() => goToAppView('perfil')}
               className="w-9 h-9 rounded-full flex items-center justify-center hover:scale-105 transition-all"
               style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)', fontSize: '0.65rem', fontWeight: 800, color: 'white' }}>
               {initials}

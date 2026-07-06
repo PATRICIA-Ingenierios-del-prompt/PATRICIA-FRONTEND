@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Plus, Users, Lock, Globe, Mic, MicOff, Paperclip, Send, Smile,
+  Plus, Users, Lock, Globe, Mic, MicOff, Send, Smile,
   Settings, Search, Crown, Shield, X, MessageCircle, FileText,
   Layers, Gamepad2, Volume2, VolumeX, MoreHorizontal,
   Phone, PhoneOff, Download, Video, VideoOff, Monitor, MonitorOff, ArrowLeft,
@@ -14,6 +14,10 @@ import monoArteImg     from '../assets/monoArteN.png';
 import monoCientImg    from '../assets/monoCientificoN.png';
 import monoCultImg     from '../assets/monoCulturaN.png';
 import monoPatriciaImg from '../assets/monoFondoU.png';
+import { useBoard } from '../hooks/useBoard';
+import { Stroke, Point } from '../types/board';
+import { addToast } from '../components/ToastSystem';
+import { useTheme } from '../store/ThemeContext';
 
 type InteriorTab = 'chat' | 'archivos' | 'lienzo' | 'juegos' | 'voz';
 type GameId = null | 'parques';
@@ -51,20 +55,20 @@ const INIT_MESSAGES = [
   { id:1, userId:'VT', user:'Valentina T.',  text:'¿Alguien tiene los apuntes del tema 5 de integrales dobles?',    time:'10:23', reactions:[{emoji:'👍',count:3},{emoji:'❤️',count:1}], type:'text' },
   { id:2, userId:'SM', user:'Santiago M.',   text:'¡Yo los tengo! Los subo en un momento 📄',                       time:'10:25', reactions:[], type:'text' },
   { id:3, userId:'ME', user:'Tú',            text:'También tengo los ejercicios del parcial anterior si los necesitan', time:'10:26', reactions:[{emoji:'🙏',count:4}], type:'text' },
-  { id:4, userId:'SM', user:'Santiago M.',   text:'apuntes_calculo3_tema5.pdf',                                      time:'10:28', reactions:[], type:'file' },
+  { id:4, userId:'SM', user:'Santiago M.',   text:'https://drive.google.com/file/apuntes-t5',                      time:'10:28', reactions:[], type:'link' },
   { id:5, userId:'IR', user:'Isabela R.',    text:'¡Gracias Santiago! Justo lo que necesitaba 🙏',                  time:'10:30', reactions:[{emoji:'❤️',count:2}], type:'text' },
   { id:6, userId:'ME', user:'Tú',            text:'¿Hacemos parche de estudio el miércoles en la biblio?',          time:'10:32', reactions:[{emoji:'✅',count:3},{emoji:'🔥',count:2}], type:'text' },
   { id:7, userId:'VT', user:'Valentina T.',  text:'👍 Yo puedo a las 3pm',                                          time:'10:33', reactions:[], type:'text' },
   { id:8, userId:'SM', user:'Santiago M.',   text:'¡Yo llego a las 4! Nos vemos ahí 🎯',                           time:'10:35', reactions:[], type:'text' },
 ];
 
-const FILES_DATA = [
-  { name:'apuntes_calculo3_tema5.pdf',   size:'2.4 MB', date:'Hoy 10:28',    icon:'📄', color:'#FF4D6A', preview: false },
-  { name:'ejercicios_parcial1.pdf',      size:'1.1 MB', date:'Ayer',          icon:'📋', color:'#FFB347', preview: false },
-  { name:'tabla_integrales.png',         size:'340 KB', date:'Hace 3 días',   icon:'🖼️', color:'#6C63FF', preview: true  },
-  { name:'temario_calculo3.docx',        size:'89 KB',  date:'Hace 1 semana', icon:'📝', color:'#7FE7C4', preview: false },
-  { name:'ejercicios_extra.pdf',         size:'560 KB', date:'Hace 1 semana', icon:'📄', color:'#FF4D6A', preview: false },
-  { name:'foto_pizarron_integrales.jpg', size:'1.8 MB', date:'Hace 2 semanas',icon:'🖼️', color:'#6C63FF', preview: true  },
+const LINKS_DATA = [
+  { name:'Apuntes Tema 5 — Integrales Dobles', url:'https://drive.google.com/file/apuntes-t5', sharedBy:'Santiago M.', date:'Hoy 10:28',    icon:'📄', color:'#FF4D6A' },
+  { name:'Ejercicios Parcial 1',               url:'https://docs.google.com/ejercicios-p1',   sharedBy:'Valentina T.', date:'Ayer',          icon:'📋', color:'#FFB347' },
+  { name:'Tabla de Integrales (imagen)',        url:'https://drive.google.com/file/tabla-int', sharedBy:'Isabel R.',    date:'Hace 3 días',   icon:'🖼️', color:'#6C63FF' },
+  { name:'Temario Cálculo III',                url:'https://docs.google.com/temario-calc3',   sharedBy:'Tú',           date:'Hace 1 semana', icon:'📝', color:'#7FE7C4' },
+  { name:'Ejercicios Extra Cap. 4',            url:'https://drive.google.com/file/ej-extra',  sharedBy:'Andrés C.',    date:'Hace 1 semana', icon:'📄', color:'#A78BFA' },
+  { name:'Video clase — Transformada Laplace', url:'https://youtube.com/watch?v=laplace-eci', sharedBy:'Prof. García', date:'Hace 2 semanas',icon:'🎬', color:'#FF6B9D' },
 ];
 
 const MEMBERS_DATA = [
@@ -79,14 +83,51 @@ const MEMBERS_DATA = [
 const STATUS_COLOR: Record<string, string> = { online:'#7FE7C4', away:'#FFB347', offline:'#4A4468' };
 const QUICK_REACTIONS = ['👍','❤️','😂','🔥','🙏','✅','👏','😮'];
 
-function CollabCanvas() {
+// ── useBoard error surfacing in CollabCanvas ──
+function CollabCanvas({ parcheId }: { parcheId: number }) {
+  const { boardId, strokes, remoteCursors, isConnected, error: boardError, sendStroke, sendCursor, clearBoard } = useBoard(parcheId, 'ME');
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState('#6C63FF');
   const [size, setSize] = useState(5);
   const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
+  
   const lastPos = useRef<{ x: number; y: number } | null>(null);
+  const currentPoints = useRef<Point[]>([]);
+  const lastCursorSend = useRef<number>(0);
+  
   const COLORS = ['#6C63FF', '#7FE7C4', '#FF6B9D', '#FFB347', '#5BC8FF', '#E0E0FF', '#FF4D6A', '#A78BFA'];
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    strokes.forEach(s => {
+      if (s.points.length === 0) return;
+      ctx.beginPath();
+      if (s.color === 'eraser') {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.lineWidth = s.width;
+      } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = s.color;
+        ctx.lineWidth = s.width;
+      }
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.moveTo(s.points[0].x, s.points[0].y);
+      for (let i = 1; i < s.points.length; i++) {
+        ctx.lineTo(s.points[i].x, s.points[i].y);
+      }
+      if (s.points.length === 1) {
+        ctx.lineTo(s.points[0].x, s.points[0].y);
+      }
+      ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over';
+    });
+  }, [strokes]);
 
   // Scale from CSS coords to canvas internal coords
   const getPos = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -101,18 +142,18 @@ function CollabCanvas() {
     return { x: (e.clientX - r.left) * sx, y: (e.clientY - r.top) * sy };
   };
 
-  const stroke = (from: { x: number; y: number }, to: { x: number; y: number }) => {
+  const drawSegment = (from: Point, to: Point, isEraser: boolean, pColor: string, pSize: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d')!;
     ctx.beginPath();
-    if (tool === 'eraser') {
+    if (isEraser) {
       ctx.globalCompositeOperation = 'destination-out';
-      ctx.lineWidth = size * 5;
+      ctx.lineWidth = pSize * 5;
     } else {
       ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = color;
-      ctx.lineWidth = size;
+      ctx.strokeStyle = pColor;
+      ctx.lineWidth = pSize;
     }
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -127,27 +168,47 @@ function CollabCanvas() {
     const pos = getPos(e);
     setIsDrawing(true);
     lastPos.current = pos;
-    // Paint a dot on click/tap with no drag
-    stroke(pos, pos);
+    currentPoints.current = [pos];
+    drawSegment(pos, pos, tool === 'eraser', color, size);
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if ('touches' in e) e.preventDefault();
-    if (!isDrawing || !lastPos.current) return;
     const pos = getPos(e);
-    stroke(lastPos.current, pos);
+    
+    const now = Date.now();
+    if (now - lastCursorSend.current > 33) {
+      sendCursor({ userId: 'ME', x: pos.x, y: pos.y });
+      lastCursorSend.current = now;
+    }
+
+    if (!isDrawing || !lastPos.current) return;
+    drawSegment(lastPos.current, pos, tool === 'eraser', color, size);
     lastPos.current = pos;
+    currentPoints.current.push(pos);
   };
 
-  const stopDraw = () => { setIsDrawing(false); lastPos.current = null; };
+  const stopDraw = () => {
+    if (isDrawing && currentPoints.current.length > 0) {
+      const newStroke: Stroke = {
+        id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(),
+        color: tool === 'eraser' ? 'eraser' : color,
+        width: tool === 'eraser' ? size * 5 : size,
+        points: [...currentPoints.current]
+      };
+      sendStroke(newStroke);
+    }
+    setIsDrawing(false); 
+    lastPos.current = null; 
+    currentPoints.current = [];
+  };
 
   const clear = () => {
-    const c = canvasRef.current;
-    if (c) c.getContext('2d')!.clearRect(0, 0, c.width, c.height);
+    clearBoard();
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
       <div className="flex items-center gap-3 p-3 border-b flex-wrap flex-shrink-0"
         style={{ background: 'var(--p-card)', borderColor: 'var(--p-divider)' }}>
         {/* Color palette */}
@@ -173,8 +234,10 @@ function CollabCanvas() {
         </div>
         <div className="ml-auto flex items-center gap-3">
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg" style={{ background: 'rgba(127,231,196,0.1)' }}>
-            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#7FE7C4' }} />
-            <span style={{ fontSize: '0.7rem', color: '#7FE7C4' }}>3 colaborando</span>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'animate-pulse' : ''}`} style={{ background: isConnected ? '#7FE7C4' : '#FF4D6A' }} />
+            <span style={{ fontSize: '0.7rem', color: isConnected ? '#7FE7C4' : '#FF4D6A' }}>
+              {isConnected ? `${Object.keys(remoteCursors).length + 1} colaborando` : 'Desconectado'}
+            </span>
           </div>
           <button onClick={clear} className="px-3 py-1.5 rounded-lg text-xs hover:opacity-80"
             style={{ background: 'rgba(255,77,106,0.1)', color: '#FF4D6A' }}>
@@ -182,20 +245,48 @@ function CollabCanvas() {
           </button>
         </div>
       </div>
-      <canvas
-        ref={canvasRef}
-        width={1400}
-        height={700}
-        className="flex-1 w-full"
-        style={{ background: 'var(--p-card)', cursor: tool === 'eraser' ? 'cell' : 'crosshair', touchAction: 'none', display: 'block' }}
-        onMouseDown={startDraw}
-        onMouseMove={draw}
-        onMouseUp={stopDraw}
-        onMouseLeave={stopDraw}
-        onTouchStart={startDraw}
-        onTouchMove={draw}
-        onTouchEnd={stopDraw}
-      />
+      <div className="flex-1 relative overflow-hidden" style={{ background: 'var(--p-card)' }}>
+        {boardError && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2.5 rounded-xl border shadow-lg"
+            style={{ background: 'rgba(255,77,106,0.12)', borderColor: 'rgba(255,77,106,0.35)', maxWidth: '90%' }}>
+            <span style={{ fontSize: '0.9rem' }}>⚠️</span>
+            <p style={{ fontSize: '0.78rem', color: '#FF4D6A' }}>Error de conexión con el lienzo: {boardError}</p>
+          </div>
+        )}
+        {Object.values(remoteCursors).map(cursor => (
+          <div key={cursor.userId}
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              transform: `translate(${cursor.x}px, ${cursor.y}px)`,
+              pointerEvents: 'none',
+              zIndex: 10,
+              transition: 'transform 0.05s linear'
+            }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5.65376 21.5034L3 3L21.8496 11.2335L13.1254 13.9234L5.65376 21.5034Z" fill="#FFB347" stroke="white" strokeWidth="1.5" strokeLinejoin="round"/>
+            </svg>
+            <div style={{ background: '#FFB347', color: 'white', fontSize: '10px', padding: '2px 6px', borderRadius: '8px', position: 'absolute', top: 20, left: 10, whiteSpace: 'nowrap' }}>
+              {cursor.userId}
+            </div>
+          </div>
+        ))}
+        <canvas
+          ref={canvasRef}
+          width={1400}
+          height={700}
+          className="w-full h-full"
+          style={{ cursor: tool === 'eraser' ? 'cell' : 'crosshair', touchAction: 'none', display: 'block' }}
+          onMouseDown={startDraw}
+          onMouseMove={draw}
+          onMouseUp={stopDraw}
+          onMouseLeave={stopDraw}
+          onTouchStart={startDraw}
+          onTouchMove={draw}
+          onTouchEnd={stopDraw}
+        />
+      </div>
     </div>
   );
 }
@@ -244,6 +335,7 @@ function memberSched(name: string): Set<string> {
 export function ParchesView({ linkedEvents = [] }: {
   linkedEvents?: Array<{ parcheId: number; eventTitle: string; eventEmoji: string; eventDate: string }>;
 }) {
+  const t = useTheme();
   const [myParches, setMyParches] = useState(PARCHES_LIST);
   const [selectedParche, setSelectedParche] = useState(PARCHES_LIST[0]);
   const [activeTab, setActiveTab] = useState<InteriorTab>('chat');
@@ -266,13 +358,26 @@ export function ParchesView({ linkedEvents = [] }: {
   const [createType, setCreateType] = useState<'public'|'private'>('public');
   const [createCategory, setCreateCategory] = useState('');
   const [createSubcategory, setCreateSubcategory] = useState('');
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createName, setCreateName] = useState('');
   const [sidebarCategory, setSidebarCategory] = useState('');
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
 
   const sendMsg = () => {
-    if (!msgInput.trim()) return;
+    if (!msgInput.trim()) {
+      addToast({ type: 'info', title: 'Mensaje vacío', message: 'Escribe algo antes de enviar.' });
+      return;
+    }
     setMessages(prev=>[...prev,{ id:prev.length+1, userId:'ME', user:'Tú', text:msgInput, time:new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}), reactions:[], type:'text' }]);
     setMsgInput('');
   };
@@ -296,19 +401,55 @@ export function ParchesView({ linkedEvents = [] }: {
   ];
 
   return (
-    <div className="h-full overflow-hidden flex" style={{ borderRadius:'16px', border:'1px solid rgba(108,99,255,0.15)', overflow:'hidden' }}>
+    <div className="h-full overflow-hidden flex relative" style={{ borderRadius:'16px', border:'1px solid rgba(108,99,255,0.15)', overflow:'hidden' }}>
 
-      {/* ── Parches Sidebar (Discord style) ──────────────────────────────── */}
-      <div className="w-64 flex-shrink-0 flex flex-col border-r"
-        style={{ background:'var(--p-card)', backdropFilter:'blur(16px)', borderColor:'var(--p-divider)' }}>
+      {/* ── Mobile sidebar overlay backdrop ── */}
+      {isMobile && showSidebar && (
+        <div className="absolute inset-0 z-30" style={{ background:'rgba(0,0,0,0.5)' }}
+          onClick={()=>setShowSidebar(false)} />
+      )}
+
+      {/* ── Parches Sidebar ──────────────────────────────────────────────── */}
+      {/* Desktop: always in flow. Mobile: absolute overlay, toggle via showSidebar */}
+      <div style={{
+        width: 256,
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        borderRight: '1px solid var(--p-divider)',
+        background: 'var(--p-card)',
+        backdropFilter: 'blur(16px)',
+        height: '100%',
+        ...(isMobile ? {
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          zIndex: 40,
+          transform: showSidebar ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.3s ease',
+        } : {
+          position: 'relative',
+          transform: 'none',
+        }),
+      }}>
 
         {/* Header */}
         <div className="px-4 py-3 border-b" style={{ borderColor:'var(--p-divider)' }}>
           <div className="flex items-center justify-between mb-2.5">
             <h3 style={{ fontWeight:700, fontSize:'0.9rem', color:'var(--p-text)' }}>Mis Parches</h3>
-            <span className="px-2 py-0.5 rounded-full text-xs" style={{ background:'var(--p-divider)', color:'#6C63FF' }}>
-              {myParches.reduce((s,p)=>s+p.unread,0)} nuevos
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-full text-xs" style={{ background:'var(--p-divider)', color:'#6C63FF' }}>
+                {myParches.reduce((s,p)=>s+p.unread,0)} nuevos
+              </span>
+              {/* Close button — mobile only */}
+              {isMobile && (
+                <button onClick={()=>setShowSidebar(false)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center hover:opacity-70"
+                  style={{ background:'rgba(108,99,255,0.1)' }}>
+                  <X size={14} style={{ color:'var(--p-muted)' }} />
+                </button>
+              )}
+            </div>
           </div>
           <div className="relative mb-2.5">
             <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color:'var(--p-muted)' }} />
@@ -348,7 +489,7 @@ export function ParchesView({ linkedEvents = [] }: {
             (sidebarFilter==='all' || p.type===sidebarFilter) &&
             (sidebarCategory==='' || p.category===sidebarCategory)
           ).map(parche=>(
-            <motion.div key={parche.id} onClick={()=>setSelectedParche(parche)}
+            <motion.div key={parche.id} onClick={()=>{ setSelectedParche(parche); setShowSidebar(false); }}
               whileHover={{ x:2 }}
               className="w-full px-3 py-2.5 flex items-center gap-3 text-left group relative transition-all cursor-pointer"
               style={{
@@ -416,11 +557,23 @@ export function ParchesView({ linkedEvents = [] }: {
       </div>
 
       {/* ── Interior Parche ───────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden" style={{ background:'rgba(13,11,30,0.7)' }}>
+      <div className="flex-1 flex flex-col overflow-hidden" style={{ background: t.bg }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b flex-shrink-0"
+        <div className="flex items-center justify-between px-3 sm:px-5 py-3 border-b flex-shrink-0"
           style={{ borderColor:'var(--p-divider)', background:'var(--p-card)', backdropFilter:'blur(12px)' }}>
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            {/* Hamburger — mobile only */}
+            {isMobile && (
+              <button onClick={()=>setShowSidebar(v=>!v)}
+                className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center"
+                style={{ background:'rgba(108,99,255,0.1)' }}>
+                <div className="flex flex-col gap-1">
+                  <div className="w-4 h-0.5 rounded-full" style={{ background:'#6C63FF' }} />
+                  <div className="w-4 h-0.5 rounded-full" style={{ background:'#6C63FF' }} />
+                  <div className="w-4 h-0.5 rounded-full" style={{ background:'#6C63FF' }} />
+                </div>
+              </button>
+            )}
             <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
               style={{ background:`${selectedParche.color}18` }}>
               {selectedParche.emoji}
@@ -498,7 +651,7 @@ export function ParchesView({ linkedEvents = [] }: {
             {/* ── CHAT ── */}
             {activeTab==='chat' && (
               <div className="flex flex-col h-full">
-                <div className="flex-1 overflow-y-auto p-4 space-y-1">
+                <div className="flex-1 overflow-y-auto p-4 space-y-1" style={{ background: t.bg }}>
                   {/* Linked event system messages */}
                   {linkedEvents.filter(e => e.parcheId === selectedParche.id).map(ev => (
                     <div key={`ev-${ev.parcheId}-${ev.eventTitle}-${ev.eventDate}`} className="flex justify-center my-2">
@@ -537,19 +690,23 @@ export function ParchesView({ linkedEvents = [] }: {
                               <span style={{ fontSize:'0.65rem', color:'var(--p-muted)' }}>{msg.time}</span>
                             </div>
                           )}
-                          {/* Bubble — always use a fixed dark surface so text is readable in both themes */}
+                          {/* Bubble — respects theme */}
                           <div className="px-3.5 py-2 rounded-2xl"
                             style={{
-                              background: isMe ? 'linear-gradient(135deg,#6C63FF,#8B7FFF)' : 'rgba(37,31,61,0.95)',
-                              color: '#F0EEFF',
+                              background: isMe
+                                ? 'linear-gradient(135deg,#6C63FF,#8B7FFF)'
+                                : t.darkMode ? 'rgba(37,31,61,0.95)' : '#EDE9FF',
+                              color: isMe ? '#FFFFFF' : t.darkMode ? '#F0EEFF' : '#1A1829',
                               borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                              border: isMe ? 'none' : '1px solid rgba(108,99,255,0.2)',
+                              border: isMe ? 'none' : `1px solid ${t.darkMode ? 'rgba(108,99,255,0.2)' : 'rgba(108,99,255,0.25)'}`,
                             }}>
-                            {msg.type==='file' ? (
-                              <div className="flex items-center gap-2">
-                                <FileText size={14} style={{ color:'#FFB347' }} />
-                                <span style={{ fontSize:'0.82rem' }}>{msg.text}</span>
-                                <button className="hover:opacity-70"><Download size={12} style={{ color:'var(--p-muted)' }} /></button>
+                            {msg.type==='link' ? (
+                              <div className="flex items-center gap-2 cursor-pointer hover:opacity-80"
+                                onClick={() => window.open(msg.text, '_blank', 'noopener')}>
+                                <FileText size={14} style={{ color:'#FFB347', flexShrink:0 }} />
+                                <span style={{ fontSize:'0.78rem', color: isMe ? 'rgba(255,255,255,0.85)' : '#6C63FF', textDecoration:'underline', wordBreak:'break-all' }}>
+                                  {msg.text.replace('https://', '')}
+                                </span>
                               </div>
                             ) : (
                               <p style={{ fontSize:'0.85rem', lineHeight:1.55 }}>{msg.text}</p>
@@ -617,14 +774,11 @@ export function ParchesView({ linkedEvents = [] }: {
                   style={{ borderColor:'var(--p-divider)', background:'var(--p-card)' }}>
                   <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border"
                     style={{ background:'var(--p-card)', borderColor:'rgba(108,99,255,0.2)' }}>
-                    <button className="hover:opacity-70 flex-shrink-0"><Smile size={18} style={{ color:'var(--p-muted)' }} /></button>
-                    <button className="hover:opacity-70 flex-shrink-0"><Paperclip size={18} style={{ color:'var(--p-muted)' }} /></button>
                     <input value={msgInput} onChange={e=>setMsgInput(e.target.value)}
                       onKeyDown={e=>e.key==='Enter' && sendMsg()}
                       placeholder={`Escribe algo en ${selectedParche.name}...`}
                       className="flex-1 bg-transparent outline-none"
                       style={{ fontSize:'0.87rem', color:'var(--p-text)' }} />
-                    <button className="hover:opacity-70 flex-shrink-0"><Mic size={18} style={{ color:'var(--p-muted)' }} /></button>
                     <button onClick={sendMsg}
                       className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-105 flex-shrink-0"
                       style={{ background:'#6C63FF' }}>
@@ -635,31 +789,46 @@ export function ParchesView({ linkedEvents = [] }: {
               </div>
             )}
 
-            {/* ── ARCHIVOS ── */}
+            {/* ── DOCUMENTOS (links) ── */}
             {activeTab==='archivos' && (
-              <div className="h-full overflow-y-auto p-5">
+              <div className="h-full overflow-y-auto p-5" style={{ background: t.bg }}>
                 <div className="flex items-center justify-between mb-5">
-                  <p style={{ fontWeight:600, fontSize:'0.95rem' }}>Archivos compartidos ({FILES_DATA.length})</p>
+                  <div>
+                    <p style={{ fontWeight:700, fontSize:'0.95rem' }}>Links de documentos</p>
+                    <p style={{ fontSize:'0.72rem', color:'var(--p-muted)', marginTop:2 }}>
+                      {LINKS_DATA.length} documentos compartidos
+                    </p>
+                  </div>
                   <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm"
                     style={{ background:'rgba(108,99,255,0.1)', color:'#6C63FF', border:'1px solid rgba(108,99,255,0.2)' }}>
-                    <Plus size={14} /> Subir archivo
+                    <Plus size={14} /> Compartir link
                   </button>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
-                  {FILES_DATA.map((f,i)=>(
-                    <motion.div key={i} whileHover={{ y:-3, boxShadow:'0 8px 24px rgba(108,99,255,0.15)' }}
-                      className="rounded-2xl border overflow-hidden cursor-pointer group"
-                      style={{ background:'var(--p-card)', borderColor:`${f.color}25` }}>
-                      <div className="h-20 flex items-center justify-center relative"
-                        style={{ background:`${f.color}12` }}>
-                        <span style={{ fontSize:'2.5rem' }}>{f.icon}</span>
-                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                          <Download size={18} color="white" />
-                        </div>
+                <div className="space-y-3">
+                  {LINKS_DATA.map((lnk,i)=>(
+                    <motion.div key={i}
+                      whileHover={{ x:4, boxShadow:`0 6px 24px ${lnk.color}20` }}
+                      className="flex items-center gap-4 rounded-2xl border p-4 cursor-pointer group transition-all"
+                      style={{ background:'var(--p-card)', borderColor:`${lnk.color}25` }}
+                      onClick={() => window.open(lnk.url, '_blank', 'noopener')}>
+                      {/* Ícono */}
+                      <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
+                        style={{ background:`${lnk.color}15`, border:`1.5px solid ${lnk.color}30` }}>
+                        {lnk.icon}
                       </div>
-                      <div className="p-3">
-                        <p className="truncate" style={{ fontSize:'0.78rem', fontWeight:600 }}>{f.name}</p>
-                        <p style={{ fontSize:'0.68rem', color:'var(--p-muted)', marginTop:'2px' }}>{f.size} · {f.date}</p>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate" style={{ fontWeight:600, fontSize:'0.88rem', color:'var(--p-text)' }}>{lnk.name}</p>
+                        <p style={{ fontSize:'0.7rem', color:'var(--p-muted)', marginTop:2 }}>
+                          Compartido por <span style={{ color:lnk.color, fontWeight:600 }}>{lnk.sharedBy}</span> · {lnk.date}
+                        </p>
+                      </div>
+                      {/* Abrir */}
+                      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all">
+                        <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold"
+                          style={{ background:`${lnk.color}15`, color:lnk.color }}>
+                          Abrir →
+                        </div>
                       </div>
                     </motion.div>
                   ))}
@@ -668,13 +837,13 @@ export function ParchesView({ linkedEvents = [] }: {
             )}
 
             {/* ── LIENZO ── */}
-            {activeTab==='lienzo' && <CollabCanvas />}
+            {activeTab==='lienzo' && <CollabCanvas parcheId={selectedParche.id} />}
 
             {/* ── JUEGOS ── */}
             {activeTab==='juegos' && (
               <>
                 {game===null && (
-                  <div className="h-full flex flex-col items-center justify-center gap-6 p-8">
+                  <div className="h-full flex flex-col items-center justify-center gap-6 p-8" style={{ background: t.bg }}>
                     <h3 style={{ fontWeight:700, fontSize:'1.1rem' }}>Elige un juego</h3>
                     <div className="flex gap-5">
                       {/* Parqués */}
@@ -721,13 +890,15 @@ export function ParchesView({ linkedEvents = [] }: {
                   </div>
                 )}
                 {game==='parques' && (
-                  <div className="h-full flex flex-col">
+                  <div className="flex-1 flex flex-col overflow-hidden" style={{ background: t.bg }}>
                     <div className="flex items-center gap-2 px-4 py-2 border-b flex-shrink-0"
                       style={{ borderColor:'var(--p-divider)', background:'var(--p-card)' }}>
                       <button onClick={()=>setGame(null)} className="hover:opacity-70" style={{ color:'var(--p-muted)', fontSize:'0.82rem' }}>← Volver</button>
                       <span style={{ fontSize:'0.85rem', fontWeight:600 }}>🎲 Parqués</span>
                     </div>
-                    <ParquesBoard />
+                    <div className="flex-1 overflow-hidden">
+                      <ParquesBoard />
+                    </div>
                   </div>
                 )}
               </>
@@ -735,7 +906,7 @@ export function ParchesView({ linkedEvents = [] }: {
 
             {/* ── VOZ (Discord-style) ── */}
             {activeTab==='voz' && (
-              <div className="h-full flex flex-col" style={{ background:'#0A0912' }}>
+              <div className="h-full flex flex-col" style={{ background: t.darkMode ? '#0A0912' : t.bg }}>
                 {!voiceConnected ? (
                   /* Pre-join screen */
                   <div className="flex-1 flex flex-col items-center justify-center gap-5">
@@ -838,7 +1009,7 @@ export function ParchesView({ linkedEvents = [] }: {
 
                     {/* Discord-style call controls bar */}
                     <div className="flex items-center justify-center gap-3 px-6 py-4 border-t"
-                      style={{ background:'#111019', borderColor:'var(--p-divider)' }}>
+                      style={{ background: t.darkMode ? '#111019' : t.cardBg, borderColor:'var(--p-divider)' }}>
                       {/* Mic */}
                       <button onClick={()=>setVoiceMuted(m=>!m)}
                         className="flex flex-col items-center gap-1 w-14 h-14 rounded-2xl items-center justify-center transition-all hover:scale-105 flex"
@@ -883,7 +1054,7 @@ export function ParchesView({ linkedEvents = [] }: {
               <motion.div initial={{ width:0, opacity:0 }} animate={{ width:250, opacity:1 }} exit={{ width:0, opacity:0 }}
                 transition={{ type:'spring', stiffness:300, damping:30 }}
                 className="border-l overflow-hidden flex-shrink-0"
-                style={{ background:'#0D0B1E', borderColor:'rgba(108,99,255,0.2)' }}>
+                style={{ background: t.darkMode ? '#0D0B1E' : t.cardBg, borderColor:'rgba(108,99,255,0.2)' }}>
                 <div className="p-3 overflow-y-auto h-full">
                   {/* Header */}
                   <div className="flex items-center gap-2 mb-3 px-1">
@@ -955,7 +1126,7 @@ export function ParchesView({ linkedEvents = [] }: {
                           {memberMenuOpen===m.name && (
                             <motion.div initial={{ opacity:0, scale:0.9, y:-4 }} animate={{ opacity:1, scale:1, y:0 }} exit={{ opacity:0 }}
                               className="absolute left-0 top-full mt-1 rounded-xl border shadow-xl z-20 py-1 w-36"
-                              style={{ background:'#1A1829', borderColor:'rgba(108,99,255,0.3)' }}
+                              style={{ background: t.darkMode ? '#1A1829' : t.cardBg, borderColor:'rgba(108,99,255,0.3)' }}
                               onClick={e=>e.stopPropagation()}>
                               {[
                                 {label:'Ver perfil', icon:'👤', danger:false},
@@ -1005,8 +1176,9 @@ export function ParchesView({ linkedEvents = [] }: {
                 </button>
               </div>
               <div className="space-y-4">
-                <input placeholder="Nombre del parche..." className="w-full rounded-xl px-4 py-3 text-sm outline-none"
-                  style={{ background:'var(--p-input)', border:'1px solid rgba(108,99,255,0.2)', color:'var(--p-text)' }} />
+                <input value={createName} onChange={e=>{setCreateName(e.target.value);setCreateError(null);}}
+                  placeholder="Nombre del parche..." className="w-full rounded-xl px-4 py-3 text-sm outline-none"
+                  style={{ background:'var(--p-input)', border:`1px solid ${createError && !createName.trim() ? '#FF4D6A' : 'rgba(108,99,255,0.2)'}`, color:'var(--p-text)' }} />
                 <textarea placeholder="Descripción..." rows={3} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
                   style={{ background:'var(--p-input)', border:'1px solid rgba(108,99,255,0.2)', color:'var(--p-text)' }} />
                 {/* Category picker */}
@@ -1057,13 +1229,39 @@ export function ParchesView({ linkedEvents = [] }: {
                 <textarea placeholder="Reglas del parche (opcional)..." rows={2} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
                   style={{ background:'var(--p-input)', border:'1px solid rgba(108,99,255,0.2)', color:'var(--p-text)' }} />
                 <div className="flex gap-3">
-                  <button onClick={()=>setShowCreate(false)} className="flex-1 py-3 rounded-xl text-sm"
+                  <button onClick={()=>{setShowCreate(false);setCreateName('');setCreateCategory('');setCreateSubcategory('');setCreateError(null);}}
+                    className="flex-1 py-3 rounded-xl text-sm"
                     style={{ background:'var(--p-input)', color:'var(--p-muted)' }}>Cancelar</button>
-                  <button onClick={()=>setShowCreate(false)} className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+                  <button
+                    onClick={()=>{
+                      if (!createName.trim()) { setCreateError('El nombre del parche es obligatorio.'); return; }
+                      if (!createCategory) { setCreateError('Selecciona el tipo de parche.'); return; }
+                      const cat = PARCHE_CATEGORIES.find(c=>c.id===createCategory)!;
+                      const newParche = { id: myParches.length+1, name: createName.trim(), emoji: cat.emoji, color: cat.color, type: createType, live: 1, unread: 0, desc: '', category: createCategory, subcategory: createSubcategory };
+                      setMyParches(p=>[...p, newParche]);
+                      setSelectedParche(newParche as any);
+                      setShowCreate(false);
+                      setCreateName('');
+                      setCreateCategory('');
+                      setCreateSubcategory('');
+                      setCreateError(null);
+                      addToast({ type: 'info', title: '¡Parche creado!', message: `"${createName.trim()}" ya está listo.` });
+                    }}
+                    className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
                     style={{ background:'linear-gradient(135deg,#6C63FF,#8B7FFF)', color:'white' }}>
                     Crear Parche 🎪
                   </button>
                 </div>
+                <AnimatePresence>
+                  {createError && (
+                    <motion.div initial={{ opacity:0, y:-4 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0 }}
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
+                      style={{ background:'rgba(255,77,106,0.1)', border:'1px solid rgba(255,77,106,0.3)' }}>
+                      <span style={{ fontSize:'0.85rem' }}>⚠️</span>
+                      <p style={{ fontSize:'0.78rem', color:'#FF4D6A' }}>{createError}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           </motion.div>
@@ -1079,7 +1277,7 @@ export function ParchesView({ linkedEvents = [] }: {
           onClick={() => setViewMemberProfile(null)}>
           <motion.div initial={{ scale:0.92, y:20 }} animate={{ scale:1, y:0 }} exit={{ scale:0.92 }}
             className="rounded-3xl w-full max-w-sm overflow-hidden"
-            style={{ background:'#1A1829', border:'1px solid rgba(108,99,255,0.3)', boxShadow:'0 32px 80px rgba(0,0,0,0.7)' }}
+            style={{ background: t.darkMode ? '#1A1829' : t.cardBg, border:'1px solid rgba(108,99,255,0.3)', boxShadow:'0 32px 80px rgba(0,0,0,0.7)' }}
             onClick={e => e.stopPropagation()}>
 
             {/* Hero with gradient + mono image */}

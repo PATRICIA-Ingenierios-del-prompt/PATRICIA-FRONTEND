@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { X, Heart, MessageCircle, Flame, Check, Send, ArrowLeft, RotateCcw, Star, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
@@ -232,6 +232,49 @@ function ChatModal({ person, onClose }: { person: { name: string; avatar: string
 
 export function MatchingView() {
   const t = useTheme();
+  const [hasPhoto, setHasPhoto]       = useState(false);
+  const [verifying, setVerifying]     = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setVerifyError('El archivo debe ser una imagen (JPG, PNG, etc.)');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setVerifyError('La imagen es demasiado grande. El máximo es 10 MB.');
+      return;
+    }
+    setVerifyError(null);
+    const url = URL.createObjectURL(file);
+    setPhotoPreview(url);
+  };
+
+  const handleVerify = () => {
+    if (!photoPreview) return;
+    if (!navigator.onLine) {
+      setVerifyError('Sin conexión a internet. Verifica tu red e inténtalo de nuevo.');
+      return;
+    }
+    setVerifying(true);
+    setVerifyError(null);
+    setTimeout(() => {
+      setVerifying(false);
+      // Simulate backend response: randomly fail ~30% of the time for demo
+      // In production this would be the actual API response
+      const faceDetected = Math.random() > 0.3;
+      if (!faceDetected) {
+        setVerifyError('No detectamos una cara de persona en la foto. Por favor sube una foto tuya, de frente y bien iluminada.');
+        return;
+      }
+      setHasPhoto(true);
+    }, 2200);
+  };
+
   const [currentIdx, setCurrentIdx] = useState(0);
   const [swipeDir, setSwipeDir] = useState<'left' | 'right' | null>(null);
   // sentRequests: IDs we've liked — waiting for them to accept
@@ -246,6 +289,118 @@ export function MatchingView() {
 
   const current = PROFILES[currentIdx % PROFILES.length];
   const next = PROFILES[(currentIdx + 1) % PROFILES.length];
+
+  /* ── Photo gate: show before matching ── */
+  if (!hasPhoto) {
+    return (
+      <div className="h-full overflow-y-auto pb-6 flex items-center justify-center">
+        <motion.div initial={{ opacity:0, y:24 }} animate={{ opacity:1, y:0 }}
+          className="w-full max-w-md rounded-3xl border overflow-hidden"
+          style={{ background: t.cardBg, borderColor: t.cardBorder, boxShadow:'0 24px 64px rgba(108,99,255,0.18)' }}>
+
+          {/* Header */}
+          <div className="relative overflow-hidden px-6 pt-8 pb-6 text-center"
+            style={{ background:'linear-gradient(135deg,#3B2F8E 0%,#6C63FF 60%,#9B55D4 100%)' }}>
+            <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage:'radial-gradient(circle,rgba(255,255,255,0.06) 1px,transparent 1px)', backgroundSize:'14px 14px' }} />
+            <div className="relative z-10">
+              <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl"
+                style={{ background:'rgba(255,255,255,0.18)', border:'2px solid rgba(255,255,255,0.3)' }}>
+                📸
+              </div>
+              <h2 style={{ fontWeight:900, fontSize:'1.4rem', color:'white', letterSpacing:'-0.02em', marginBottom:8 }}>
+                Foto de perfil obligatoria
+              </h2>
+              <p style={{ fontSize:'0.85rem', color:'rgba(255,255,255,0.78)', lineHeight:1.6 }}>
+                Para usar Matching necesitas subir una foto real tuya. La verificamos automáticamente para garantizar una comunidad segura.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-6">
+            {/* Info pills */}
+            <div className="flex flex-wrap gap-2 mb-6">
+              {[
+                'Foto privada y segura',
+                'Verificación automática con IA',
+                'Solo fotos de personas reales',
+              ].map(text => (
+                <div key={text} className="flex items-center px-3 py-1.5 rounded-full"
+                  style={{ background:'rgba(108,99,255,0.1)', border:'1px solid rgba(108,99,255,0.2)' }}>
+                  <span style={{ fontSize:'0.72rem', color:'#6C63FF', fontWeight:600 }}>{text}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Photo picker */}
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoSelect} />
+
+            {photoPreview ? (
+              <div className="flex flex-col items-center gap-4 mb-6">
+                <div className="relative">
+                  <img src={photoPreview} alt="Preview"
+                    className="w-32 h-32 rounded-full object-cover border-4"
+                    style={{ borderColor:'#6C63FF', boxShadow:'0 8px 32px rgba(108,99,255,0.4)' }} />
+                  <button onClick={() => { setPhotoPreview(null); setVerifyError(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                    className="absolute -top-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center text-xs"
+                    style={{ background:'#FF4D6A', color:'white', border:'2px solid white' }}>
+                    ✕
+                  </button>
+                </div>
+                <p style={{ fontSize:'0.8rem', color: t.textMuted, textAlign:'center' }}>
+                  Foto seleccionada. Al verificar, la IA confirma que es una foto real de una persona.
+                </p>
+              </div>
+            ) : (
+              <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }}
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full rounded-2xl border-2 border-dashed py-8 flex flex-col items-center gap-3 mb-6 transition-all hover:opacity-80"
+                style={{ borderColor:'rgba(108,99,255,0.4)', background:'rgba(108,99,255,0.05)' }}>
+                <span style={{ fontSize:'2.5rem' }}>📷</span>
+                <div className="text-center">
+                  <p style={{ fontWeight:700, color:'#6C63FF', marginBottom:4 }}>Subir mi foto</p>
+                  <p style={{ fontSize:'0.75rem', color: t.textMuted }}>JPG, PNG · Máx. 10 MB</p>
+                </div>
+              </motion.button>
+            )}
+
+            {verifyError && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+                className="flex items-start gap-3 px-4 py-3 rounded-2xl mb-4"
+                style={{ background: 'rgba(255,77,106,0.1)', border: '1px solid rgba(255,77,106,0.3)' }}>
+                <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>❌</span>
+                <div>
+                  <p style={{ fontSize: '0.82rem', color: '#FF4D6A', fontWeight: 600, marginBottom: 2 }}>Verificación fallida</p>
+                  <p style={{ fontSize: '0.78rem', color: '#FF4D6A', lineHeight: 1.5 }}>{verifyError}</p>
+                </div>
+              </motion.div>
+            )}
+
+            <motion.button
+              whileHover={photoPreview && !verifying ? { scale:1.02 } : {}}
+              whileTap={photoPreview && !verifying ? { scale:0.98 } : {}}
+              onClick={handleVerify}
+              disabled={!photoPreview || verifying}
+              className="w-full py-3.5 rounded-2xl font-bold text-sm transition-all disabled:opacity-40"
+              style={{ background: verifying ? 'rgba(108,99,255,0.6)' : 'linear-gradient(135deg,#6C63FF,#8B7FFF)', color:'white',
+                boxShadow: photoPreview && !verifying ? '0 8px 28px rgba(108,99,255,0.4)' : 'none' }}>
+              {verifying ? (
+                <span className="flex items-center justify-center gap-2">
+                  <motion.span animate={{ rotate:360 }} transition={{ duration:0.8, repeat:Infinity, ease:'linear' }}
+                    style={{ display:'inline-block' }}>⟳</motion.span>
+                  Verificando que eres una persona real...
+                </span>
+              ) : '🤖 Verificar y acceder al Matching'}
+            </motion.button>
+
+            <p className="text-center mt-4" style={{ fontSize:'0.72rem', color: t.textMuted, lineHeight:1.5 }}>
+              Sin foto verificada no puedes ver ni conectar con otros usuarios. Puedes añadir más fotos después.
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   const swipe = (dir: 'left' | 'right') => {
     setSwipeDir(dir);

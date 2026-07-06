@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { ImageWithFallback } from '../components/ImageWithFallback';
 import monoImg       from '../assets/monoULink.png';
@@ -87,35 +87,38 @@ const FEED = [
   },
 ];
 
-const DASH_NOTIFS = [
-  { emoji: '💜', color: '#FF6B9D', text: '¡Nuevo match con Camila Rodríguez!',             time: '2 min',  unread: true  },
-  { emoji: '🎪', color: '#6C63FF', text: 'Tu parche "Cálculo III" tiene 3 mensajes nuevos', time: '15 min', unread: true  },
-  { emoji: '🎉', color: '#FFB347', text: 'El Hackathon ECI 2026 empieza mañana',            time: '1h',     unread: false },
-];
 
-function VibraCard({ vibra, onNavigate }: { vibra: typeof VIBRAS[0]; onNavigate: (v: ViewId) => void }) {
+function VibraCard({ vibra, onNavigate, expanded, onToggle, supportsHover }: {
+  vibra: typeof VIBRAS[0];
+  onNavigate: (v: ViewId) => void;
+  expanded: boolean;
+  onToggle: () => void;
+  supportsHover: boolean;
+}) {
   const [hovered, setHovered] = useState(false);
+  const isOpen = supportsHover ? hovered : expanded;
   return (
     <motion.div
+      onClick={supportsHover ? undefined : onToggle}
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
-      animate={hovered ? { scale: 1.04 } : { scale: 1 }}
+      animate={isOpen ? { scale: 1.04 } : { scale: 1 }}
       transition={{ type: 'spring', stiffness: 280, damping: 22 }}
       className="rounded-2xl border cursor-pointer relative"
       style={{
-        background: hovered ? `linear-gradient(135deg, ${vibra.color}22, ${vibra.color}08)` : 'var(--p-card)',
-        borderColor: hovered ? `${vibra.color}50` : 'var(--p-divider)',
-        boxShadow: hovered ? `0 12px 40px ${vibra.color}35` : 'none',
-        minHeight: hovered ? 220 : 130,
-        zIndex: hovered ? 20 : 1,
+        background: isOpen ? `linear-gradient(135deg, ${vibra.color}22, ${vibra.color}08)` : 'var(--p-card)',
+        borderColor: isOpen ? `${vibra.color}50` : 'var(--p-divider)',
+        boxShadow: isOpen ? `0 12px 40px ${vibra.color}35` : 'none',
+        minHeight: isOpen ? 220 : 130,
+        zIndex: isOpen ? 20 : 1,
         transition: 'min-height 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, background 0.3s ease, z-index 0s',
         overflow: 'visible',
       }}>
       {/* Mono temático por vibra — más grande y visible */}
       <div className="absolute -right-2 -bottom-2 pointer-events-none select-none"
         style={{
-          opacity: hovered ? 1 : 0.32,
-          transform: hovered ? 'scale(1.1) translate(4px, 4px)' : 'scale(1)',
+          opacity: isOpen ? 1 : 0.32,
+          transform: isOpen ? 'scale(1.1) translate(4px, 4px)' : 'scale(1)',
           transition: 'opacity 0.3s ease, transform 0.35s ease',
           width: 130, height: 130,
         }}>
@@ -123,21 +126,21 @@ function VibraCard({ vibra, onNavigate }: { vibra: typeof VIBRAS[0]; onNavigate:
           src={vibra.monoImg}
           alt={`Mono ${vibra.label}`}
           style={{ width: '100%', height: '100%', objectFit: 'contain',
-            filter: hovered ? 'drop-shadow(0 6px 20px rgba(0,0,0,0.2))' : 'none' }}
+            filter: isOpen ? 'drop-shadow(0 6px 20px rgba(0,0,0,0.2))' : 'none' }}
         />
       </div>
 
       {/* clip-path keeps rounded corners while card overflow is visible */}
       <div className="absolute inset-0 rounded-2xl pointer-events-none" style={{ overflow: 'hidden', zIndex: -1,
-        background: hovered ? `linear-gradient(135deg, ${vibra.color}22, ${vibra.color}08)` : 'transparent' }} />
+        background: isOpen ? `linear-gradient(135deg, ${vibra.color}22, ${vibra.color}08)` : 'transparent' }} />
       <div className="p-5 h-full flex flex-col" style={{ position: 'relative', zIndex: 1 }}>
         <div className="flex items-center gap-2 mb-2">
           {/* Solo el nombre, sin emoji */}
-          <p style={{ fontWeight: 700, fontSize: '1.05rem', color: hovered ? vibra.color : 'var(--p-text)' }}>{vibra.label}</p>
+          <p style={{ fontWeight: 700, fontSize: '1.05rem', color: isOpen ? vibra.color : 'var(--p-text)' }}>{vibra.label}</p>
         </div>
 
         <AnimatePresence>
-          {hovered && (
+          {isOpen && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
               transition={{ duration: 0.2 }} className="flex-1 flex flex-col justify-between">
               <p style={{ fontSize: '0.82rem', color: 'var(--p-sub)', lineHeight: 1.6, marginBottom: '12px' }}>
@@ -150,7 +153,7 @@ function VibraCard({ vibra, onNavigate }: { vibra: typeof VIBRAS[0]; onNavigate:
                     {vibra.eventos} eventos disponibles
                   </span>
                 </div>
-                <button onClick={() => onNavigate('eventos')}
+                <button onClick={(e) => { e.stopPropagation(); onNavigate('eventos'); }}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105"
                   style={{ background: '#7FE7C4', color: '#0F0E1A' }}>
                   Explorar <ArrowRight size={14} />
@@ -160,7 +163,7 @@ function VibraCard({ vibra, onNavigate }: { vibra: typeof VIBRAS[0]; onNavigate:
           )}
         </AnimatePresence>
 
-        {!hovered && (
+        {!isOpen && (
           <p style={{ fontSize: '0.75rem', color: 'var(--p-muted)' }}>{vibra.eventos} disponibles</p>
         )}
       </div>
@@ -257,6 +260,23 @@ export function HomeView({ onNavigate }: HomeViewProps) {
   const initials  = (userName ?? userEmail ?? '?')
     .split(' ').filter(Boolean).slice(0, 2).map((w: string) => w[0].toUpperCase()).join('');
   const [joinedParches, setJoinedParches] = useState<number[]>([]);
+  const [expandedVibra, setExpandedVibra] = useState<string | null>(null);
+  const [supportsHover, setSupportsHover] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const update = () => setSupportsHover(mediaQuery.matches);
+    update();
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', update);
+      return () => mediaQuery.removeEventListener('change', update);
+    }
+
+    mediaQuery.addListener(update);
+    return () => mediaQuery.removeListener(update);
+  }, []);
 
   return (
     <div className="h-full overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
@@ -312,40 +332,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             </div>
           </div>
 
-          {/* Notifications preview card */}
-          <div className="w-full lg:w-80 lg:flex-shrink-0 rounded-2xl border flex flex-col"
-            style={{ background: t.cardBg, borderColor: t.cardBorder }}>
-            <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b"
-              style={{ borderColor: t.cardBorder }}>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#FF4D6A' }} />
-                <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: '0.88rem', color: t.text }}>Notificaciones</span>
-              </div>
-              <button onClick={() => onNavigate('notificaciones')}
-                style={{ fontSize: '0.72rem', color: '#6C63FF' }} className="hover:underline">
-                Ver todas
-              </button>
-            </div>
-            <div className="flex-1 overflow-hidden divide-y" style={{ borderColor: t.cardBorder }}>
-              {DASH_NOTIFS.map((n, i) => (
-                <motion.div key={i}
-                  initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
-                  className="flex items-start gap-3 px-4 py-3 hover:opacity-80 cursor-pointer transition-all">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm"
-                    style={{ background: `${n.color}18` }}>
-                    {n.emoji}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="truncate" style={{ fontSize: '0.8rem', color: t.text, fontWeight: n.unread ? 600 : 400 }}>
-                      {n.text}
-                    </p>
-                    <p style={{ fontSize: '0.68rem', color: t.textMuted, marginTop: '2px' }}>Hace {n.time}</p>
-                  </div>
-                  {n.unread && <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ background: '#6C63FF' }} />}
-                </motion.div>
-              ))}
-            </div>
-          </div>
         </section>
 
         {/* ── 2. FEED ──────────────────────────────────────────────────── */}
@@ -365,7 +351,16 @@ export function HomeView({ onNavigate }: HomeViewProps) {
           </div>
           {/* overflow:visible so expanded corner cards aren't clipped */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" style={{ overflow: 'visible' }}>
-            {VIBRAS.map(v => <VibraCard key={v.id} vibra={v} onNavigate={onNavigate} />)}
+            {VIBRAS.map(v => (
+              <VibraCard
+                key={v.id}
+                vibra={v}
+                onNavigate={onNavigate}
+                supportsHover={supportsHover}
+                expanded={supportsHover ? false : expandedVibra === v.id}
+                onToggle={() => setExpandedVibra(prev => prev === v.id ? null : v.id)}
+              />
+            ))}
           </div>
         </section>
 

@@ -45,6 +45,9 @@ export default defineConfig(({ mode }) => {
           target: gatewayUrl,
           changeOrigin: true,
         },
+        // Parqués game backend (8085)
+        '/api/games': { target: 'http://localhost:8085', changeOrigin: true },
+        '/parques-ws': { target: 'http://localhost:8085', changeOrigin: true, ws: true },
       },
     },
     resolve: {
