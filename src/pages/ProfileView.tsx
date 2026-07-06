@@ -29,6 +29,7 @@ const CARRERAS = [
   'Administración de Empresas', 'Matemáticas', 'Ingeniería Mecánica',
   'Ingeniería Biomédica', 'Ingeniería Ambiental', 'Ingeniería Estadística',
   'Ingeniería de Inteligencia Artificial', 'Ingeniería de Ciberseguridad', 'Ingeniería en Biotecnología',
+  'Postgrado',
 ];
 const SEMESTRES = ['1','2','3','4','5','6','7','8','9','10'];
 
@@ -130,7 +131,7 @@ function EditModal({ onClose, intereses, onSaveIntereses }: { onClose: () => voi
                 <select value={form.carrera} onChange={e => set('carrera', e.target.value)}
                   className="w-full px-3 py-3 rounded-xl outline-none text-sm"
                   style={{ background: t.inputBg, border:`1.5px solid ${t.cardBorder}`, color: t.text }}>
-                  {CARRERAS.map(c => <option key={c} value={c} style={{ background: t.darkMode ? '#1A1829' : '#fff' }}>{c}</option>)}
+                  {CARRERAS.map(c => <option key={c} value={c} style={{ background: t.darkMode ? '#1A1829' : '#fff', color: t.darkMode ? '#F0EEFF' : '#1A1829' }}>{c}</option>)}
                 </select>
               </div>
               <div>
@@ -138,9 +139,22 @@ function EditModal({ onClose, intereses, onSaveIntereses }: { onClose: () => voi
                 <select value={form.semestre} onChange={e => set('semestre', e.target.value)}
                   className="w-full px-3 py-3 rounded-xl outline-none text-sm"
                   style={{ background: t.inputBg, border:`1.5px solid ${t.cardBorder}`, color: t.text }}>
-                  {SEMESTRES.map(s => <option key={s} value={s} style={{ background: t.darkMode ? '#1A1829' : '#fff' }}>{s}°</option>)}
+                  {SEMESTRES.map(s => <option key={s} value={s} style={{ background: t.darkMode ? '#1A1829' : '#fff', color: t.darkMode ? '#F0EEFF' : '#1A1829' }}>{s}°</option>)}
                 </select>
               </div>
+            </div>
+            <div>
+              <label style={{ fontSize:'0.78rem', fontWeight:600, color: t.text, display:'block', marginBottom:'6px' }}>
+                Segunda carrera <span style={{ fontWeight:400, color: t.textMuted, fontSize:'0.72rem' }}>(opcional)</span>
+              </label>
+              <select value={form.segundaCarrera} onChange={e => set('segundaCarrera', e.target.value)}
+                className="w-full px-3 py-3 rounded-xl outline-none text-sm"
+                style={{ background: t.inputBg, border:`1.5px solid ${t.cardBorder}`, color: t.text }}>
+                <option value="" style={{ background: t.darkMode ? '#1A1829' : '#fff', color: t.darkMode ? '#F0EEFF' : '#1A1829' }}>Ninguna</option>
+                {CARRERAS.filter(c => c !== form.carrera).map(c => (
+                  <option key={c} value={c} style={{ background: t.darkMode ? '#1A1829' : '#fff', color: t.darkMode ? '#F0EEFF' : '#1A1829' }}>{c}</option>
+                ))}
+              </select>
             </div>
             <div className="flex gap-3 pt-2">
               <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm" style={{ background: t.inputBg, color: t.textMuted }}>Cancelar</button>
@@ -247,7 +261,6 @@ export function ProfileView() {
           <div className="flex gap-7">
             {[
               { label:'Conexiones', value:'234', color:'#6C63FF' },
-              { label:'Seguidores', value:'189', color:'#FF6B9D' },
               { label:'Parches',    value:'7',   color:'#7FE7C4' },
               { label:'Disponible', value:`${schedule.size}h`, color:'#FFB347' },
             ].map(s => (

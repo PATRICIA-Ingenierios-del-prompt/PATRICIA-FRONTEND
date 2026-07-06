@@ -184,9 +184,30 @@ const ECI_CARRERAS = [
   'Ingeniería de Inteligencia Artificial',
   'Ingeniería de Ciberseguridad',
   'Ingeniería en Biotecnología',
+  'Postgrado',
 ];
 
 const SEMESTRES = ['1°', '2°', '3°', '4°', '5°', '6°', '7°', '8°', '9°', '10°'];
+
+const MIN_AGE = 15;
+const MAX_AGE = 100;
+
+function calcAge(dateStr: string): number | null {
+  if (!dateStr) return null;
+  const birth = new Date(dateStr);
+  if (isNaN(birth.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+function isoDateYearsAgo(years: number): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - years);
+  return d.toISOString().slice(0, 10);
+}
 
 function Step2({
   data, setData, onNext, darkMode,
@@ -219,7 +240,12 @@ function Step2({
     reader.readAsDataURL(file);
   }, []);
 
-  const canContinue = !!data.carrera && !!data.semestre && !!data.fechaNac;
+  const age = calcAge(data.fechaNac);
+  const fechaError = data.fechaNac && (age === null || age < MIN_AGE || age > MAX_AGE)
+    ? `Debes tener entre ${MIN_AGE} y ${MAX_AGE} años.`
+    : '';
+
+  const canContinue = !!data.carrera && !!data.semestre && !!data.fechaNac && !fechaError;
 
   return (
     <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}
@@ -356,8 +382,10 @@ function Step2({
         <label style={labelStyle(darkMode)}>Fecha de nacimiento</label>
         <input type="date" value={data.fechaNac} onChange={e => set('fechaNac', e.target.value)}
           onFocus={() => setFocused('fecha')} onBlur={() => setFocused(null)}
-          style={inputStyle(focused === 'fecha', darkMode)}
+          min={isoDateYearsAgo(MAX_AGE)} max={isoDateYearsAgo(MIN_AGE)}
+          style={inputStyle(focused === 'fecha', darkMode, !!fechaError)}
           className={darkMode ? '[color-scheme:dark]' : '[color-scheme:light]'} />
+        {fechaError && <p style={{ fontSize: '0.72rem', color: '#FF4757', marginTop: '4px' }}>{fechaError}</p>}
       </div>
 
       {/* Género */}
@@ -519,10 +547,10 @@ function Step3({ email, onNext, darkMode }: { email: string; onNext: () => void;
             style={{
               width: '52px',
               height: '60px',
-              background: d ? 'rgba(108,99,255,0.12)' : '#0F0F1E',
+              background: d ? (darkMode ? 'rgba(108,99,255,0.18)' : 'rgba(108,99,255,0.14)') : (darkMode ? '#0F0F1E' : '#F5F3FF'),
               border: `2px solid ${error ? '#FF4757' : d ? '#6C63FF' : 'rgba(108,99,255,0.25)'}`,
               borderRadius: '14px',
-              color: '#E0E0FF',
+              color: darkMode ? '#E0E0FF' : '#1A1829',
               fontSize: '1.4rem',
               outline: 'none',
               boxShadow: d ? '0 0 12px rgba(108,99,255,0.2)' : 'none',
