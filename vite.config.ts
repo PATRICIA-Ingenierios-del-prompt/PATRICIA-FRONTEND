@@ -45,6 +45,13 @@ export default defineConfig(({ mode }) => {
           target: gatewayUrl,
           changeOrigin: true,
         },
+        // Parches / Events / Location REST → Gateway (injects X-User-Id from the JWT)
+        '/api/parches': { target: gatewayUrl, changeOrigin: true },
+        '/api/invites': { target: gatewayUrl, changeOrigin: true },
+        '/api/events': { target: gatewayUrl, changeOrigin: true },
+        '/api/locations': { target: gatewayUrl, changeOrigin: true },
+        // Location live geo socket → Gateway → Location MS (STOMP over WS)
+        '/ws/geo': { target: gatewayUrl, changeOrigin: true, ws: true },
         // Parqués game backend (8085)
         '/api/games': { target: 'http://localhost:8085', changeOrigin: true },
         '/parques-ws': { target: 'http://localhost:8085', changeOrigin: true, ws: true },

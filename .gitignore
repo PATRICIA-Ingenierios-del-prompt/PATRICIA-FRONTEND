@@ -1,4 +1,11 @@
+# dependencies & build output — never committed; run `npm install` on clone
 node_modules/
 dist/
-node_modules
+
+# local env & secrets
 .env
+.env.local
+
+# editor / OS
+.vscode/
+.DS_Store

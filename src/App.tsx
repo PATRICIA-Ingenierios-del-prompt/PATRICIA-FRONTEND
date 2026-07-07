@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Compass, Heart, Users, MessageSquare, Calendar, Smile, Image,
   Bell, Settings, ChevronLeft, ChevronRight, Search, Zap,
-  Sun, Moon, LogOut, Menu
+  Sun, Moon, LogOut, Menu, MapPin
 } from 'lucide-react';
 import { HomeView } from './pages/HomeView';
 import { ChatsView } from './pages/ChatsView';
 import { ParchesView } from './pages/ParchesView';
-import { EventosView } from './pages/EventosView';
+import { EventosView, type EnrolledEvent } from './pages/EventosView';
+import { LocationView } from './pages/LocationView';
 import { MatchingView } from './pages/MatchingView';
 import { BienestarView } from './pages/BienestarView';
 import { ProfileView } from './pages/ProfileView';
@@ -27,13 +28,14 @@ import { useLocation, useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 
 type AuthState = 'login' | 'loginform' | 'register' | 'callback' | 'app';
-type ViewId = 'home' | 'matching' | 'parches' | 'chats' | 'eventos' | 'bienestar' | 'album' | 'notificaciones' | 'ajustes' | 'perfil';
+type ViewId = 'home' | 'matching' | 'parches' | 'chats' | 'eventos' | 'ubicacion' | 'bienestar' | 'album' | 'notificaciones' | 'ajustes' | 'perfil';
 
 const NAV_ITEMS: { id: ViewId; label: string; icon: React.ComponentType<any>; badge?: number }[] = [
   { id: 'home',          label: 'Descubrir',       icon: Compass },
   { id: 'matching',      label: 'Matching',         icon: Heart,  badge: 3 },
   { id: 'parches',       label: 'Parches',          icon: Users,  badge: 10 },
   { id: 'eventos',       label: 'Eventos',          icon: Calendar },
+  { id: 'ubicacion',     label: 'Ubicación en vivo', icon: MapPin },
   { id: 'bienestar',     label: 'Bienestar 24/7',   icon: Smile },
   { id: 'album',         label: 'Álbum de Monas',   icon: Image },
   { id: 'ajustes',       label: 'Ajustes',          icon: Settings },
@@ -45,6 +47,7 @@ const APP_VIEW_PATHS: Record<ViewId, string> = {
   parches: '/app/parches',
   chats: '/app/chats',
   eventos: '/app/eventos',
+  ubicacion: '/app/ubicacion',
   bienestar: '/app/bienestar',
   album: '/app/album',
   notificaciones: '/app/notificaciones',
@@ -75,6 +78,7 @@ const VIEW_LABELS: Record<ViewId, string> = {
   parches:        'Parches',
   chats:          'Chats Privados',
   eventos:        'Eventos',
+  ubicacion:      'Ubicación en vivo',
   bienestar:      'Bienestar 24/7',
   album:          'Álbum de Monas',
   notificaciones: 'Notificaciones',
@@ -980,6 +984,10 @@ function AppCore() {
   const [visionMode, setVisionMode] = useState<VisionMode>('normal');
   const [dyslexiaMode, setDyslexiaMode] = useState(false);
   const [linkedEvents, setLinkedEvents] = useState<Array<{parcheId: number; eventTitle: string; eventEmoji: string; eventDate: string}>>([]);
+  // Events the user has enrolled in (lifted so the Location view can track them).
+  const [enrolledEvents, setEnrolledEvents] = useState<EnrolledEvent[]>([]);
+  const [trackEventId, setTrackEventId] = useState<string | null>(null);
+  const enrolledIds = new Set(enrolledEvents.map(e => e.eventId));
   const theme = getTheme(darkMode);
 
   useEffect(() => {
@@ -1052,7 +1060,11 @@ function AppCore() {
       case 'home':           return <HomeView onNavigate={goToAppView} />;
       case 'parches':        return <ParchesView linkedEvents={linkedEvents} />;
       case 'chats':          return <ChatsView onNavigate={goToAppView} />;
-      case 'eventos':        return <EventosView onLinkEvent={(parcheId, ev) => setLinkedEvents(prev => [...prev, {parcheId, ...ev}])} />;
+      case 'eventos':        return <EventosView
+                                onTrackEvent={(eventId) => { setTrackEventId(eventId); goToAppView('ubicacion'); }}
+                                enrolledIds={enrolledIds}
+                                onEnroll={(e) => setEnrolledEvents(prev => prev.some(x => x.eventId === e.eventId) ? prev : [...prev, e])} />;
+      case 'ubicacion':      return <LocationView eventId={trackEventId} enrolledEvents={enrolledEvents} onConsumePreset={() => setTrackEventId(null)} />;
       case 'matching':       return <MatchingView />;
       case 'bienestar':      return <BienestarView />;
       case 'perfil':         return <ProfileView />;
