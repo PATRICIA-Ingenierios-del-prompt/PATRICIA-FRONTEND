@@ -4,7 +4,7 @@ import { useAuth } from '../store/AuthContext';
 import { AnimatedBackground } from '../components/AnimatedBackground';
 
 interface Props {
-  onSuccess: () => void;
+  onSuccess: (fromRegister: boolean) => void;
   onError: () => void;
   darkMode: boolean;
 }
