@@ -3,11 +3,14 @@ import { Send, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
 import { ImageWithFallback } from '../components/ImageWithFallback';
+import { addToast } from '../components/ToastSystem';
 import { sendChatMessage } from '../services/llmApi';
-import monoPatriciaImg  from '../assets/monoPATRICIA.png';
-import monoRespiraImg   from '../assets/monoRESPIRA.png';
-import monoTranqImg     from '../assets/monoTRANQUILO.png';
-import monoMusicaImg    from '../assets/monoMUSICA.png';
+import monoPatriciaImg  from '../assets/monoFondoU.png';
+import monoULinkImg     from '../assets/monoULink.png';
+import monoDiarioImg    from '../assets/monoDiario.png';
+import monoRespiraImg   from '../assets/monoRespiraN.png';
+import monoTranqImg     from '../assets/monoTranquiloN.png';
+import monoMusicaImg    from '../assets/monoMusicaN.png';
 import ruidoBlancoAudio from '../assets/audio/RuidoBlanco.mp3';
 import ruidoMarronAudio from '../assets/audio/RuidoMarron.mp3';
 import lluviaAudio      from '../assets/audio/lluvia.mp3';
@@ -114,6 +117,7 @@ export function BienestarView() {
   const [breathCycles, setBreathCycles] = useState(0);
   const [activePrompt, setActivePrompt] = useState(0);
   const [savedToday, setSavedToday] = useState(false);
+  const [diaryError, setDiaryError] = useState<string | null>(null);
   const breathRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audioRef  = useRef<HTMLAudioElement | null>(null);
 
@@ -124,12 +128,19 @@ export function BienestarView() {
       setPlayingSound(null);
     } else {
       audioRef.current?.pause();
-      const audio = new Audio(src);
-      audio.loop = true;
-      audio.volume = muted ? 0 : volume / 100;
-      audio.play();
-      audioRef.current = audio;
-      setPlayingSound(id);
+      try {
+        const audio = new Audio(src);
+        audio.loop = true;
+        audio.volume = muted ? 0 : volume / 100;
+        audio.play().catch(() => {
+          addToast({ type: 'reporte', title: 'Error de audio', message: 'No se pudo reproducir el sonido. Intenta de nuevo.' });
+          setPlayingSound(null);
+        });
+        audioRef.current = audio;
+        setPlayingSound(id);
+      } catch {
+        addToast({ type: 'reporte', title: 'Error de audio', message: 'No se pudo cargar el archivo de sonido.' });
+      }
     }
   };
 
@@ -231,8 +242,8 @@ export function BienestarView() {
         <div className="rounded-2xl border overflow-hidden flex flex-col" style={{ background: t.cardBg, borderColor: t.cardBorder, height: '520px' }}>
           <div className="px-5 py-3 border-b flex items-center gap-3"
             style={{ borderColor: 'var(--p-divider)', background: 'rgba(108,99,255,0.06)' }}>
-            <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0" style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)' }}>
-              <ImageWithFallback src={monoPatriciaImg} alt="Mono" className="w-full h-full object-contain" />
+            <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0" style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)' }}>
+              <ImageWithFallback src={monoULinkImg} alt="Mono" className="w-full h-full object-contain" />
             </div>
             <div>
               <p style={{ fontWeight: 700, fontSize: '0.95rem' }}>Mono — Bienestar ECI</p>
@@ -252,9 +263,9 @@ export function BienestarView() {
             {msgs.map(m => (
               <div key={m.id} className={`flex gap-3 ${m.from === 'user' ? 'flex-row-reverse' : ''}`}>
                 {m.from === 'bot' && (
-                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0"
+                  <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0"
                     style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)' }}>
-                    <ImageWithFallback src={monoPatriciaImg} alt="Mono" className="w-full h-full object-contain" />
+                    <ImageWithFallback src={monoULinkImg} alt="Mono" className="w-full h-full object-contain" />
                   </div>
                 )}
                 <div className="max-w-xs px-4 py-2.5 rounded-2xl"
@@ -267,12 +278,11 @@ export function BienestarView() {
                 </div>
               </div>
             ))}
-            {/* Typing indicator — visible while waiting for LLM response */}
             {isLoading && (
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0"
+                <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0"
                   style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)' }}>
-                  <ImageWithFallback src={monoPatriciaImg} alt="Mono" className="w-full h-full object-contain" />
+                  <ImageWithFallback src={monoULinkImg} alt="Mono" className="w-full h-full object-contain" />
                 </div>
                 <div className="px-4 py-3 rounded-2xl flex items-center gap-1.5"
                   style={{ background: 'var(--p-hover)', borderRadius: '18px 18px 18px 4px' }}>
@@ -293,13 +303,10 @@ export function BienestarView() {
             <div className="flex gap-2">
               <input value={msg} onChange={e => setMsg(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && sendMsg()}
-                placeholder={isLoading ? 'Mono está pensando...' : 'Escribe cómo te sientes...'}
-                disabled={isLoading}
+                placeholder="Escribe cómo te sientes..."
                 className="flex-1 px-4 py-2.5 rounded-xl outline-none text-sm"
-                style={{ background: t.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text, opacity: isLoading ? 0.6 : 1 }} />
-              <button onClick={sendMsg} disabled={isLoading}
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: '#6C63FF', opacity: isLoading ? 0.6 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}>
+                style={{ background: t.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text }} />
+              <button onClick={sendMsg} className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#6C63FF' }}>
                 <Send size={15} color="white" />
               </button>
             </div>
@@ -316,22 +323,29 @@ export function BienestarView() {
         </div>
       )}
 
-      {/* ── DIARIO ── */}
       {tab === 'diario' && (
         <div className="flex gap-6 h-full overflow-hidden">
 
-          {/* Left column — write + AI */}
           <div className="flex-1 flex flex-col gap-5 overflow-y-auto pr-1 pb-4">
 
-            {/* Mood picker hero */}
             <div className="rounded-3xl overflow-hidden border relative"
-              style={{ background: 'linear-gradient(135deg, #1A1829 0%, #251F3D 100%)', borderColor: 'rgba(108,99,255,0.22)' }}>
+              style={{
+                background: t.darkMode
+                  ? 'linear-gradient(135deg, #1A1829 0%, #251F3D 100%)'
+                  : 'linear-gradient(135deg, #EDE9FF 0%, #F0FFF8 100%)',
+                borderColor: t.darkMode ? 'rgba(108,99,255,0.22)' : 'rgba(108,99,255,0.2)',
+              }}>
               <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(108,99,255,0.3), transparent 50%)' }} />
-              <div className="relative p-6">
+              <div className="absolute right-0 bottom-0 h-full flex items-end pointer-events-none">
+                <ImageWithFallback src={monoDiarioImg} alt="Mono Diario"
+                  className="object-contain object-bottom"
+                  style={{ height: 190, filter: 'drop-shadow(0 4px 18px rgba(108,99,255,0.35))' }} />
+              </div>
+              <div className="relative p-6 pr-36">
                 <div className="flex items-center justify-between mb-5">
                   <div>
-                    <p style={{ fontWeight: 800, fontSize: '1.05rem', color: '#F0EEFF' }}>¿Cómo te sientes hoy?</p>
-                    <p style={{ fontSize: '0.78rem', color: '#8B85B0', marginTop: '2px' }}>
+                    <p style={{ fontWeight: 800, fontSize: '1.05rem', color: t.darkMode ? '#F0EEFF' : '#1A1829' }}>¿Cómo te sientes hoy?</p>
+                    <p style={{ fontSize: '0.78rem', color: t.darkMode ? '#8B85B0' : '#6B6490', marginTop: '2px' }}>
                       {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </p>
                   </div>
@@ -342,26 +356,25 @@ export function BienestarView() {
                   </div>
                 </div>
 
-                {/* Large emoji selector */}
                 <div className="flex gap-3 justify-center mb-6">
                   {EMOCIONES.map(em => {
                     const isSelected = diaryEmotion === em.emoji;
                     return (
                       <motion.button key={em.value}
-                        onClick={() => setDiaryEmotion(em.emoji)}
+                        onClick={() => { setDiaryEmotion(em.emoji); setDiaryError(null); }}
                         whileHover={{ scale: 1.15, y: -4 }}
                         whileTap={{ scale: 0.92 }}
                         className="flex flex-col items-center gap-2 px-4 py-3 rounded-2xl transition-all"
                         style={{
-                          background: isSelected ? `${em.color}20` : 'rgba(255,255,255,0.04)',
-                          border: `2px solid ${isSelected ? em.color : 'rgba(255,255,255,0.08)'}`,
+                          background: isSelected ? `${em.color}20` : t.darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(108,99,255,0.06)',
+                          border: `2px solid ${isSelected ? em.color : t.darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(108,99,255,0.15)'}`,
                           boxShadow: isSelected ? `0 0 20px ${em.color}40` : 'none',
                           transform: isSelected ? 'translateY(-4px)' : undefined,
                         }}>
                         <span style={{ fontSize: '2rem', filter: !diaryEmotion || isSelected ? 'none' : 'grayscale(0.7) opacity(0.5)' }}>
                           {em.emoji}
                         </span>
-                        <span style={{ fontSize: '0.7rem', fontWeight: isSelected ? 700 : 400, color: isSelected ? em.color : '#8B85B0' }}>
+                        <span style={{ fontSize: '0.7rem', fontWeight: isSelected ? 700 : 400, color: isSelected ? em.color : t.darkMode ? '#8B85B0' : '#6B6490' }}>
                           {em.label}
                         </span>
                       </motion.button>
@@ -369,7 +382,6 @@ export function BienestarView() {
                   })}
                 </div>
 
-                {/* AI insight when mood selected */}
                 <AnimatePresence>
                   {selectedMoodVal && (
                     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -390,11 +402,9 @@ export function BienestarView() {
               </div>
             </div>
 
-            {/* Write section */}
             <div className="rounded-2xl border p-5" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
               <div className="flex items-center justify-between mb-3">
                 <p style={{ fontWeight: 700, fontSize: '0.95rem', color: t.text }}>Escribe en tu diario</p>
-                {/* Prompt suggestions */}
                 <button onClick={() => { setActivePrompt(p => (p + 1) % DIARY_PROMPTS.length); setDiaryNote(''); }}
                   className="px-3 py-1 rounded-xl text-xs transition-all hover:opacity-80"
                   style={{ background: 'rgba(108,99,255,0.1)', color: '#6C63FF', border: '1px solid rgba(108,99,255,0.2)' }}>
@@ -412,7 +422,7 @@ export function BienestarView() {
                 </motion.p>
               </AnimatePresence>
 
-              <textarea value={diaryNote} onChange={e => setDiaryNote(e.target.value)}
+              <textarea value={diaryNote} onChange={e => { setDiaryNote(e.target.value); setDiaryError(null); }}
                 placeholder="Escribe libremente... este espacio es solo tuyo 💜"
                 rows={5} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
                 style={{ background: t.inputBg, border: `1px solid ${diaryNote ? 'rgba(108,99,255,0.4)' : 'rgba(108,99,255,0.15)'}`, color: t.text, lineHeight: 1.7, transition: 'border-color 0.2s' }} />
@@ -422,15 +432,33 @@ export function BienestarView() {
                   {diaryNote.length} caracteres
                 </p>
                 <motion.button
-                  onClick={() => { setSavedToday(true); setDiaryNote(''); setDiaryEmotion(null); }}
-                  disabled={!diaryEmotion || !diaryNote.trim()}
-                  whileHover={diaryEmotion && diaryNote.trim() ? { scale: 1.03 } : {}}
-                  whileTap={diaryEmotion && diaryNote.trim() ? { scale: 0.97 } : {}}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{ background: diaryEmotion && diaryNote.trim() ? '#6C63FF' : 'rgba(108,99,255,0.2)', color: 'white', boxShadow: diaryEmotion && diaryNote.trim() ? '0 4px 14px rgba(108,99,255,0.35)' : 'none' }}>
+                  onClick={() => {
+                    if (!diaryEmotion) { setDiaryError('Selecciona cómo te sientes antes de guardar.'); return; }
+                    if (!diaryNote.trim()) { setDiaryError('Escribe algo en tu diario antes de guardar.'); return; }
+                    setDiaryError(null);
+                    setSavedToday(true);
+                    setDiaryNote('');
+                    setDiaryEmotion(null);
+                  }}
+                  disabled={savedToday}
+                  whileHover={!savedToday ? { scale: 1.03 } : {}}
+                  whileTap={!savedToday ? { scale: 0.97 } : {}}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{ background: savedToday ? 'rgba(127,231,196,0.3)' : '#6C63FF', color: 'white', boxShadow: savedToday ? 'none' : '0 4px 14px rgba(108,99,255,0.35)' }}>
                   {savedToday ? '✓ Guardado' : '💾 Guardar registro'}
                 </motion.button>
               </div>
+
+              <AnimatePresence>
+                {diaryError && !savedToday && (
+                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    className="mt-2 px-3 py-2.5 rounded-xl flex items-center gap-2"
+                    style={{ background: 'rgba(255,77,106,0.08)', border: '1px solid rgba(255,77,106,0.25)' }}>
+                    <span style={{ fontSize: '0.85rem' }}>⚠️</span>
+                    <p style={{ fontSize: '0.78rem', color: '#FF4D6A' }}>{diaryError}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <AnimatePresence>
                 {savedToday && (
@@ -508,7 +536,13 @@ export function BienestarView() {
         <div className="space-y-5">
           {/* Hero banner with Mono */}
           <div className="rounded-3xl overflow-hidden relative border"
-            style={{ background: 'linear-gradient(135deg, #1A1829, #251F3D)', borderColor: 'rgba(108,99,255,0.25)', minHeight: 160 }}>
+            style={{
+              background: t.darkMode
+                ? 'linear-gradient(135deg, #1A1829, #251F3D)'
+                : 'linear-gradient(135deg, #EDE9FF, #F0FFF8)',
+              borderColor: t.darkMode ? 'rgba(108,99,255,0.25)' : 'rgba(108,99,255,0.2)',
+              minHeight: 160,
+            }}>
             <div className="absolute right-0 bottom-0 h-full flex items-end">
               <ImageWithFallback src={playingSound ? monoMusicaImg : monoTranqImg} alt="Mono"
                 className="object-contain object-bottom"
@@ -561,10 +595,10 @@ export function BienestarView() {
                 </motion.div>
               ) : (
                 <div>
-                  <p style={{ fontWeight: 800, fontSize: '1.2rem', color: '#F0EEFF', marginBottom: '6px' }}>
+                  <p style={{ fontWeight: 800, fontSize: '1.2rem', color: t.darkMode ? '#F0EEFF' : '#1A1829', marginBottom: '6px' }}>
                     Sonidos de bienestar 🎵
                   </p>
-                  <p style={{ fontSize: '0.85rem', color: '#8B85B0', lineHeight: 1.6 }}>
+                  <p style={{ fontSize: '0.85rem', color: t.darkMode ? '#8B85B0' : '#6B6490', lineHeight: 1.6 }}>
                     Elige un sonido para relajarte, concentrarte o descansar mejor.
                   </p>
                 </div>
