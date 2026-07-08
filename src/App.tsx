@@ -26,6 +26,7 @@ import logoNuevoOscuroImg from './assets/logoNuevoOscuro.png';
 import logoNuevoClaroImg from './assets/logoNuevoClaro.png';
 import { useLocation, useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
+import { tokenManager } from './services/tokenManager';
 
 type AuthState = 'login' | 'loginform' | 'register' | 'callback' | 'app';
 type ViewId = 'home' | 'matching' | 'parches' | 'chats' | 'eventos' | 'ubicacion' | 'bienestar' | 'album' | 'notificaciones' | 'ajustes' | 'perfil';
@@ -958,9 +959,11 @@ function AppCore() {
     window.location.pathname === '/auth/callback' &&
     new URLSearchParams(window.location.search).has('code');
 
-  const [authState, setAuthState] = useState<AuthState>(() =>
-    isMsCallback ? 'callback' : 'login',
-  );
+  const [authState, setAuthState] = useState<AuthState>(() => {
+  if (isMsCallback) return 'callback';
+  if (tokenManager.getAccessToken()) return 'app';
+  return 'login';
+});
   const [activeView, setActiveView] = useState<ViewId>('home');
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

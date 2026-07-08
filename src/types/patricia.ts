@@ -73,6 +73,7 @@ export interface ParcheResponse {
   maxCapacity: number;
   memberCount: number;
   pictureUrl: string;
+  communication: CommunicationChannels | null;
 }
 export interface ParcheSummaryResponse {
   parcheId: UUID;
@@ -175,3 +176,9 @@ export interface GeoSnapshotMessage {
   eventId: UUID;
   positions: GeoBroadcastMessage[];
 }
+
+export interface CommunicationChannels {
+  chatId: UUID | null;
+  voiceId: UUID | null;
+}
+

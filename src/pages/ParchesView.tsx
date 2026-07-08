@@ -22,6 +22,8 @@ import { useAuth } from '../store/AuthContext';
 import { parcheService } from '../services/parcheService';
 import { CATEGORY_META, ALL_CATEGORIES } from '../lib/maps';
 import type { ParcheSummaryResponse, EventCategory } from '../types/patricia';
+import { ComunicacionSocket, type ChatMessage, type VoiceEvent, type VoiceSignalPayload } from '../services/comunicacionSocket';
+import { apiClient } from '../services/apiClient';
 
 /** Render-ready parche derived from the backend summary. */
 interface UiParche {
@@ -368,6 +370,15 @@ export function ParchesView({ linkedEvents = [] }: {
   const [game, setGame] = useState<GameId>(null);
   const [voiceConnected, setVoiceConnected] = useState(false);
   const [voiceMuted, setVoiceMuted] = useState(false);
+  const [chatId, setChatId]                     = useState<string | null>(null);
+  const [rtMessages, setRtMessages]             = useState<ChatMessage[]>([]);
+  const [voiceParticipants, setVoiceParticipants] = useState<VoiceEvent[]>([]);
+  const socketRef  = useRef<ComunicacionSocket | null>(null);
+  const unsubRef   = useRef<(() => void) | null>(null);
+  const localStream = useRef<MediaStream | null>(null);
+  const peers      = useRef<Map<string, RTCPeerConnection>>(new Map());
+  const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+  const voiceConnectedRef = useRef(false);
   const [voiceCamOn, setVoiceCamOn] = useState(true);
   const [voiceScreenShare, setVoiceScreenShare] = useState(false);
   const [memberMenuOpen, setMemberMenuOpen] = useState<string|null>(null);
@@ -481,6 +492,58 @@ export function ParchesView({ linkedEvents = [] }: {
     finally { setCreateSaving(false); }
   };
 
+  // Socket init
+useEffect(() => {
+  const socket = new ComunicacionSocket({
+    onConnect: () => console.log('[comms] conectado'),
+    onVoiceSignal: handleVoiceSignal,
+  });
+  socket.activate();
+  socketRef.current = socket;
+  return () => { socket.deactivate(); };
+}, []);
+
+// Cargar chatId y suscribirse cuando cambia el parche
+useEffect(() => {
+  if (!selectedParche.id) return;
+  unsubRef.current?.();
+  setRtMessages([]);
+  setVoiceParticipants([]);
+  setChatId(null);
+
+  let alive = true;
+  parcheService.get(selectedParche.id).then(detail => {
+    if (!alive) return;
+    const cid = (detail as any).communication?.chatId;
+    if (!cid) return;
+    setChatId(cid);
+
+    // Historial
+    apiClient.get(`/api/chat/${cid}/messages?page=0&size=50`)
+      .then(r => { if (alive) setRtMessages([...(r.data.content ?? [])].reverse()); })
+      .catch(() => {});
+
+    // STOMP
+    const unsub = socketRef.current?.subscribeToParche(cid, {
+      onMessage: msg => setRtMessages(prev => [...prev, msg]),
+      onVoiceEvent: evt => {
+        if (evt.signalType === 'JOIN') {
+          setVoiceParticipants(prev =>
+            prev.find(p => p.senderUserId === evt.senderUserId) ? prev : [...prev, evt]
+          );
+          if (voiceConnectedRef.current && evt.senderUserId !== meId) initiateOffer(evt.senderUserId, cid);
+        } else {
+          setVoiceParticipants(prev => prev.filter(p => p.senderUserId !== evt.senderUserId));
+          closePeer(evt.senderUserId);
+        }
+      },
+    });
+    if (unsub) unsubRef.current = unsub;
+  }).catch(() => {});
+
+  return () => { alive = false; unsubRef.current?.(); };
+}, [selectedParche.id]);
+
   // Full detail + linked events for the entered (member) parche.
   useEffect(() => {
     if (!selectedParche.id || !isMember(selectedParche)) { setParcheEventCount(0); return; }
@@ -493,12 +556,83 @@ export function ParchesView({ linkedEvents = [] }: {
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
 
+  // ── WebRTC ──
+function createPeer(remoteId: string, cid: string): RTCPeerConnection {
+  const pc = new RTCPeerConnection(ICE_SERVERS);
+  peers.current.set(remoteId, pc);
+  localStream.current?.getTracks().forEach(t => pc.addTrack(t, localStream.current!));
+  pc.ontrack = evt => {
+    let a = document.getElementById(`va-${remoteId}`) as HTMLAudioElement;
+    if (!a) { a = Object.assign(document.createElement('audio'), { id: `va-${remoteId}`, autoplay: true }); document.body.appendChild(a); }
+    a.srcObject = evt.streams[0];
+  };
+  pc.onicecandidate = evt => {
+    if (evt.candidate) socketRef.current?.sendVoiceSignal(cid, { signalType: 'ICE_CANDIDATE', targetUserId: remoteId, signalData: JSON.stringify(evt.candidate) });
+  };
+  return pc;
+}
+
+async function initiateOffer(remoteId: string, cid: string) {
+  const pc = createPeer(remoteId, cid);
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  socketRef.current?.sendVoiceSignal(cid, { signalType: 'OFFER', targetUserId: remoteId, signalData: JSON.stringify(offer) });
+}
+
+async function handleVoiceSignal(signal: VoiceSignalPayload) {
+  if (!signal.senderUserId || signal.senderUserId === meId || !chatId) return;
+  if (signal.signalType === 'OFFER') {
+    const pc = createPeer(signal.senderUserId, chatId);
+    await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(signal.signalData!)));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    socketRef.current?.sendVoiceSignal(chatId, { signalType: 'ANSWER', targetUserId: signal.senderUserId, signalData: JSON.stringify(answer) });
+  } else if (signal.signalType === 'ANSWER') {
+    const pc = peers.current.get(signal.senderUserId);
+    if (pc) await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(signal.signalData!)));
+  } else if (signal.signalType === 'ICE_CANDIDATE') {
+    const pc = peers.current.get(signal.senderUserId);
+    if (pc) await pc.addIceCandidate(new RTCIceCandidate(JSON.parse(signal.signalData!)));
+  }
+}
+
+function closePeer(uid: string) {
+  peers.current.get(uid)?.close(); peers.current.delete(uid);
+  document.getElementById(`va-${uid}`)?.remove();
+}
+
+const realJoinVoice = async () => {
+  if (!chatId) return;
+  try {
+    localStream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+    setVoiceConnected(true);
+    voiceConnectedRef.current = true;
+    socketRef.current?.joinVoice(chatId);
+  } catch { addToast({ type: 'info', title: 'Micrófono', message: 'Permite el acceso al micrófono' }); }
+};
+
+const realLeaveVoice = () => {
+  if (chatId) socketRef.current?.leaveVoice(chatId);
+  peers.current.forEach((pc, uid) => { pc.close(); document.getElementById(`va-${uid}`)?.remove(); });
+  peers.current.clear();
+  localStream.current?.getTracks().forEach(t => t.stop());
+  localStream.current = null;
+  setVoiceConnected(false);
+  voiceConnectedRef.current = false;
+  setVoiceMuted(false);
+  setVoiceParticipants([]);
+};
+
+// ── sendMsg real ──
+
   const sendMsg = () => {
-    if (!msgInput.trim()) {
-      addToast({ type: 'info', title: 'Mensaje vacío', message: 'Escribe algo antes de enviar.' });
-      return;
+    if (!msgInput.trim()) { addToast({ type: 'info', title: 'Mensaje vacío', message: 'Escribe algo antes de enviar.' }); return; }
+    if (chatId && socketRef.current?.connected) {
+      socketRef.current.sendMessage(chatId, msgInput);
+    } else {
+      // fallback local mientras el canal se configura
+      setMessages(prev => [...prev, { id: prev.length + 1, userId: 'ME', user: 'Tú', text: msgInput, time: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }), reactions: [], type: 'text' }]);
     }
-    setMessages(prev=>[...prev,{ id:prev.length+1, userId:'ME', user:'Tú', text:msgInput, time:new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}), reactions:[], type:'text' }]);
     setMsgInput('');
   };
 
@@ -851,7 +985,22 @@ export function ParchesView({ linkedEvents = [] }: {
                       </div>
                     </div>
                   ))}
-                  {messages.map((msg,i)=>{
+                  {rtMessages.length > 0 ? rtMessages.map((msg, i) => {
+                    const isMe = msg.senderId === meId;
+                    return (
+                      <motion.div key={msg.id ?? i} initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }}
+                        className="flex items-start gap-3 group relative px-2 py-0.5 rounded-xl"
+                        style={{ flexDirection: isMe ? 'row-reverse' : 'row' }}>
+                        <div className={`flex flex-col gap-0.5 max-w-[70%] ${isMe ? 'items-end' : 'items-start'}`}>
+                          {!isMe && <span style={{ fontSize:'0.78rem', fontWeight:600, color:'#6C63FF' }}>{msg.senderUsername}</span>}
+                          <div className="px-3.5 py-2 rounded-2xl" style={{ background: isMe ? 'linear-gradient(135deg,#6C63FF,#8B7FFF)' : 'rgba(37,31,61,0.95)', color:'#F0EEFF', borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px' }}>
+                            <p style={{ fontSize:'0.85rem', lineHeight:1.55 }}>{msg.content}</p>
+                          </div>
+                          <span style={{ fontSize:'0.6rem', color:'var(--p-muted)' }}>{new Date(msg.sentAt).toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' })}</span>
+                        </div>
+                      </motion.div>
+                    );
+                  }) : messages.map((msg, i) => {
                     const isMe = msg.userId==='ME';
                     const showAvatar = i===0 || messages[i-1].userId!==msg.userId;
                     return (
@@ -1107,7 +1256,7 @@ export function ParchesView({ linkedEvents = [] }: {
                         {MEMBERS_DATA.filter(m=>m.status==='online').length} miembros disponibles
                       </p>
                     </div>
-                    <button onClick={()=>setVoiceConnected(true)}
+                    <button onClick={realJoinVoice}
                       className="flex items-center gap-2 px-8 py-3.5 rounded-2xl font-semibold transition-all hover:scale-105"
                       style={{ background:'#7FE7C4', color:'#0F0E1A' }}>
                       <Phone size={18} /> Unirse a la llamada
@@ -1150,37 +1299,31 @@ export function ParchesView({ linkedEvents = [] }: {
                       </div>
 
                       {/* Other participants — profile photo placeholders */}
-                      {MEMBERS_DATA.filter(m=>m.status==='online' && m.name!=='Tú').map((m,i) => (
-                        <motion.div key={m.name}
-                          animate={{ boxShadow: i===0 ? ['0 0 0 0px #7FE7C4','0 0 0 4px #7FE7C440','0 0 0 0px #7FE7C4'] : 'none' }}
+                      {voiceParticipants.map((p, i) => (
+                        <motion.div key={p.senderUserId}
+                          animate={{ boxShadow: ['0 0 0 0px #7FE7C4','0 0 0 4px #7FE7C440','0 0 0 0px #7FE7C4'] }}
                           transition={{ duration:1.8, repeat:Infinity, delay:i*0.4 }}
                           className="relative rounded-2xl overflow-hidden flex flex-col items-center justify-center gap-2"
-                          style={{ background:'rgba(13,11,30,0.85)', border: i===0 ? '2px solid #7FE7C4' : '1.5px solid rgba(108,99,255,0.3)', minHeight:120 }}>
-                          {/* Gradient avatar (profile photo will go here) */}
+                          style={{ background:'rgba(13,11,30,0.85)', border:'1.5px solid rgba(108,99,255,0.3)', minHeight:120 }}>
                           <div className="w-14 h-14 rounded-full flex items-center justify-center"
-                            style={{ background: m.gradient, fontSize:'1.1rem', fontWeight:800, color:'white', boxShadow:'0 4px 16px rgba(0,0,0,0.45)' }}>
-                            {m.avatar}
+                            style={{ background:'linear-gradient(135deg,#6C63FF,#FF6B9D)', fontSize:'1.1rem', fontWeight:800, color:'white' }}>
+                            {p.senderUsername?.substring(0,2).toUpperCase()}
                           </div>
-                          {/* Speaking indicator */}
-                          {i===0 && (
-                            <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 rounded-full"
-                              style={{ background:'rgba(127,231,196,0.25)', border:'1px solid rgba(127,231,196,0.5)' }}>
-                              {[1,2,3].map(b=>(
-                                <motion.div key={b} animate={{ height:[3,10,3] }}
-                                  transition={{ duration:0.6, repeat:Infinity, delay:b*0.15 }}
-                                  style={{ width:2, background:'#7FE7C4', borderRadius:2 }} />
-                              ))}
-                            </div>
-                          )}
                           <span className="absolute bottom-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full"
                             style={{ background:'rgba(0,0,0,0.65)', color:'white' }}>
-                            {m.name.split(' ')[0]}
+                            {p.senderUsername?.split(' ')[0]}
                           </span>
                           <div className="absolute bottom-2 left-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ background:'rgba(0,0,0,0.5)' }}>
                             <Mic size={10} color="white" />
                           </div>
                         </motion.div>
                       ))}
+                      {voiceParticipants.length === 0 && (
+                        <div className="rounded-2xl flex items-center justify-center"
+                          style={{ background:'rgba(13,11,30,0.5)', border:'1.5px dashed rgba(108,99,255,0.2)', minHeight:120 }}>
+                          <p style={{ fontSize:'0.75rem', color:'var(--p-muted)' }}>Esperando participantes...</p>
+                        </div>
+                      )}
 
                       {/* Screen share tile */}
                       {voiceScreenShare && (
@@ -1222,7 +1365,7 @@ export function ParchesView({ linkedEvents = [] }: {
                       <div className="w-px h-8 mx-1" style={{ background:'rgba(108,99,255,0.2)' }} />
 
                       {/* Hang up */}
-                      <button onClick={()=>{ setVoiceConnected(false); setVoiceScreenShare(false); setVoiceCamOn(true); setVoiceMuted(false); }}
+                      <button onClick={() => { realLeaveVoice(); setVoiceScreenShare(false); setVoiceCamOn(true); }}
                         className="flex items-center gap-2 px-6 h-14 rounded-2xl font-semibold transition-all hover:scale-105"
                         style={{ background:'#FF4D6A', color:'white' }}>
                         <PhoneOff size={20} />
