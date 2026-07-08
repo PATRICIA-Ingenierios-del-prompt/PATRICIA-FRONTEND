@@ -41,9 +41,14 @@ export class LocationSocket {
   private subs: StompSubscription[] = [];
 
   constructor(opts: LocationSocketOptions = {}) {
-    const token = tokenManager.getAccessToken() ?? '';
     this.client = new Client({
-      brokerURL: `${wsOrigin()}/ws/geo?access_token=${encodeURIComponent(token)}`,
+      // Re-read the token on EVERY (re)connect attempt: if the JWT rotated or
+      // expired mid-session, a reconnect with the original URL would 401 forever.
+      beforeConnect: () => {
+        const token = tokenManager.getAccessToken() ?? '';
+        this.client.brokerURL = `${wsOrigin()}/ws/geo?access_token=${encodeURIComponent(token)}`;
+      },
+      brokerURL: `${wsOrigin()}/ws/geo`,
       reconnectDelay: 4000,
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
