@@ -4,8 +4,8 @@ dist/
 
 # local env & secrets
 .env
+
 .env.local
 
-# editor / OS
 .vscode/
-.DS_Store
+.DS_Store 

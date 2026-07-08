@@ -15,8 +15,11 @@ import { ProfileView } from './pages/ProfileView';
 import { LoginView } from './pages/LoginView';
 import { RegisterView } from './pages/RegisterView';
 import { LandingPage } from './pages/LandingPage';
+import { OnboardingView } from './pages/OnboardingView';
 import { MicrosoftCallback } from './pages/MicrosoftCallback';
 import { AuthProvider, useAuth } from './store/AuthContext';
+import { userService } from './services/userService';
+import { tokenManager } from './services/tokenManager';
 import { ToastContainer, addToast } from './components/ToastSystem';
 import { AnimatedBackground } from './components/AnimatedBackground';
 import { ThemeContext, getTheme, useTheme } from './store/ThemeContext';
@@ -27,9 +30,9 @@ import logoNuevoClaroImg from './assets/logoNuevoClaro.png';
 import { useLocation, useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { tokenManager } from './services/tokenManager';
+type AuthState = 'login' | 'loginform' | 'register' | 'callback' | 'onboarding' | 'app';
+type ViewId = 'home' | 'matching' | 'parches' | 'chats' | 'eventos' | 'bienestar' | 'album' | 'notificaciones' | 'ajustes' | 'perfil';
 
-type AuthState = 'login' | 'loginform' | 'register' | 'callback' | 'app';
-type ViewId = 'home' | 'matching' | 'parches' | 'chats' | 'eventos' | 'ubicacion' | 'bienestar' | 'album' | 'notificaciones' | 'ajustes' | 'perfil';
 
 const NAV_ITEMS: { id: ViewId; label: string; icon: React.ComponentType<any>; badge?: number }[] = [
   { id: 'home',          label: 'Descubrir',       icon: Compass },
@@ -975,7 +978,7 @@ function AppCore() {
   const isAppRoute = currentPath === '/app' || currentPath.startsWith('/app/');
 
   // Auth — name derived from JWT email claim (karol.estupinan-v@ → "Karol Estupinan")
-  const { userName, userEmail } = useAuth();
+  const { userName, userEmail, userId } = useAuth();
   const displayName = userName ?? userEmail ?? 'Usuario';
   const initials = displayName
     .split(' ').filter(Boolean).slice(0, 2)
@@ -1017,8 +1020,30 @@ function AppCore() {
     navigate(APP_VIEW_PATHS[view]);
   };
 
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = async (fromRegister = false) => {
     window.localStorage.setItem(AUTH_STORAGE_KEY, 'true');
+    // Leer el userId directo del token — React puede no haber re-renderizado aún
+    const uid = userId ?? tokenManager.getUserIdFromToken();
+    if (uid) {
+      try {
+        const necesita = await userService.necesitaOnboarding(uid);
+        if (necesita) {
+          setAuthState('onboarding');
+          return;
+        }
+        // Cuenta existente intentando registrarse de nuevo → aviso y entra al app
+        if (fromRegister) {
+          addToast({
+            type: 'info',
+            title: 'Ya tienes una cuenta',
+            message: 'Este correo ya está registrado en U•link. ¡Bienvenido de vuelta! 💜',
+            duration: 5000,
+          });
+        }
+      } catch {
+        // Si falla la verificación (red caída etc.), dejar pasar al app sin bloquear
+      }
+    }
     setAuthState('app');
     navigate('/app/home', { replace: true });
   };
@@ -1046,7 +1071,7 @@ function AppCore() {
   if (authState === 'callback')
     return (
       <MicrosoftCallback
-        onSuccess={() => setAuthState('app')}
+        onSuccess={handleLoginSuccess}
         onError={() => setAuthState('loginform')}
         darkMode={darkMode}
       />
@@ -1054,9 +1079,16 @@ function AppCore() {
   if (authState === 'login')
     return <LandingPage onLogin={() => setLandingTarget('login')} onRegister={() => setLandingTarget('register')} darkMode={darkMode} setDarkMode={setDarkMode} />;
   if (authState === 'loginform')
-    return <LoginView onLogin={handleLoginSuccess} onGoRegister={() => setAuthState('register')} darkMode={darkMode} setDarkMode={setDarkMode} />;
+    return <LoginView onLogin={() => handleLoginSuccess(false)} onGoRegister={() => setAuthState('register')} darkMode={darkMode} setDarkMode={setDarkMode} />;
   if (authState === 'register')
-    return <RegisterView onRegister={handleLoginSuccess} onGoLogin={() => setAuthState('loginform')} darkMode={darkMode} setDarkMode={setDarkMode} />;
+    return <RegisterView onRegister={() => handleLoginSuccess(true)} onGoLogin={() => setAuthState('loginform')} darkMode={darkMode} setDarkMode={setDarkMode} />;
+  if (authState === 'onboarding')
+    return (
+      <OnboardingView
+        onComplete={() => { setAuthState('app'); navigate('/app/home', { replace: true }); }}
+        darkMode={darkMode}
+      />
+    );
 
   const renderView = () => {
     switch (activeView) {

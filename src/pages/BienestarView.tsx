@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
 import { ImageWithFallback } from '../components/ImageWithFallback';
 import { addToast } from '../components/ToastSystem';
+import { sendChatMessage } from '../services/llmApi';
 import monoPatriciaImg  from '../assets/monoFondoU.png';
 import monoULinkImg     from '../assets/monoULink.png';
 import monoDiarioImg    from '../assets/monoDiario.png';
@@ -103,6 +104,7 @@ export function BienestarView() {
   ];
   const [msgs, setMsgs] = useState(INIT_MSGS);
   const [msg, setMsg] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedEmocion, setSelectedEmocion] = useState<number | null>(null);
   const [playingSound, setPlayingSound] = useState<number | null>(null);
   const [volume, setVolume] = useState(70);
@@ -142,13 +144,23 @@ export function BienestarView() {
     }
   };
 
-  const sendMsg = () => {
-    if (!msg.trim()) return;
-    const userMsg = { id: msgs.length + 1, from: 'user', text: msg };
-    const botMsg = { id: msgs.length + 2, from: 'bot', text: BOT_RESPONSES[Math.floor(Math.random() * BOT_RESPONSES.length)] };
+  const sendMsg = async () => {
+    if (!msg.trim() || isLoading) return;
+    const userText = msg.trim();
+    const userMsg = { id: Date.now(), from: 'user', text: userText };
     setMsgs(p => [...p, userMsg]);
-    setTimeout(() => setMsgs(p => [...p, botMsg]), 800);
     setMsg('');
+    setIsLoading(true);
+    try {
+      const response = await sendChatMessage(userText);
+      const botMsg = { id: Date.now() + 1, from: 'bot', text: response };
+      setMsgs(p => [...p, botMsg]);
+    } catch {
+      const errMsg = { id: Date.now() + 1, from: 'bot', text: '¡Ups! No pude conectarme con el servidor en este momento 😔 Asegúrate de que el backend esté corriendo en el puerto 8080.' };
+      setMsgs(p => [...p, errMsg]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const startBreath = () => {
@@ -266,6 +278,25 @@ export function BienestarView() {
                 </div>
               </div>
             ))}
+            {isLoading && (
+              <div className="flex gap-3">
+                <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)' }}>
+                  <ImageWithFallback src={monoULinkImg} alt="Mono" className="w-full h-full object-contain" />
+                </div>
+                <div className="px-4 py-3 rounded-2xl flex items-center gap-1.5"
+                  style={{ background: 'var(--p-hover)', borderRadius: '18px 18px 18px 4px' }}>
+                  {[0, 1, 2].map(i => (
+                    <div key={i} className="w-2 h-2 rounded-full"
+                      style={{
+                        background: '#6C63FF',
+                        animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite`,
+                        opacity: 0.7,
+                      }} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="p-4 border-t" style={{ borderColor: 'var(--p-divider)' }}>
