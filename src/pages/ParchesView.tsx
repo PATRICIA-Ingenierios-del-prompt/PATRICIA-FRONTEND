@@ -18,6 +18,24 @@ import { useBoard } from '../hooks/useBoard';
 import { Stroke, Point } from '../types/board';
 import { addToast } from '../components/ToastSystem';
 import { useTheme } from '../store/ThemeContext';
+import { useAuth } from '../store/AuthContext';
+import { parcheService } from '../services/parcheService';
+import { CATEGORY_META, ALL_CATEGORIES } from '../lib/maps';
+import type { ParcheSummaryResponse, EventCategory } from '../types/patricia';
+import { ComunicacionSocket, type ChatMessage, type VoiceEvent, type VoiceSignalPayload } from '../services/comunicacionSocket';
+import { apiClient } from '../services/apiClient';
+
+/** Render-ready parche derived from the backend summary. */
+interface UiParche {
+  id: string; name: string; emoji: string; color: string;
+  type: 'public' | 'private'; category: string;
+  live: number; unread: number; memberCount: number; maxCapacity: number;
+}
+const EMPTY_PARCHE: UiParche = { id: '', name: '', emoji: '✨', color: '#6C63FF', type: 'public', category: 'VARIETY', live: 0, unread: 0, memberCount: 0, maxCapacity: 0 };
+function toUiParche(p: ParcheSummaryResponse): UiParche {
+  const meta = CATEGORY_META[p.category as keyof typeof CATEGORY_META] ?? CATEGORY_META.VARIETY;
+  return { id: p.parcheId, name: p.name, emoji: meta.emoji, color: meta.color, type: p.visibility === 'PRIVATE' ? 'private' : 'public', category: p.category, live: 0, unread: 0, memberCount: p.memberCount, maxCapacity: p.maxCapacity };
+}
 
 type InteriorTab = 'chat' | 'archivos' | 'lienzo' | 'juegos' | 'voz';
 type GameId = null | 'parques';
@@ -40,15 +58,6 @@ const PARCHE_CATEGORIES = [
   { id:'arte',       label:'Arte',       emoji:'🎨', color:'#FF9BAE', subcategories:[] },
   { id:'comida',     label:'Comida',     emoji:'🍕', color:'#FFB347', subcategories:[] },
   { id:'deporte',    label:'Deporte',    emoji:'⚽', color:'#4ADE80', subcategories:[] },
-];
-
-const PARCHES_LIST = [
-  { id:1, name:'Cálculo III Survivors', emoji:'📐', color:'#6C63FF', type:'public',  live:7,  unread:3,  desc:'Grupo de estudio para Cálculo',    category:'estudio',    subcategory:'Cálculos'      },
-  { id:2, name:'Proyecto IA — Grupo 4', emoji:'🤖', color:'#7FE7C4', type:'private', live:3,  unread:0,  desc:'Equipo de proyecto final',          category:'estudio',    subcategory:'Programación'  },
-  { id:3, name:'Fútbol Martes ECI',     emoji:'⚽', color:'#FFB347', type:'public',  live:12, unread:7,  desc:'Partidos semanales en campus',      category:'deporte',    subcategory:''              },
-  { id:4, name:'Gaming Night 🎮',       emoji:'🎮', color:'#FF6B9D', type:'private', live:5,  unread:0,  desc:'Torneos y diversión',               category:'juegos',     subcategory:''              },
-  { id:5, name:'Tesis & Proyectos',     emoji:'🎓', color:'#5BC8FF', type:'public',  live:9,  unread:1,  desc:'Apoyo para proyectos de grado',     category:'estudio',    subcategory:'Ing. Sistemas' },
-  { id:6, name:'Club Fotografía',       emoji:'📷', color:'#A78BFA', type:'public',  live:4,  unread:0,  desc:'Salidas fotográficas semanales',    category:'arte',       subcategory:''              },
 ];
 
 const INIT_MESSAGES = [
@@ -336,12 +345,21 @@ export function ParchesView({ linkedEvents = [] }: {
   linkedEvents?: Array<{ parcheId: number; eventTitle: string; eventEmoji: string; eventDate: string }>;
 }) {
   const t = useTheme();
-  const [myParches, setMyParches] = useState(PARCHES_LIST);
-  const [selectedParche, setSelectedParche] = useState(PARCHES_LIST[0]);
+  const { userId: meId } = useAuth();
+  // Real data: public parches (browse) + my memberships (from /api/parches/me).
+  const [publicos, setPublicos] = useState<UiParche[]>([]);
+  const [mine, setMine] = useState<UiParche[]>([]);
+  const [scope, setScope] = useState<'public' | 'private'>('public');
+  const [joinCode, setJoinCode] = useState('');
+  const [loadingList, setLoadingList] = useState(true);
+  const [search, setSearch] = useState('');
+  const [catFilter, setCatFilter] = useState<'ALL' | EventCategory>('ALL');
+  const [openOnly, setOpenOnly] = useState(false);
+  const [parcheEventCount, setParcheEventCount] = useState(0);
+  const [selectedParche, setSelectedParche] = useState<UiParche>(EMPTY_PARCHE);
   const [activeTab, setActiveTab] = useState<InteriorTab>('chat');
   const [showMembers, setShowMembers] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
-  const [sidebarFilter, setSidebarFilter] = useState<'all'|'public'|'private'>('all');
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [reportMember, setReportMember] = useState<string|null>(null);
   const [viewMemberProfile, setViewMemberProfile] = useState<typeof MEMBERS_DATA[0] | null>(null);
@@ -352,15 +370,26 @@ export function ParchesView({ linkedEvents = [] }: {
   const [game, setGame] = useState<GameId>(null);
   const [voiceConnected, setVoiceConnected] = useState(false);
   const [voiceMuted, setVoiceMuted] = useState(false);
+  const [chatId, setChatId]                     = useState<string | null>(null);
+  const [rtMessages, setRtMessages]             = useState<ChatMessage[]>([]);
+  const [voiceParticipants, setVoiceParticipants] = useState<VoiceEvent[]>([]);
+  const socketRef  = useRef<ComunicacionSocket | null>(null);
+  const unsubRef   = useRef<(() => void) | null>(null);
+  const localStream = useRef<MediaStream | null>(null);
+  const peers      = useRef<Map<string, RTCPeerConnection>>(new Map());
+  const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+  const voiceConnectedRef = useRef(false);
   const [voiceCamOn, setVoiceCamOn] = useState(true);
   const [voiceScreenShare, setVoiceScreenShare] = useState(false);
   const [memberMenuOpen, setMemberMenuOpen] = useState<string|null>(null);
   const [createType, setCreateType] = useState<'public'|'private'>('public');
-  const [createCategory, setCreateCategory] = useState('');
-  const [createSubcategory, setCreateSubcategory] = useState('');
+  const [createCategory, setCreateCategory] = useState<EventCategory>('TECHNOLOGY');
   const [createError, setCreateError] = useState<string | null>(null);
   const [createName, setCreateName] = useState('');
-  const [sidebarCategory, setSidebarCategory] = useState('');
+  const [createDesc, setCreateDesc] = useState('');
+  const [createCapacity, setCreateCapacity] = useState('');
+  const [createFile, setCreateFile] = useState<File | null>(null);
+  const [createSaving, setCreateSaving] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -391,14 +420,219 @@ export function ParchesView({ linkedEvents = [] }: {
     categoryScrollRef.current?.scrollBy({ left: 120 * dir, behavior: 'smooth' });
   };
 
+  /* ── real data: público browse (via filter endpoints) + my memberships ── */
+  const loadPublicos = useCallback(async () => {
+    const s = search.trim();
+    try {
+      // Route to the most specific filter endpoint, then compose the rest client-side
+      // and keep only PUBLIC (parche filter endpoints are NOT visibility-scoped).
+      const res = s ? await parcheService.byName(s) : openOnly ? await parcheService.openSpots() : catFilter !== 'ALL' ? await parcheService.byCategory(catFilter) : await parcheService.byVisibility('PUBLIC');
+      let items = res.content.map(toUiParche).filter(p => p.type === 'public');
+      if (catFilter !== 'ALL') items = items.filter(p => p.category === catFilter);
+      if (openOnly) items = items.filter(p => p.memberCount < p.maxCapacity);
+      if (s) items = items.filter(p => p.name.toLowerCase().includes(s.toLowerCase()));
+      setPublicos(items);
+    } catch { setPublicos([]); }
+  }, [search, openOnly, catFilter]);
+  const loadMine = useCallback(async () => {
+    try { setMine((await parcheService.mine()).content.map(toUiParche)); } catch { /* ignore */ }
+  }, []);
+  useEffect(() => { void loadMine(); }, [loadMine]);
+  useEffect(() => {
+    setLoadingList(true);
+    const timer = setTimeout(() => { void loadPublicos().finally(() => setLoadingList(false)); }, 250);
+    return () => clearTimeout(timer);
+  }, [loadPublicos]);
+
+  const membershipIds = new Set(mine.map(p => p.id));
+  const isMember = (p: UiParche) => !!p.id && membershipIds.has(p.id);
+  const privateSearch = search.trim().toLowerCase();
+  const list = scope === 'public' ? publicos : mine.filter(p => p.type === 'private' && (!privateSearch || p.name.toLowerCase().includes(privateSearch)));
+
+  const joinPublic = async (p: UiParche) => {
+    try { await parcheService.join(p.id); addToast({ type: 'logro', title: '¡Te uniste!', message: p.name }); await loadMine(); }
+    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo unir', message: e?.response?.data?.message ?? e?.message ?? 'Error' }); }
+  };
+  const joinByCode = async () => {
+    const code = joinCode.trim();
+    if (!code) return;
+    try { await parcheService.acceptInvite(code); addToast({ type: 'logro', title: '¡Te uniste al parche privado!', message: 'Código aceptado.' }); setJoinCode(''); await loadMine(); setScope('private'); }
+    catch (e: any) { addToast({ type: 'reporte', title: 'Código inválido', message: e?.response?.data?.message ?? e?.message ?? 'Error' }); }
+  };
+  const leaveParche = async (p: UiParche) => {
+    if (!meId) return;
+    try { await parcheService.removeMember(p.id, meId); addToast({ type: 'info', title: 'Saliste del parche', message: p.name }); setSelectedParche(EMPTY_PARCHE); await Promise.all([loadMine(), loadPublicos()]); }
+    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo salir', message: e?.response?.data?.message ?? e?.message ?? 'Error' }); }
+  };
+  const generateInvite = async (p: UiParche) => {
+    try { const r = await parcheService.createInvite({ parcheId: p.id }); addToast({ type: 'logro', title: 'Código de invitación', message: `${r.token} · válido ${Math.round(r.expiresInSeconds / 60)} min` }); }
+    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo generar', message: e?.response?.data?.message ?? e?.message ?? 'Error' }); }
+  };
+  const deleteParcheHandler = async (p: UiParche) => {
+    try { await parcheService.remove(p.id); addToast({ type: 'info', title: 'Parche eliminado', message: p.name }); setSelectedParche(EMPTY_PARCHE); await Promise.all([loadMine(), loadPublicos()]); }
+    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo eliminar', message: e?.response?.data?.message ?? e?.message ?? 'Error' }); }
+  };
+  const createParcheHandler = async () => {
+    if (!createName.trim()) { setCreateError('Ponle un nombre al parche.'); return; }
+    setCreateSaving(true); setCreateError(null);
+    try {
+      let pictureUrl: string | undefined;
+      if (createFile) {
+        try {
+          const { uploadToPresignedPost } = await import('../services/uploads');
+          const pre = await parcheService.requestPictureUpload({ contentType: createFile.type, fileSize: createFile.size });
+          pictureUrl = await uploadToPresignedPost(pre, createFile);
+        } catch { addToast({ type: 'info', title: 'Imagen omitida', message: 'No se pudo subir la imagen; se creó sin foto.' }); }
+      }
+      const created = await parcheService.create({ name: createName.trim(), description: createDesc.trim(), category: createCategory, maxCapacity: Number(createCapacity) || 10, visibility: createType === 'private' ? 'PRIVATE' : 'PUBLIC', pictureUrl });
+      addToast({ type: 'logro', title: '¡Parche creado!', message: created.name });
+      setShowCreate(false); setCreateName(''); setCreateDesc(''); setCreateCapacity(''); setCreateFile(null);
+      await Promise.all([loadMine(), loadPublicos()]);
+    } catch (e: any) { setCreateError(e?.response?.data?.message ?? e?.message ?? 'No se pudo crear el parche.'); }
+    finally { setCreateSaving(false); }
+  };
+
+  // Socket init
+useEffect(() => {
+  const socket = new ComunicacionSocket({
+    onConnect: () => console.log('[comms] conectado'),
+    onVoiceSignal: handleVoiceSignal,
+  });
+  socket.activate();
+  socketRef.current = socket;
+  return () => { socket.deactivate(); };
+}, []);
+
+// Cargar chatId y suscribirse cuando cambia el parche
+useEffect(() => {
+  if (!selectedParche.id) return;
+  unsubRef.current?.();
+  setRtMessages([]);
+  setVoiceParticipants([]);
+  setChatId(null);
+
+  let alive = true;
+  parcheService.get(selectedParche.id).then(detail => {
+    if (!alive) return;
+    const cid = (detail as any).communication?.chatId;
+    if (!cid) return;
+    setChatId(cid);
+
+    // Historial
+    apiClient.get(`/api/chat/${cid}/messages?page=0&size=50`)
+      .then(r => { if (alive) setRtMessages([...(r.data.content ?? [])].reverse()); })
+      .catch(() => {});
+
+    // STOMP
+    const unsub = socketRef.current?.subscribeToParche(cid, {
+      onMessage: msg => setRtMessages(prev => [...prev, msg]),
+      onVoiceEvent: evt => {
+        if (evt.signalType === 'JOIN') {
+          setVoiceParticipants(prev =>
+            prev.find(p => p.senderUserId === evt.senderUserId) ? prev : [...prev, evt]
+          );
+          if (voiceConnectedRef.current && evt.senderUserId !== meId) initiateOffer(evt.senderUserId, cid);
+        } else {
+          setVoiceParticipants(prev => prev.filter(p => p.senderUserId !== evt.senderUserId));
+          closePeer(evt.senderUserId);
+        }
+      },
+    });
+    if (unsub) unsubRef.current = unsub;
+  }).catch(() => {});
+
+  return () => { alive = false; unsubRef.current?.(); };
+}, [selectedParche.id]);
+
+  // Full detail + linked events for the entered (member) parche.
+  useEffect(() => {
+    if (!selectedParche.id || !isMember(selectedParche)) { setParcheEventCount(0); return; }
+    let alive = true;
+    parcheService.get(selectedParche.id).then(d => { if (alive) setSelectedParche(prev => prev.id === selectedParche.id ? { ...prev, memberCount: d.memberCount, maxCapacity: d.maxCapacity } : prev); }).catch(() => {});
+    parcheService.getEvents(selectedParche.id).then(ids => { if (alive) setParcheEventCount(ids.length); }).catch(() => {});
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedParche.id]);
+
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
 
+  // ── WebRTC ──
+function createPeer(remoteId: string, cid: string): RTCPeerConnection {
+  const pc = new RTCPeerConnection(ICE_SERVERS);
+  peers.current.set(remoteId, pc);
+  localStream.current?.getTracks().forEach(t => pc.addTrack(t, localStream.current!));
+  pc.ontrack = evt => {
+    let a = document.getElementById(`va-${remoteId}`) as HTMLAudioElement;
+    if (!a) { a = Object.assign(document.createElement('audio'), { id: `va-${remoteId}`, autoplay: true }); document.body.appendChild(a); }
+    a.srcObject = evt.streams[0];
+  };
+  pc.onicecandidate = evt => {
+    if (evt.candidate) socketRef.current?.sendVoiceSignal(cid, { signalType: 'ICE_CANDIDATE', targetUserId: remoteId, signalData: JSON.stringify(evt.candidate) });
+  };
+  return pc;
+}
+
+async function initiateOffer(remoteId: string, cid: string) {
+  const pc = createPeer(remoteId, cid);
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  socketRef.current?.sendVoiceSignal(cid, { signalType: 'OFFER', targetUserId: remoteId, signalData: JSON.stringify(offer) });
+}
+
+async function handleVoiceSignal(signal: VoiceSignalPayload) {
+  if (!signal.senderUserId || signal.senderUserId === meId || !chatId) return;
+  if (signal.signalType === 'OFFER') {
+    const pc = createPeer(signal.senderUserId, chatId);
+    await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(signal.signalData!)));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    socketRef.current?.sendVoiceSignal(chatId, { signalType: 'ANSWER', targetUserId: signal.senderUserId, signalData: JSON.stringify(answer) });
+  } else if (signal.signalType === 'ANSWER') {
+    const pc = peers.current.get(signal.senderUserId);
+    if (pc) await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(signal.signalData!)));
+  } else if (signal.signalType === 'ICE_CANDIDATE') {
+    const pc = peers.current.get(signal.senderUserId);
+    if (pc) await pc.addIceCandidate(new RTCIceCandidate(JSON.parse(signal.signalData!)));
+  }
+}
+
+function closePeer(uid: string) {
+  peers.current.get(uid)?.close(); peers.current.delete(uid);
+  document.getElementById(`va-${uid}`)?.remove();
+}
+
+const realJoinVoice = async () => {
+  if (!chatId) return;
+  try {
+    localStream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+    setVoiceConnected(true);
+    voiceConnectedRef.current = true;
+    socketRef.current?.joinVoice(chatId);
+  } catch { addToast({ type: 'info', title: 'Micrófono', message: 'Permite el acceso al micrófono' }); }
+};
+
+const realLeaveVoice = () => {
+  if (chatId) socketRef.current?.leaveVoice(chatId);
+  peers.current.forEach((pc, uid) => { pc.close(); document.getElementById(`va-${uid}`)?.remove(); });
+  peers.current.clear();
+  localStream.current?.getTracks().forEach(t => t.stop());
+  localStream.current = null;
+  setVoiceConnected(false);
+  voiceConnectedRef.current = false;
+  setVoiceMuted(false);
+  setVoiceParticipants([]);
+};
+
+// ── sendMsg real ──
+
   const sendMsg = () => {
-    if (!msgInput.trim()) {
-      addToast({ type: 'info', title: 'Mensaje vacío', message: 'Escribe algo antes de enviar.' });
-      return;
+    if (!msgInput.trim()) { addToast({ type: 'info', title: 'Mensaje vacío', message: 'Escribe algo antes de enviar.' }); return; }
+    if (chatId && socketRef.current?.connected) {
+      socketRef.current.sendMessage(chatId, msgInput);
+    } else {
+      // fallback local mientras el canal se configura
+      setMessages(prev => [...prev, { id: prev.length + 1, userId: 'ME', user: 'Tú', text: msgInput, time: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }), reactions: [], type: 'text' }]);
     }
-    setMessages(prev=>[...prev,{ id:prev.length+1, userId:'ME', user:'Tú', text:msgInput, time:new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}), reactions:[], type:'text' }]);
     setMsgInput('');
   };
 
@@ -456,10 +690,10 @@ export function ParchesView({ linkedEvents = [] }: {
         {/* Header */}
         <div className="px-4 py-3 border-b" style={{ borderColor:'var(--p-divider)' }}>
           <div className="flex items-center justify-between mb-2.5">
-            <h3 style={{ fontWeight:700, fontSize:'0.9rem', color:'var(--p-text)' }}>Mis Parches</h3>
+            <h3 style={{ fontWeight:700, fontSize:'0.9rem', color:'var(--p-text)' }}>Parches</h3>
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded-full text-xs" style={{ background:'var(--p-divider)', color:'#6C63FF' }}>
-                {myParches.reduce((s,p)=>s+p.unread,0)} nuevos
+                {mine.length} unido{mine.length !== 1 ? 's' : ''}
               </span>
               {/* Close button — mobile only */}
               {isMobile && (
@@ -473,34 +707,35 @@ export function ParchesView({ linkedEvents = [] }: {
           </div>
           <div className="relative mb-2.5">
             <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color:'var(--p-muted)' }} />
-            <input placeholder="Buscar parche..." className="w-full rounded-xl pl-8 pr-3 py-2 text-xs outline-none"
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar parche por nombre..." className="w-full rounded-xl pl-8 pr-3 py-2 text-xs outline-none"
               style={{ background:'var(--p-input)', color:'var(--p-text)', border:'1px solid rgba(108,99,255,0.15)' }} />
           </div>
-          {/* Public / Private filter */}
+          {/* Públicos / Privados toggle */}
           <div className="flex gap-1 p-0.5 rounded-xl" style={{ background:'var(--p-input)' }}>
-            {(['all','public','private'] as const).map(f => (
-              <button key={f} onClick={()=>setSidebarFilter(f)}
+            {([['public','🌍 Públicos'],['private','🔒 Privados']] as const).map(([val,label]) => (
+              <button key={val} onClick={()=>setScope(val)}
                 className="flex-1 py-1 rounded-lg text-center transition-all"
-                style={{ background: sidebarFilter===f ? '#6C63FF' : 'transparent', color: sidebarFilter===f ? 'white' : 'var(--p-muted)', fontSize:'0.65rem', fontWeight: sidebarFilter===f ? 700 : 400 }}>
-                {f==='all' ? 'Todos' : f==='public' ? '🌍 Públicos' : '🔒 Privados'}
+                style={{ background: scope===val ? '#6C63FF' : 'transparent', color: scope===val ? 'white' : 'var(--p-muted)', fontSize:'0.65rem', fontWeight: scope===val ? 700 : 400 }}>
+                {label}
               </button>
             ))}
           </div>
-          {/* Category filter chips */}
+          {/* Filters (Públicos only) — each hits a real filter endpoint */}
+          {scope==='public' && (
           <div className="relative mt-2">
             <div ref={categoryScrollRef} className="flex gap-1.5 overflow-x-auto pb-0.5 px-6" style={{ scrollbarWidth:'none' }}>
-              <button onClick={()=>setSidebarCategory('')}
+              <button onClick={()=>setCatFilter('ALL')}
                 className="flex-shrink-0 px-2 py-0.5 rounded-full transition-all"
-                style={{ background: sidebarCategory==='' ? '#6C63FF' : 'var(--p-input)', color: sidebarCategory==='' ? 'white' : 'var(--p-muted)', fontSize:'0.6rem', fontWeight: sidebarCategory==='' ? 700 : 400 }}>
-                Todos
+                style={{ background: catFilter==='ALL' ? '#6C63FF' : 'var(--p-input)', color: catFilter==='ALL' ? 'white' : 'var(--p-muted)', fontSize:'0.6rem', fontWeight: catFilter==='ALL' ? 700 : 400 }}>
+                Todas
               </button>
-              {PARCHE_CATEGORIES.map(cat => (
-                <button key={cat.id} onClick={()=>setSidebarCategory(sidebarCategory===cat.id ? '' : cat.id)}
+              {ALL_CATEGORIES.map(cat => { const m = CATEGORY_META[cat]; return (
+                <button key={cat} onClick={()=>setCatFilter(catFilter===cat ? 'ALL' : cat)}
                   className="flex-shrink-0 flex items-center gap-0.5 px-2 py-0.5 rounded-full transition-all"
-                  style={{ background: sidebarCategory===cat.id ? cat.color : 'var(--p-input)', color: sidebarCategory===cat.id ? 'white' : 'var(--p-muted)', fontSize:'0.6rem', fontWeight: sidebarCategory===cat.id ? 700 : 400 }}>
-                  {cat.emoji} {cat.label}
+                  style={{ background: catFilter===cat ? m.color : 'var(--p-input)', color: catFilter===cat ? 'white' : 'var(--p-muted)', fontSize:'0.6rem', fontWeight: catFilter===cat ? 700 : 400 }}>
+                  {m.emoji} {m.label}
                 </button>
-              ))}
+              ); })}
             </div>
             {categoryCanScrollLeft && (
               <>
@@ -525,14 +760,40 @@ export function ParchesView({ linkedEvents = [] }: {
               </>
             )}
           </div>
+          )}
+          {scope==='public' && (
+            <button onClick={()=>setOpenOnly(v=>!v)} className="mt-2 w-full py-1 rounded-lg text-center transition-all"
+              style={{ background: openOnly ? 'rgba(127,231,196,0.16)' : 'var(--p-input)', color: openOnly ? '#7FE7C4' : 'var(--p-muted)', fontSize:'0.62rem', fontWeight: openOnly ? 700 : 400, border: `1px solid ${openOnly ? 'rgba(127,231,196,0.4)' : 'transparent'}` }}>
+              {openOnly ? '✓ Solo con cupos' : 'Solo con cupos disponibles'}
+            </button>
+          )}
         </div>
+
+        {/* Join a private parche by code (Privados only) */}
+        {scope==='private' && (
+          <div className="px-3 py-3 border-b" style={{ borderColor:'var(--p-divider)' }}>
+            <p style={{ fontSize:'0.68rem', color:'var(--p-muted)', marginBottom:6, fontWeight:600 }}>🔑 Unirme con código</p>
+            <div className="flex gap-1.5">
+              <input value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())} placeholder="XXXX-XXXX"
+                onKeyDown={e=>{ if(e.key==='Enter') joinByCode(); }}
+                className="flex-1 rounded-lg px-2.5 py-1.5 text-xs outline-none"
+                style={{ background:'var(--p-input)', color:'var(--p-text)', border:'1px solid rgba(108,99,255,0.2)', letterSpacing:'0.06em' }} />
+              <button onClick={joinByCode} className="px-3 rounded-lg text-xs font-semibold" style={{ background:'#7FE7C4', color:'#0F0E1A' }}>Unirme</button>
+            </div>
+          </div>
+        )}
 
         {/* List */}
         <div className="flex-1 overflow-y-auto py-2">
-          {myParches.filter(p =>
-            (sidebarFilter==='all' || p.type===sidebarFilter) &&
-            (sidebarCategory==='' || p.category===sidebarCategory)
-          ).map(parche=>(
+          {loadingList && <p className="px-4 py-3" style={{ fontSize:'0.72rem', color:'var(--p-muted)' }}>Cargando…</p>}
+          {!loadingList && list.length===0 && (
+            <p className="px-4 py-3" style={{ fontSize:'0.72rem', color:'var(--p-muted)', lineHeight:1.6 }}>
+              {scope==='private' ? 'No estás en ningún parche privado. Únete con un código arriba.' : 'No hay parches públicos disponibles.'}
+            </p>
+          )}
+          {list.map(parche=>{
+            const member = isMember(parche);
+            return (
             <motion.div key={parche.id} onClick={()=>{ setSelectedParche(parche); setShowSidebar(false); }}
               whileHover={{ x:2 }}
               className="w-full px-3 py-2.5 flex items-center gap-3 text-left group relative transition-all cursor-pointer"
@@ -543,12 +804,15 @@ export function ParchesView({ linkedEvents = [] }: {
               {/* Icon */}
               <div className="relative flex-shrink-0">
                 <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
-                  style={{ background:`${parche.color}20`, border:`1.5px solid ${parche.color}40` }}>
+                  style={{ background:`${parche.color}20`, border:`1.5px solid ${parche.color}40`, opacity: member ? 1 : 0.75 }}>
                   {parche.emoji}
                 </div>
-                {/* Online pulse */}
-                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2"
-                  style={{ background:parche.live>0 ? '#7FE7C4' : '#4A4468', borderColor:'var(--p-card)' }} />
+                {!member && (
+                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center border-2"
+                    style={{ background:'var(--p-card)', borderColor:'var(--p-card)' }}>
+                    <Lock size={9} style={{ color:'var(--p-muted)' }} />
+                  </div>
+                )}
               </div>
               {/* Info */}
               <div className="flex-1 min-w-0">
@@ -558,36 +822,18 @@ export function ParchesView({ linkedEvents = [] }: {
                   </span>
                   {parche.type==='private' ? <Lock size={10} style={{ color:'var(--p-muted)', flexShrink:0 }} /> : <Globe size={10} style={{ color:'#7FE7C4', flexShrink:0 }} />}
                 </div>
-                <p style={{ fontSize:'0.68rem', color:'var(--p-muted)' }}>{parche.live} en vivo</p>
-                {(() => {
-                  const cat = PARCHE_CATEGORIES.find(c=>c.id===parche.category);
-                  return cat ? (
-                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full mt-0.5"
-                      style={{ fontSize:'0.55rem', background:`${cat.color}22`, color:cat.color, fontWeight:600 }}>
-                      {cat.emoji} {cat.label}{parche.subcategory ? ` · ${parche.subcategory}` : ''}
-                    </span>
-                  ) : null;
-                })()}
+                <p style={{ fontSize:'0.68rem', color:'var(--p-muted)' }}>{parche.memberCount}/{parche.maxCapacity} miembros{member ? '' : ' · no unido'}</p>
               </div>
-              {/* Badge */}
-              {parche.unread>0 && (
-                <motion.div initial={{ scale:0 }} animate={{ scale:1 }} transition={{ type:'spring' }}
-                  className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ background:'#FF4D6A', fontSize:'0.6rem', fontWeight:700, color:'white' }}>
-                  {parche.unread}
-                </motion.div>
+              {/* Join button for public non-member parches */}
+              {!member && parche.type==='public' && (
+                <button onClick={(e)=>{ e.stopPropagation(); joinPublic(parche); }}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold flex-shrink-0 hover:opacity-90"
+                  style={{ background:'rgba(108,99,255,0.18)', color:'#6C63FF' }}>
+                  Unirme
+                </button>
               )}
-              {/* Hover + button */}
-              <div className="absolute right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                {parche.unread===0 && (
-                  <button className="w-5 h-5 rounded-full flex items-center justify-center"
-                    style={{ background:'rgba(108,99,255,0.2)' }}>
-                    <Plus size={10} style={{ color:'#6C63FF' }} />
-                  </button>
-                )}
-              </div>
             </motion.div>
-          ))}
+          );})}
         </div>
 
         {/* Create button */}
@@ -601,7 +847,31 @@ export function ParchesView({ linkedEvents = [] }: {
       </div>
 
       {/* ── Interior Parche ───────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden" style={{ background: t.bg }}>
+      <div className="flex-1 flex flex-col overflow-hidden relative" style={{ background: t.bg }}>
+
+        {/* Censor: pick-a-parche empty state, or locked until you join */}
+        {!selectedParche.id ? (
+          <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 text-center px-10" style={{ background:'rgba(13,11,30,0.9)' }}>
+            <div className="w-16 h-16 rounded-full flex items-center justify-center text-3xl" style={{ background:'rgba(108,99,255,0.12)' }}>🧭</div>
+            <p style={{ fontWeight:700, fontSize:'1rem', color:'var(--p-text)' }}>Explora los parches</p>
+            <p style={{ fontSize:'0.82rem', color:'var(--p-muted)', maxWidth:360, lineHeight:1.6 }}>Elige un parche de la lista. Únete a los públicos con un toque, o entra a un privado con su código.</p>
+          </div>
+        ) : !isMember(selectedParche) && (
+          <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 text-center px-10" style={{ background:'rgba(13,11,30,0.86)', backdropFilter:'blur(7px)' }}>
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl" style={{ background:`${selectedParche.color}22` }}>{selectedParche.emoji}</div>
+            <div>
+              <p style={{ fontWeight:800, fontSize:'1.1rem', color:'var(--p-text)' }}>{selectedParche.name}</p>
+              <p style={{ fontSize:'0.8rem', color:'var(--p-muted)', marginTop:4 }}>{selectedParche.memberCount}/{selectedParche.maxCapacity} miembros</p>
+            </div>
+            <div className="flex items-center gap-2" style={{ color:'var(--p-muted)', fontSize:'0.82rem' }}><Lock size={14} /> El chat y las herramientas están bloqueados hasta que te unas</div>
+            {selectedParche.type==='public' ? (
+              <button onClick={()=>joinPublic(selectedParche)} className="px-6 py-3 rounded-xl text-sm font-semibold hover:opacity-90" style={{ background:'linear-gradient(135deg,#6C63FF,#8B7FFF)', color:'white' }}>Unirme al parche</button>
+            ) : (
+              <p style={{ fontSize:'0.78rem', color:'var(--p-muted)', maxWidth:320 }}>Este es un parche privado. Únete con su código desde la pestaña Privados.</p>
+            )}
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between px-3 sm:px-5 py-3 border-b flex-shrink-0"
           style={{ borderColor:'var(--p-divider)', background:'var(--p-card)', backdropFilter:'blur(12px)' }}>
@@ -626,16 +896,16 @@ export function ParchesView({ linkedEvents = [] }: {
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span style={{ fontWeight:700, fontSize:'0.95rem', color:'var(--p-text)' }}>{selectedParche.name}</span>
                 {selectedParche.type==='private' ? <Lock size={12} style={{ color:'var(--p-muted)' }} /> : <Globe size={12} style={{ color:'#7FE7C4' }} />}
-                {/* Linked events badge */}
-                {linkedEvents.filter(e => e.parcheId === selectedParche.id).length > 0 && (
+                {/* Linked events badge (GET /api/parches/{id}/events) */}
+                {parcheEventCount > 0 && (
                   <span className="px-2 py-0.5 rounded-full flex-shrink-0"
                     style={{ fontSize:'0.6rem', background:'rgba(255,179,71,0.15)', color:'#FFB347', border:'1px solid rgba(255,179,71,0.3)', fontWeight:600 }}>
-                    📅 {linkedEvents.filter(e => e.parcheId === selectedParche.id).length} evento{linkedEvents.filter(e => e.parcheId === selectedParche.id).length > 1 ? 's' : ''} vinculado{linkedEvents.filter(e => e.parcheId === selectedParche.id).length > 1 ? 's' : ''}
+                    📅 {parcheEventCount} evento{parcheEventCount > 1 ? 's' : ''} vinculado{parcheEventCount > 1 ? 's' : ''}
                   </span>
                 )}
               </div>
               <span style={{ fontSize:'0.68rem', color:'var(--p-muted)' }}>
-                <span style={{ color:'#7FE7C4' }}>●</span> {selectedParche.live} en vivo
+                <span style={{ color:'#7FE7C4' }}>●</span> {selectedParche.memberCount}/{selectedParche.maxCapacity} miembros
               </span>
             </div>
           </div>
@@ -659,15 +929,22 @@ export function ParchesView({ linkedEvents = [] }: {
                     transition={{ duration:0.12 }}
                     className="absolute right-0 top-10 rounded-xl border overflow-hidden z-50 min-w-[180px]"
                     style={{ background:'var(--p-card)', borderColor:'rgba(108,99,255,0.2)', boxShadow:'0 8px 32px rgba(0,0,0,0.35)' }}>
-                    <button onClick={() => {
-                        setMyParches(prev => prev.filter(p => p.id !== selectedParche.id));
-                        const remaining = myParches.filter(p => p.id !== selectedParche.id);
-                        if (remaining.length > 0) setSelectedParche(remaining[0]);
-                        setSettingsMenuOpen(false);
-                      }}
+                    {selectedParche.type==='private' && (
+                      <button onClick={() => { setSettingsMenuOpen(false); void generateInvite(selectedParche); }}
+                        className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left hover:opacity-80 transition-all border-b"
+                        style={{ color:'var(--p-text)', borderColor:'var(--p-divider)' }}>
+                        🔑 Generar código de invitación
+                      </button>
+                    )}
+                    <button onClick={() => { setSettingsMenuOpen(false); void leaveParche(selectedParche); }}
+                      className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left hover:opacity-80 transition-all border-b"
+                      style={{ color:'#FF4D6A', borderColor:'var(--p-divider)' }}>
+                      🚪 Salirse del parche
+                    </button>
+                    <button onClick={() => { setSettingsMenuOpen(false); void deleteParcheHandler(selectedParche); }}
                       className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left hover:opacity-80 transition-all"
                       style={{ color:'#FF4D6A' }}>
-                      🚪 Salirse del parche
+                      🗑️ Eliminar parche <span style={{ fontSize:'0.62rem', color:'var(--p-muted)' }}>(dueño)</span>
                     </button>
                   </motion.div>
                 )}
@@ -708,7 +985,22 @@ export function ParchesView({ linkedEvents = [] }: {
                       </div>
                     </div>
                   ))}
-                  {messages.map((msg,i)=>{
+                  {rtMessages.length > 0 ? rtMessages.map((msg, i) => {
+                    const isMe = msg.senderId === meId;
+                    return (
+                      <motion.div key={msg.id ?? i} initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }}
+                        className="flex items-start gap-3 group relative px-2 py-0.5 rounded-xl"
+                        style={{ flexDirection: isMe ? 'row-reverse' : 'row' }}>
+                        <div className={`flex flex-col gap-0.5 max-w-[70%] ${isMe ? 'items-end' : 'items-start'}`}>
+                          {!isMe && <span style={{ fontSize:'0.78rem', fontWeight:600, color:'#6C63FF' }}>{msg.senderUsername}</span>}
+                          <div className="px-3.5 py-2 rounded-2xl" style={{ background: isMe ? 'linear-gradient(135deg,#6C63FF,#8B7FFF)' : 'rgba(37,31,61,0.95)', color:'#F0EEFF', borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px' }}>
+                            <p style={{ fontSize:'0.85rem', lineHeight:1.55 }}>{msg.content}</p>
+                          </div>
+                          <span style={{ fontSize:'0.6rem', color:'var(--p-muted)' }}>{new Date(msg.sentAt).toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' })}</span>
+                        </div>
+                      </motion.div>
+                    );
+                  }) : messages.map((msg, i) => {
                     const isMe = msg.userId==='ME';
                     const showAvatar = i===0 || messages[i-1].userId!==msg.userId;
                     return (
@@ -964,7 +1256,7 @@ export function ParchesView({ linkedEvents = [] }: {
                         {MEMBERS_DATA.filter(m=>m.status==='online').length} miembros disponibles
                       </p>
                     </div>
-                    <button onClick={()=>setVoiceConnected(true)}
+                    <button onClick={realJoinVoice}
                       className="flex items-center gap-2 px-8 py-3.5 rounded-2xl font-semibold transition-all hover:scale-105"
                       style={{ background:'#7FE7C4', color:'#0F0E1A' }}>
                       <Phone size={18} /> Unirse a la llamada
@@ -1007,37 +1299,31 @@ export function ParchesView({ linkedEvents = [] }: {
                       </div>
 
                       {/* Other participants — profile photo placeholders */}
-                      {MEMBERS_DATA.filter(m=>m.status==='online' && m.name!=='Tú').map((m,i) => (
-                        <motion.div key={m.name}
-                          animate={{ boxShadow: i===0 ? ['0 0 0 0px #7FE7C4','0 0 0 4px #7FE7C440','0 0 0 0px #7FE7C4'] : 'none' }}
+                      {voiceParticipants.map((p, i) => (
+                        <motion.div key={p.senderUserId}
+                          animate={{ boxShadow: ['0 0 0 0px #7FE7C4','0 0 0 4px #7FE7C440','0 0 0 0px #7FE7C4'] }}
                           transition={{ duration:1.8, repeat:Infinity, delay:i*0.4 }}
                           className="relative rounded-2xl overflow-hidden flex flex-col items-center justify-center gap-2"
-                          style={{ background:'rgba(13,11,30,0.85)', border: i===0 ? '2px solid #7FE7C4' : '1.5px solid rgba(108,99,255,0.3)', minHeight:120 }}>
-                          {/* Gradient avatar (profile photo will go here) */}
+                          style={{ background:'rgba(13,11,30,0.85)', border:'1.5px solid rgba(108,99,255,0.3)', minHeight:120 }}>
                           <div className="w-14 h-14 rounded-full flex items-center justify-center"
-                            style={{ background: m.gradient, fontSize:'1.1rem', fontWeight:800, color:'white', boxShadow:'0 4px 16px rgba(0,0,0,0.45)' }}>
-                            {m.avatar}
+                            style={{ background:'linear-gradient(135deg,#6C63FF,#FF6B9D)', fontSize:'1.1rem', fontWeight:800, color:'white' }}>
+                            {p.senderUsername?.substring(0,2).toUpperCase()}
                           </div>
-                          {/* Speaking indicator */}
-                          {i===0 && (
-                            <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 rounded-full"
-                              style={{ background:'rgba(127,231,196,0.25)', border:'1px solid rgba(127,231,196,0.5)' }}>
-                              {[1,2,3].map(b=>(
-                                <motion.div key={b} animate={{ height:[3,10,3] }}
-                                  transition={{ duration:0.6, repeat:Infinity, delay:b*0.15 }}
-                                  style={{ width:2, background:'#7FE7C4', borderRadius:2 }} />
-                              ))}
-                            </div>
-                          )}
                           <span className="absolute bottom-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full"
                             style={{ background:'rgba(0,0,0,0.65)', color:'white' }}>
-                            {m.name.split(' ')[0]}
+                            {p.senderUsername?.split(' ')[0]}
                           </span>
                           <div className="absolute bottom-2 left-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ background:'rgba(0,0,0,0.5)' }}>
                             <Mic size={10} color="white" />
                           </div>
                         </motion.div>
                       ))}
+                      {voiceParticipants.length === 0 && (
+                        <div className="rounded-2xl flex items-center justify-center"
+                          style={{ background:'rgba(13,11,30,0.5)', border:'1.5px dashed rgba(108,99,255,0.2)', minHeight:120 }}>
+                          <p style={{ fontSize:'0.75rem', color:'var(--p-muted)' }}>Esperando participantes...</p>
+                        </div>
+                      )}
 
                       {/* Screen share tile */}
                       {voiceScreenShare && (
@@ -1079,7 +1365,7 @@ export function ParchesView({ linkedEvents = [] }: {
                       <div className="w-px h-8 mx-1" style={{ background:'rgba(108,99,255,0.2)' }} />
 
                       {/* Hang up */}
-                      <button onClick={()=>{ setVoiceConnected(false); setVoiceScreenShare(false); setVoiceCamOn(true); setVoiceMuted(false); }}
+                      <button onClick={() => { realLeaveVoice(); setVoiceScreenShare(false); setVoiceCamOn(true); }}
                         className="flex items-center gap-2 px-6 h-14 rounded-2xl font-semibold transition-all hover:scale-105"
                         style={{ background:'#FF4D6A', color:'white' }}>
                         <PhoneOff size={20} />
@@ -1223,40 +1509,25 @@ export function ParchesView({ linkedEvents = [] }: {
                 <input value={createName} onChange={e=>{setCreateName(e.target.value);setCreateError(null);}}
                   placeholder="Nombre del parche..." className="w-full rounded-xl px-4 py-3 text-sm outline-none"
                   style={{ background:'var(--p-input)', border:`1px solid ${createError && !createName.trim() ? '#FF4D6A' : 'rgba(108,99,255,0.2)'}`, color:'var(--p-text)' }} />
-                <textarea placeholder="Descripción..." rows={3} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
+                <textarea value={createDesc} onChange={e=>setCreateDesc(e.target.value)} placeholder="Descripción..." rows={3} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
                   style={{ background:'var(--p-input)', border:'1px solid rgba(108,99,255,0.2)', color:'var(--p-text)' }} />
-                {/* Category picker */}
+                {/* Category picker (real backend categories) */}
                 <div>
-                  <p style={{ fontSize:'0.8rem', fontWeight:600, marginBottom:'8px', color:'var(--p-sub)' }}>
-                    Tipo de parche <span style={{ color:'#FF4D6A' }}>*</span>
-                  </p>
+                  <p style={{ fontSize:'0.8rem', fontWeight:600, marginBottom:'8px', color:'var(--p-sub)' }}>Categoría <span style={{ color:'#FF4D6A' }}>*</span></p>
                   <div className="grid grid-cols-4 gap-2">
-                    {PARCHE_CATEGORIES.map(cat=>(
-                      <button key={cat.id} onClick={()=>{setCreateCategory(cat.id);setCreateSubcategory('');}}
+                    {ALL_CATEGORIES.map(cat=>{ const m = CATEGORY_META[cat]; const on = createCategory===cat; return (
+                      <button key={cat} onClick={()=>setCreateCategory(cat)}
                         className="flex flex-col items-center gap-1 py-2.5 rounded-xl border transition-all"
-                        style={{ background: createCategory===cat.id ? `${cat.color}20` : 'var(--p-input)', borderColor: createCategory===cat.id ? cat.color : 'rgba(108,99,255,0.15)', color: createCategory===cat.id ? cat.color : 'var(--p-muted)' }}>
-                        <span style={{ fontSize:'1.1rem' }}>{cat.emoji}</span>
-                        <span style={{ fontSize:'0.6rem', fontWeight: createCategory===cat.id ? 700 : 400 }}>{cat.label}</span>
+                        style={{ background: on ? `${m.color}20` : 'var(--p-input)', borderColor: on ? m.color : 'rgba(108,99,255,0.15)', color: on ? m.color : 'var(--p-muted)' }}>
+                        <span style={{ fontSize:'1.1rem' }}>{m.emoji}</span>
+                        <span style={{ fontSize:'0.6rem', fontWeight: on ? 700 : 400 }}>{m.label}</span>
                       </button>
-                    ))}
+                    ); })}
                   </div>
                 </div>
-                {/* Subcategory — only for Estudio */}
-                {createCategory==='estudio' && (
-                  <div>
-                    <p style={{ fontSize:'0.78rem', fontWeight:600, marginBottom:'6px', color:'var(--p-sub)' }}>Área de estudio</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {PARCHE_CATEGORIES.find(c=>c.id==='estudio')!.subcategories.map(sub=>(
-                        <button key={sub} onClick={()=>setCreateSubcategory(sub)}
-                          className="px-2.5 py-1 rounded-lg text-xs transition-all border"
-                          style={{ background: createSubcategory===sub ? 'rgba(108,99,255,0.2)' : 'var(--p-input)', borderColor: createSubcategory===sub ? '#6C63FF' : 'rgba(108,99,255,0.15)', color: createSubcategory===sub ? '#6C63FF' : 'var(--p-muted)', fontWeight: createSubcategory===sub ? 700 : 400 }}>
-                          {sub}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
                 <div className="flex gap-3">
+                  <input value={createCapacity} onChange={e=>setCreateCapacity(e.target.value)} type="number" min={1} placeholder="Cupos máx..." className="w-28 rounded-xl px-4 py-3 text-sm outline-none"
+                    style={{ background:'var(--p-input)', border:'1px solid rgba(108,99,255,0.2)', color:'var(--p-text)' }} />
                   {[{val:'public',label:'🌍 Público'},{val:'private',label:'🔒 Privado'}].map(opt=>(
                     <button key={opt.val} onClick={()=>setCreateType(opt.val as 'public'|'private')}
                       className="flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all"
@@ -1266,34 +1537,20 @@ export function ParchesView({ linkedEvents = [] }: {
                   ))}
                 </div>
                 {createType==='private' && (
-                  <input placeholder="Código de acceso (ej: CALC2026)..."
-                    className="w-full rounded-xl px-4 py-3 text-sm outline-none text-center font-mono tracking-widest"
-                    style={{ background:'var(--p-input)', border:'1px solid rgba(108,99,255,0.2)', color:'#6C63FF' }} />
+                  <p style={{ fontSize:'0.7rem', color:'var(--p-muted)', lineHeight:1.5 }}>🔒 Es privado: tras crearlo, genera un código de invitación desde el parche para que otros entren.</p>
                 )}
-                <textarea placeholder="Reglas del parche (opcional)..." rows={2} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
-                  style={{ background:'var(--p-input)', border:'1px solid rgba(108,99,255,0.2)', color:'var(--p-text)' }} />
+                <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color:'var(--p-muted)' }}>
+                  📎 {createFile ? createFile.name : 'Imagen (opcional)'}
+                  <input type="file" accept="image/*" className="hidden" onChange={e=>setCreateFile(e.target.files?.[0] ?? null)} />
+                </label>
                 <div className="flex gap-3">
-                  <button onClick={()=>{setShowCreate(false);setCreateName('');setCreateCategory('');setCreateSubcategory('');setCreateError(null);}}
+                  <button onClick={()=>{setShowCreate(false);setCreateName('');setCreateDesc('');setCreateCapacity('');setCreateFile(null);setCreateError(null);}}
                     className="flex-1 py-3 rounded-xl text-sm"
                     style={{ background:'var(--p-input)', color:'var(--p-muted)' }}>Cancelar</button>
-                  <button
-                    onClick={()=>{
-                      if (!createName.trim()) { setCreateError('El nombre del parche es obligatorio.'); return; }
-                      if (!createCategory) { setCreateError('Selecciona el tipo de parche.'); return; }
-                      const cat = PARCHE_CATEGORIES.find(c=>c.id===createCategory)!;
-                      const newParche = { id: myParches.length+1, name: createName.trim(), emoji: cat.emoji, color: cat.color, type: createType, live: 1, unread: 0, desc: '', category: createCategory, subcategory: createSubcategory };
-                      setMyParches(p=>[...p, newParche]);
-                      setSelectedParche(newParche as any);
-                      setShowCreate(false);
-                      setCreateName('');
-                      setCreateCategory('');
-                      setCreateSubcategory('');
-                      setCreateError(null);
-                      addToast({ type: 'info', title: '¡Parche creado!', message: `"${createName.trim()}" ya está listo.` });
-                    }}
-                    className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+                  <button onClick={createParcheHandler} disabled={createSaving}
+                    className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-50"
                     style={{ background:'linear-gradient(135deg,#6C63FF,#8B7FFF)', color:'white' }}>
-                    Crear Parche 🎪
+                    {createSaving ? 'Creando…' : 'Crear Parche 🎪'}
                   </button>
                 </div>
                 <AnimatePresence>
