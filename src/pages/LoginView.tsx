@@ -8,6 +8,8 @@ import monoImg from '../assets/monoULink.png';
 import { motion, AnimatePresence } from 'motion/react';
 import { authService } from '../services/authService';
 import { useAuth } from '../store/AuthContext';
+import { LegalModals, type LegalModalType } from '../components/LegalContent';
+import { friendlyError } from '../lib/errorMessages';
 
 type LoginStep = 'main' | 'email' | 'otp';
 
@@ -45,6 +47,7 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
   const [otp, setOtp]         = useState(['', '', '', '', '', '']);
   const [error, setError]     = useState('');
   const [otpCooldown, setOtpCooldown] = useState(0); // seconds remaining
+  const [legalModal, setLegalModal] = useState<LegalModalType>(null);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -113,10 +116,10 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
       setTimeout(() => otpRefs.current[0]?.focus(), 120);
     } catch (e: any) {
       const status = e?.response?.status;
-      const msg = e?.response?.data?.message;
       if (status === 403) setError('Este dominio de correo no está permitido.');
       else if (status === 429) setError('Demasiados intentos. Espera un momento.');
-      else setError(msg ?? 'No se pudo enviar el código. Intenta de nuevo.');
+      else if (status === 404) setError('No encontramos una cuenta con ese correo institucional.');
+      else setError(friendlyError(e, 'No se pudo enviar el código. Intenta de nuevo.'));
     } finally {
       setLoading(false);
     }
@@ -134,9 +137,8 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
       onLogin();
     } catch (e: any) {
       const status = e?.response?.status;
-      const msg = e?.response?.data?.message;
-      if (status === 401) setError(msg ?? 'Código incorrecto o expirado.');
-      else setError(msg ?? 'Error al verificar. Intenta de nuevo.');
+      if (status === 401) setError('Código incorrecto o expirado.');
+      else setError(friendlyError(e, 'Error al verificar. Intenta de nuevo.'));
       setOtp(['', '', '', '', '', '']);
       setTimeout(() => otpRefs.current[0]?.focus(), 120);
     } finally {
@@ -235,7 +237,7 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
               <motion.div key="main" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.22 }}>
                 <div className="text-center mb-6">
                   <h1 style={{ fontWeight: 800, fontSize: '1.5rem', color: textCol, marginBottom: '6px' }}>Iniciar Sesión</h1>
-                  <p style={{ fontSize: '0.85rem', color: mutedCol, lineHeight: 1.6 }}>Bienvenido de vuelta a la comunidad ECI 💜</p>
+                  <p style={{ fontSize: '0.85rem', color: mutedCol, lineHeight: 1.6 }}>Bienvenido de vuelta a la comunidad ECI</p>
                 </div>
 
                 {/* Microsoft button */}
@@ -357,13 +359,14 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
             </p>
             <p className="text-center mt-3" style={{ fontSize: '0.7rem', color: '#555', lineHeight: 1.5 }}>
               Al continuar aceptas nuestros{' '}
-              <button style={{ color: '#6C63FF', background: 'none', border: 'none', cursor: 'pointer' }} className="hover:underline">Términos de uso</button>
+              <button onClick={() => setLegalModal('terminos')} style={{ color: '#6C63FF', background: 'none', border: 'none', cursor: 'pointer' }} className="hover:underline">Términos de uso</button>
               {' '}y{' '}
-              <button style={{ color: '#6C63FF', background: 'none', border: 'none', cursor: 'pointer' }} className="hover:underline">Política de privacidad</button>
+              <button onClick={() => setLegalModal('privacidad')} style={{ color: '#6C63FF', background: 'none', border: 'none', cursor: 'pointer' }} className="hover:underline">Política de privacidad</button>
             </p>
           </div>
         </div>
       </motion.div>
+      <LegalModals open={legalModal} darkMode={darkMode} onClose={() => setLegalModal(null)} />
     </div>
   );
 }

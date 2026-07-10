@@ -37,7 +37,7 @@ const PARCHES_GRID = [
   { id:3, name:'Fútbol Martes ECI',     members:18, desc:'Partidos amistosos cada martes a las 5pm',   color:'#FFB347', emoji:'⚽', bg:'linear-gradient(135deg,#FFB34740,#FFB34710)' },
   { id:4, name:'Club Fotografía',       members:17, desc:'Salidas fotográficas y workshops semanales',  color:'#FF6B9D', emoji:'📷', bg:'linear-gradient(135deg,#FF6B9D40,#FF6B9D10)' },
   { id:5, name:'IEEE Student Branch',   members:45, desc:'Eventos de robótica, IA y networking',        color:'#5BC8FF', emoji:'⚡', bg:'linear-gradient(135deg,#5BC8FF40,#5BC8FF10)' },
-  { id:6, name:'Gaming Night 🎮',       members:11, desc:'Torneos de Valorant, LoL y más cada viernes',color:'#A78BFA', emoji:'🎮', bg:'linear-gradient(135deg,#A78BFA40,#A78BFA10)' },
+  { id:6, name:'Gaming Night',          members:11, desc:'Torneos de Valorant, LoL y más cada viernes',color:'#A78BFA', emoji:'🎮', bg:'linear-gradient(135deg,#A78BFA40,#A78BFA10)' },
 ];
 
 const EVENTO_DESTACADO = {
@@ -77,12 +77,12 @@ const FEED = [
   },
   {
     user: 'Sofía M.', avatar: 'SM', gradient: 'linear-gradient(135deg,#FFB347,#FF6B9D)',
-    action: 'compartió', target: 'Taller Bienestar: Mindfulness 🧘', emoji: '🌿',
+    action: 'compartió', target: 'Taller Bienestar: Mindfulness', emoji: '🌿',
     time: '34 min', likes: 23, liked: false, color: '#7FE7C4',
   },
   {
     user: 'Felipe A.', avatar: 'FA', gradient: 'linear-gradient(135deg,#7FE7C4,#6C63FF)',
-    action: 'alcanzó el', target: 'Nivel 12 en la ECI ⭐', emoji: '🏆',
+    action: 'alcanzó el', target: 'Nivel 12 en la ECI', emoji: '🏆',
     time: '1h', likes: 41, liked: false, color: '#FFB347',
   },
 ];
@@ -213,7 +213,7 @@ function FeedSection() {
             En vivo
           </p>
           <h2 style={{ fontWeight: 800, fontSize: '1.4rem', color: t.text }}>
-            Lo que pasa ahora 🔥
+            Lo que pasa ahora
           </h2>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full" style={{ background: 'rgba(255,77,106,0.1)' }}>

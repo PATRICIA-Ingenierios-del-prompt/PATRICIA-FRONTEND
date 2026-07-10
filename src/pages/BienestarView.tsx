@@ -18,15 +18,15 @@ import bosqueAudio      from '../assets/audio/bosque.mp3';
 import olasAudio        from '../assets/audio/olas.mp3';
 
 const INIT_MSGS = [
-  { id: 1, from: 'bot', text: '¡Hola! Soy Mono, tu compañero de bienestar 🐒💜 ¿Cómo te sientes hoy?' },
+  { id: 1, from: 'bot', text: '¡Hola! Soy Mono, tu compañero de bienestar. ¿Cómo te sientes hoy?' },
 ];
 
 const BOT_RESPONSES = [
-  'Entiendo, los parciales pueden ser muy agotadores 😔 Recuerda que el estrés es temporal. ¿Quieres practicar una respiración rápida?',
-  'Te escucho 💜 Es normal sentirse así. ¿Has dormido bien esta semana? El descanso es fundamental para el rendimiento académico.',
+  'Entiendo, los parciales pueden ser muy agotadores. Recuerda que el estrés es temporal. ¿Quieres practicar una respiración rápida?',
+  'Te escucho. Es normal sentirse así. ¿Has dormido bien esta semana? El descanso es fundamental para el rendimiento académico.',
   'Gracias por compartirlo conmigo. ¿Sabes que 5 minutos de meditación pueden reducir el cortisol hasta un 30%? ¿Te gustaría intentarlo?',
   'Eso es totalmente válido. ¿Quieres que te recomiende alguna película relajante o música para desconectarte un rato?',
-  '¡Eso suena increíble! Me alegra que estés bien 🎉 Sigue así. ¿Hay algo en lo que te pueda ayudar hoy?',
+  '¡Eso suena increíble! Me alegra que estés bien. Sigue así. ¿Hay algo en lo que te pueda ayudar hoy?',
 ];
 
 const SOUNDS = [
@@ -85,9 +85,9 @@ const DIARY_PROMPTS = [
 
 const AI_TIPS: Record<number, { title: string; tip: string; color: string }> = {
   5: { title: '¡Excelente estado!', tip: 'Sigue así. Es un buen momento para ayudar a otros o avanzar en proyectos importantes.', color: '#7FE7C4' },
-  4: { title: 'Vas bien 🙂', tip: 'Un día tranquilo. Aprovecha para descansar y consolidar lo aprendido hoy.', color: '#6C63FF' },
+  4: { title: 'Vas bien', tip: 'Un día tranquilo. Aprovecha para descansar y consolidar lo aprendido hoy.', color: '#6C63FF' },
   3: { title: 'Día regular', tip: 'Está bien no estar al 100%. Intenta una respiración rápida o escuchar tu playlist favorita.', color: '#FFB347' },
-  2: { title: 'Ánimo 💜', tip: 'Los días difíciles también pasan. Habla con alguien de confianza o prueba el chatbot de bienestar.', color: '#FF6B9D' },
+  2: { title: 'Ánimo', tip: 'Los días difíciles también pasan. Habla con alguien de confianza o prueba el chatbot de bienestar.', color: '#FF6B9D' },
   1: { title: 'Te escuchamos', tip: 'Reconocer el estrés es valiente. Considera hablar con el equipo de bienestar ECI hoy.', color: '#FF4D6A' },
 };
 
@@ -97,10 +97,10 @@ export function BienestarView() {
   const t = useTheme();
   const [tab, setTab] = useState<typeof TAB_IDS[number]>('chat');
   const TABS = [
-    { id: 'chat'    as const, label: '🐒 Mono' },
-    { id: 'diario'  as const, label: '📖 Diario' },
-    { id: 'sonidos' as const, label: '🎵 Sonidos' },
-    { id: 'respira' as const, label: '🌬️ Respira' },
+    { id: 'chat'    as const, label: 'Mono' },
+    { id: 'diario'  as const, label: 'Diario' },
+    { id: 'sonidos' as const, label: 'Sonidos' },
+    { id: 'respira' as const, label: 'Respira' },
   ];
   const [msgs, setMsgs] = useState(INIT_MSGS);
   const [msg, setMsg] = useState('');
@@ -156,7 +156,7 @@ export function BienestarView() {
       const botMsg = { id: Date.now() + 1, from: 'bot', text: response };
       setMsgs(p => [...p, botMsg]);
     } catch {
-      const errMsg = { id: Date.now() + 1, from: 'bot', text: '¡Ups! No pude conectarme con el servidor en este momento 😔 Asegúrate de que el backend esté corriendo en el puerto 8080.' };
+      const errMsg = { id: Date.now() + 1, from: 'bot', text: 'No pude conectarme en este momento. Intenta de nuevo en unos segundos.' };
       setMsgs(p => [...p, errMsg]);
     } finally {
       setIsLoading(false);
@@ -200,7 +200,7 @@ export function BienestarView() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h2 style={{ fontWeight: 700, fontSize: '1.3rem' }}>Bienestar 24/7</h2>
-          <p style={{ fontSize: '0.85rem', color: t.textMuted }}>Tu espacio seguro en la ECI — siempre aquí para ti 💜</p>
+          <p style={{ fontSize: '0.85rem', color: t.textMuted }}>Tu espacio seguro en la ECI — siempre aquí para ti</p>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
           {TABS.map(t => (
@@ -336,13 +336,13 @@ export function BienestarView() {
                 borderColor: t.darkMode ? 'rgba(108,99,255,0.22)' : 'rgba(108,99,255,0.2)',
               }}>
               <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(108,99,255,0.3), transparent 50%)' }} />
-              <div className="absolute right-0 bottom-0 h-full flex items-end pointer-events-none">
+              <div className="hidden sm:flex absolute right-0 bottom-0 h-full items-end pointer-events-none">
                 <ImageWithFallback src={monoDiarioImg} alt="Mono Diario"
                   className="object-contain object-bottom"
                   style={{ height: 190, filter: 'drop-shadow(0 4px 18px rgba(108,99,255,0.35))' }} />
               </div>
-              <div className="relative p-6 pr-36">
-                <div className="flex items-center justify-between mb-5">
+              <div className="relative p-6 pr-6 sm:pr-36">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
                   <div>
                     <p style={{ fontWeight: 800, fontSize: '1.05rem', color: t.darkMode ? '#F0EEFF' : '#1A1829' }}>¿Cómo te sientes hoy?</p>
                     <p style={{ fontSize: '0.78rem', color: t.darkMode ? '#8B85B0' : '#6B6490', marginTop: '2px' }}>
@@ -356,7 +356,7 @@ export function BienestarView() {
                   </div>
                 </div>
 
-                <div className="flex gap-3 justify-center mb-6">
+                <div className="flex flex-wrap gap-3 justify-center mb-6">
                   {EMOCIONES.map(em => {
                     const isSelected = diaryEmotion === em.emoji;
                     return (
@@ -364,7 +364,7 @@ export function BienestarView() {
                         onClick={() => { setDiaryEmotion(em.emoji); setDiaryError(null); }}
                         whileHover={{ scale: 1.15, y: -4 }}
                         whileTap={{ scale: 0.92 }}
-                        className="flex flex-col items-center gap-2 px-4 py-3 rounded-2xl transition-all"
+                        className="flex flex-col items-center gap-2 px-3 py-2 sm:px-4 sm:py-3 rounded-2xl transition-all"
                         style={{
                           background: isSelected ? `${em.color}20` : t.darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(108,99,255,0.06)',
                           border: `2px solid ${isSelected ? em.color : t.darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(108,99,255,0.15)'}`,
@@ -408,7 +408,7 @@ export function BienestarView() {
                 <button onClick={() => { setActivePrompt(p => (p + 1) % DIARY_PROMPTS.length); setDiaryNote(''); }}
                   className="px-3 py-1 rounded-xl text-xs transition-all hover:opacity-80"
                   style={{ background: 'rgba(108,99,255,0.1)', color: '#6C63FF', border: '1px solid rgba(108,99,255,0.2)' }}>
-                  💡 Sugerir pregunta
+                  Sugerir pregunta
                 </button>
               </div>
 
@@ -423,7 +423,7 @@ export function BienestarView() {
               </AnimatePresence>
 
               <textarea value={diaryNote} onChange={e => { setDiaryNote(e.target.value); setDiaryError(null); }}
-                placeholder="Escribe libremente... este espacio es solo tuyo 💜"
+                placeholder="Escribe libremente... este espacio es solo tuyo"
                 rows={5} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
                 style={{ background: t.inputBg, border: `1px solid ${diaryNote ? 'rgba(108,99,255,0.4)' : 'rgba(108,99,255,0.15)'}`, color: t.text, lineHeight: 1.7, transition: 'border-color 0.2s' }} />
 
@@ -445,7 +445,7 @@ export function BienestarView() {
                   whileTap={!savedToday ? { scale: 0.97 } : {}}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{ background: savedToday ? 'rgba(127,231,196,0.3)' : '#6C63FF', color: 'white', boxShadow: savedToday ? 'none' : '0 4px 14px rgba(108,99,255,0.35)' }}>
-                  {savedToday ? '✓ Guardado' : '💾 Guardar registro'}
+                  {savedToday ? '✓ Guardado' : 'Guardar registro'}
                 </motion.button>
               </div>
 
@@ -466,7 +466,7 @@ export function BienestarView() {
                     className="mt-3 px-4 py-3 rounded-xl flex items-center gap-2"
                     style={{ background: 'rgba(127,231,196,0.1)', border: '1px solid rgba(127,231,196,0.25)' }}>
                     <span style={{ fontSize: '1rem' }}>✅</span>
-                    <p style={{ fontSize: '0.78rem', color: '#7FE7C4' }}>¡Registro del día guardado! Tu constancia vale mucho 💪</p>
+                    <p style={{ fontSize: '0.78rem', color: '#7FE7C4' }}>¡Registro del día guardado! Tu constancia vale mucho.</p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -596,7 +596,7 @@ export function BienestarView() {
               ) : (
                 <div>
                   <p style={{ fontWeight: 800, fontSize: '1.2rem', color: t.darkMode ? '#F0EEFF' : '#1A1829', marginBottom: '6px' }}>
-                    Sonidos de bienestar 🎵
+                    Sonidos de bienestar
                   </p>
                   <p style={{ fontSize: '0.85rem', color: t.darkMode ? '#8B85B0' : '#6B6490', lineHeight: 1.6 }}>
                     Elige un sonido para relajarte, concentrarte o descansar mejor.
@@ -715,7 +715,7 @@ export function BienestarView() {
                 whileTap={{ scale: 0.97 }}
                 className="mt-8 px-12 py-4 rounded-2xl font-bold text-lg transition-all"
                 style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)', color: 'white', boxShadow: '0 6px 24px rgba(108,99,255,0.35)' }}>
-                🌬️ Comenzar {breathMode.name}
+                Comenzar {breathMode.name}
               </motion.button>
             ) : (
               <button onClick={stopBreath} className="mt-8 px-8 py-3 rounded-2xl font-semibold transition-all hover:opacity-80"
@@ -762,7 +762,7 @@ export function BienestarView() {
             {/* Tip */}
             <div className="rounded-2xl p-4 border mt-4"
               style={{ background: 'rgba(127,231,196,0.06)', borderColor: 'rgba(127,231,196,0.2)' }}>
-              <p style={{ fontSize: '0.75rem', color: '#7FE7C4', fontWeight: 600, marginBottom: '4px' }}>💡 Consejo</p>
+              <p style={{ fontSize: '0.75rem', color: '#7FE7C4', fontWeight: 600, marginBottom: '4px' }}>Consejo</p>
               <p style={{ fontSize: '0.75rem', color: t.textMuted, lineHeight: 1.6 }}>
                 Practica al menos 3 ciclos para sentir los beneficios. Lo ideal es hacer esto antes de dormir o en momentos de estrés.
               </p>

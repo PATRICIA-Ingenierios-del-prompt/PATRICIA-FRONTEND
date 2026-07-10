@@ -19,6 +19,7 @@ import monoCoderFImg     from '../assets/monoCoderN.png';
 import monoEstudioFImg   from '../assets/monoEstudiosoN.png';
 import monoCoderNewImg   from '../assets/monoCoderNew.png';
 import { motion, AnimatePresence } from 'motion/react';
+import { LegalModals, type LegalModalType } from '../components/LegalContent';
 
 interface LandingPageProps {
   onLogin: () => void;
@@ -55,6 +56,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
   const [featureIdx, setFeatureIdx] = useState(0);
   const [galleryOrder, setGalleryOrder] = useState([0, 1, 2, 3, 4, 5]);
   const [mobileExpandedIdx, setMobileExpandedIdx] = useState<number | null>(null);
+  const [legalModal, setLegalModal] = useState<LegalModalType>(null);
 
   const swapWithHero = (pos: number) => {
     setGalleryOrder(prev => {
@@ -213,7 +215,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                     <p style={{ fontWeight:700, fontSize:'0.88rem', color: dark ? 'white' : '#1A1829', marginTop:4, marginBottom:2 }}>Camila Rodríguez</p>
                     <p style={{ fontSize:'0.72rem', color: dark ? 'rgba(255,255,255,0.5)' : 'rgba(26,24,41,0.52)', marginBottom:9 }}>Ing. de Sistemas · 7mo sem.</p>
                     <div style={{ background:'rgba(108,99,255,0.15)', borderRadius:8, padding:'4px 9px', display:'inline-flex', gap:4 }}>
-                      <span style={{ fontSize:'0.64rem', color:'#6C63FF', fontWeight:700 }}>⚡ 96% compatibilidad</span>
+                      <span style={{ fontSize:'0.64rem', color:'#6C63FF', fontWeight:700 }}>96% compatibilidad</span>
                     </div>
                   </div>
                 </motion.div>
@@ -232,7 +234,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                   <div style={{ width:38, height:38, borderRadius:11, background:'rgba(91,200,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.1rem', flexShrink:0 }}>🧘</div>
                   <div>
                     <p style={{ fontWeight:700, fontSize:'0.78rem', color: dark ? 'white' : '#1A1829', lineHeight:1.2 }}>Momento de pausa</p>
-                    <p style={{ fontSize:'0.64rem', color:'#0A8FCC', fontWeight:600, marginTop:3 }}>🌿 Bienestar 24/7</p>
+                    <p style={{ fontSize:'0.64rem', color:'#0A8FCC', fontWeight:600, marginTop:3 }}>Bienestar 24/7</p>
                   </div>
                 </motion.div>
               </motion.div>
@@ -265,7 +267,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                   border:'1px solid rgba(255,179,71,0.45)',
                   backdropFilter:'blur(12px)' }}>
                 <motion.div animate={{ scale:[1,1.06,1] }} transition={{ duration:2.5, repeat:Infinity, ease:'easeInOut' }}>
-                  <p style={{ fontSize:'0.7rem', fontWeight:800, color:'#C47D00', whiteSpace:'nowrap' }}>⭐ +120 XP ganados hoy</p>
+                  <p style={{ fontSize:'0.7rem', fontWeight:800, color:'#C47D00', whiteSpace:'nowrap' }}>+120 XP ganados hoy</p>
                 </motion.div>
               </motion.div>
             </div>
@@ -286,7 +288,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                     <div style={{ width:7, height:7, borderRadius:'50%', background:'#FF4D6A', boxShadow:'0 0 8px #FF4D6A' }} />
                     <span style={{ fontSize:'0.58rem', fontWeight:800, color:'#FF4D6A', textTransform:'uppercase', letterSpacing:'0.09em' }}>En vivo</span>
                   </div>
-                  <p style={{ fontWeight:700, fontSize:'0.86rem', color: dark ? 'white' : '#1A1829', marginBottom:3 }}>Hackathon ECI 2026 💻</p>
+                  <p style={{ fontWeight:700, fontSize:'0.86rem', color: dark ? 'white' : '#1A1829', marginBottom:3 }}>Hackathon ECI 2026</p>
                   <p style={{ fontSize:'0.7rem', color: dark ? 'rgba(255,255,255,0.47)' : 'rgba(26,24,41,0.5)', marginBottom:11 }}>Sáb 20 Jun · Auditorio Ppal.</p>
                   <div style={{ height:4, background: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', borderRadius:2, overflow:'hidden', marginBottom:5 }}>
                     <div style={{ width:'78%', height:'100%', background:'linear-gradient(90deg,#FFB347,#FF6B9D)', borderRadius:2 }} />
@@ -308,10 +310,10 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                   <ImageWithFallback src={monoCoderNewImg} alt="Mona coleccionable" style={{ maxWidth:'70%', maxHeight:'100%', objectFit:'contain' }} />
                 </motion.div>
                 <div style={{ flexShrink:0 }}>
-                  <p style={{ fontWeight:700, fontSize:'0.8rem', color: dark ? 'white' : '#1A1829', lineHeight:1.25 }}>¡Nueva mona desbloqueada! 🎉</p>
+                  <p style={{ fontWeight:700, fontSize:'0.8rem', color: dark ? 'white' : '#1A1829', lineHeight:1.25 }}>¡Nueva mona desbloqueada!</p>
                   <p style={{ fontSize:'0.65rem', color: dark ? 'rgba(255,255,255,0.47)' : 'rgba(26,24,41,0.5)', marginTop:3 }}>Álbum de Monas · Edición Coder</p>
                 </div>
-                <span style={{ flexShrink:0, background:'rgba(167,139,250,0.15)', color:'#A78BFA', padding:'3px 10px', borderRadius:20, fontSize:'0.62rem', fontWeight:700 }}>🟣 Legendario</span>
+                <span style={{ flexShrink:0, background:'rgba(167,139,250,0.15)', color:'#A78BFA', padding:'3px 10px', borderRadius:20, fontSize:'0.62rem', fontWeight:700 }}>Legendario</span>
               </motion.div>
             </div>
           </div>
@@ -465,7 +467,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
           <motion.div initial={{ opacity:0 }} whileInView={{ opacity:1 }} viewport={{ once:true }} className="text-center mb-10">
             <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-5 text-sm font-semibold"
               style={{ background:'rgba(108,99,255,0.1)', color:'#6C63FF', border:'1px solid rgba(108,99,255,0.25)' }}>
-              ✨ Funcionalidades
+              Funcionalidades
             </span>
             <h2 style={{ fontWeight:900, fontSize:'clamp(1.8rem,4vw,2.8rem)', color:textH, lineHeight:1.15, marginBottom:14 }}>
               Todo lo que necesitas,<br />
@@ -588,7 +590,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
           </div>
 
           <div className="flex flex-wrap justify-center gap-3 mt-14">
-            {['🔒 Verificación ECI','⚡ Tiempo real','🤖 IA integrada','💜 Bienestar 24/7','🎮 Gamificado'].map(tag => (
+            {['Verificación ECI','Tiempo real','IA integrada','Bienestar 24/7','Gamificado'].map(tag => (
               <span key={tag} className="px-4 py-2 rounded-full text-sm"
                 style={{ background:'rgba(108,99,255,0.08)', color:'#6C63FF', border:'1px solid rgba(108,99,255,0.16)', fontWeight:500 }}>
                 {tag}
@@ -647,7 +649,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                 <motion.div animate={{ rotate:[-3,3,-3] }} transition={{ duration:3, repeat:Infinity, ease:'easeInOut' }}
                   className="absolute -top-4 -right-4 px-3 py-1.5 rounded-xl text-xs font-bold"
                   style={{ background:'#6C63FF', color:'white', boxShadow:'0 4px 14px rgba(108,99,255,0.42)' }}>
-                  🎪 ¡Únete!
+                  ¡Únete!
                 </motion.div>
               </div>
             </div>
@@ -665,11 +667,17 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
           U•link © 2026 · Escuela Colombiana de Ingeniería · Solo para la comunidad ECI
         </p>
         <div className="flex items-center justify-center gap-6 mt-4">
-          {['Términos de uso','Privacidad','Centro de ayuda','Contacto'].map(l => (
-            <button key={l} className="text-xs hover:underline transition-all" style={{ color:textS, background:'none', border:'none' }}>{l}</button>
+          {([
+            { label: 'Términos de uso', type: 'terminos' as const },
+            { label: 'Privacidad', type: 'privacidad' as const },
+            { label: 'Centro de ayuda', type: 'ayuda' as const },
+            { label: 'Contacto', type: 'contacto' as const },
+          ]).map(l => (
+            <button key={l.type} onClick={() => setLegalModal(l.type)} className="text-xs hover:underline transition-all" style={{ color:textS, background:'none', border:'none' }}>{l.label}</button>
           ))}
         </div>
       </footer>
+      <LegalModals open={legalModal} darkMode={dark} onClose={() => setLegalModal(null)} />
     </div>
   );
 }

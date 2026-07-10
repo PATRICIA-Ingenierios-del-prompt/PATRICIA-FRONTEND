@@ -136,7 +136,7 @@ export function VisionSelector({ mode, setMode, dyslexia, setDyslexia, collapsed
             {/* Vision / Color section */}
             <div className="px-3 pt-3 pb-1">
               <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#6C63FF', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>
-                👁️ Daltonismo
+                Daltonismo
               </p>
               {VISION_MODES.map(vm => (
                 <button key={vm.id}
@@ -157,7 +157,7 @@ export function VisionSelector({ mode, setMode, dyslexia, setDyslexia, collapsed
             {/* Dyslexia section */}
             <div className="px-3 pb-3">
               <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#7FE7C4', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>
-                📖 Dislexia
+                Dislexia
               </p>
               <div className="flex items-center justify-between px-3 py-2.5 rounded-xl border"
                 style={{ background: dyslexia ? 'rgba(127,231,196,0.08)' : 'rgba(108,99,255,0.04)', borderColor: dyslexia ? 'rgba(127,231,196,0.3)' : 'rgba(108,99,255,0.15)' }}>
@@ -392,7 +392,7 @@ export function AccessibilityPanel({ mode, setMode, dyslexia, setDyslexia }: Acc
             className="p-3 rounded-xl border"
             style={{ background: 'linear-gradient(135deg, rgba(108,99,255,0.08), rgba(127,231,196,0.06))', borderColor: 'rgba(108,99,255,0.25)' }}>
             <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--p-text)', marginBottom: '3px' }}>
-              🎉 Modos combinados activos
+              Modos combinados activos
             </p>
             <p style={{ fontSize: '0.68rem', color: 'var(--p-muted)', lineHeight: 1.5 }}>
               {VISION_MODES.find(m => m.id === mode)?.label} + Lectura fácil — ambos modos funcionan de forma independiente y simultánea.

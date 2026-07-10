@@ -8,6 +8,7 @@ import logoNuevoClaroImg from '../assets/logoNuevoClaro.png';
 import { motion, AnimatePresence } from 'motion/react';
 import { userService, type OnboardingPayload } from '../services/userService';
 import { useAuth } from '../store/AuthContext';
+import { friendlyError } from '../lib/errorMessages';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface OnboardingViewProps {
@@ -183,7 +184,7 @@ function StepPerfil({ data, setData, onNext, onBack, dark }: {
 
       {/* ── Datos académicos ── */}
       <div className="rounded-2xl p-4 border" style={{ borderColor: 'rgba(108,99,255,0.2)', background: idleBg }}>
-        <p style={{ fontWeight: 700, fontSize: '0.9rem', color: text, marginBottom: '14px' }}>🎓 Datos académicos</p>
+        <p style={{ fontWeight: 700, fontSize: '0.9rem', color: text, marginBottom: '14px' }}>Datos académicos</p>
         <div className="mb-4">
           <label style={labelStyle(dark)}>Carrera *</label>
           <div className="relative">
@@ -377,8 +378,7 @@ export function OnboardingView({ onComplete, darkMode }: OnboardingViewProps) {
       setUserName(`${payload.nombre} ${payload.apellidos}`);
       onComplete();
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Error al guardar el perfil. Intenta de nuevo.';
-      setError(msg);
+      setError(friendlyError(err, 'Error al guardar el perfil. Intenta de nuevo.'));
     } finally {
       setLoading(false);
     }

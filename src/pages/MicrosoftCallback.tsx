@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { authService } from '../services/authService';
 import { useAuth } from '../store/AuthContext';
 import { AnimatedBackground } from '../components/AnimatedBackground';
+import { friendlyError } from '../lib/errorMessages';
 
 interface Props {
   onSuccess: (fromRegister: boolean) => void;
@@ -22,10 +23,9 @@ export function MicrosoftCallback({ onSuccess, onError, darkMode }: Props) {
     const params      = new URLSearchParams(window.location.search);
     const code        = params.get('code');
     const msError     = params.get('error');
-    const msErrorDesc = params.get('error_description');
 
     if (msError || !code) {
-      setErrorMsg(msErrorDesc ?? msError ?? 'No se recibió el código de autorización.');
+      setErrorMsg('No pudimos completar el inicio de sesión con Microsoft. Intenta de nuevo.');
       setStatus('error');
       return;
     }
@@ -40,11 +40,7 @@ export function MicrosoftCallback({ onSuccess, onError, darkMode }: Props) {
         onSuccess();
       })
       .catch(err => {
-        const msg =
-          err?.response?.data?.message ??
-          err?.message ??
-          'Error al iniciar sesión con Microsoft.';
-        setErrorMsg(msg);
+        setErrorMsg(friendlyError(err, 'Error al iniciar sesión con Microsoft. Intenta de nuevo.'));
         setStatus('error');
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps

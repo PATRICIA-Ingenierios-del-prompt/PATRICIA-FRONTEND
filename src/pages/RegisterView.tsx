@@ -12,6 +12,7 @@ import logoNuevoOscuroImg from '../assets/logoNuevoOscuro.png';
 import logoNuevoClaroImg  from '../assets/logoNuevoClaro.png';
 import monoImg            from '../assets/monoULink.png';
 import { motion } from 'motion/react';
+import { LegalModals, type LegalModalType } from '../components/LegalContent';
 
 const MS_CLIENT_ID = '2f99fb73-56a7-49d2-a199-8e47c687251b';
 const MS_TENANT    = 'common';
@@ -37,6 +38,7 @@ function MicrosoftLogo({ size = 20 }: { size?: number }) {
 
 export function RegisterView({ onGoLogin, darkMode = true, setDarkMode }: RegisterViewProps) {
   const [loading, setLoading] = useState(false);
+  const [legalModal, setLegalModal] = useState<LegalModalType>(null);
 
   const cardBg   = darkMode ? '#1A1A2E' : '#FFFFFF';
   const textCol  = darkMode ? '#E0E0FF' : '#1A1829';
@@ -140,12 +142,13 @@ export function RegisterView({ onGoLogin, darkMode = true, setDarkMode }: Regist
           {/* Legal footer */}
           <p className="text-center mt-6" style={{ fontSize: '0.7rem', color: '#555', lineHeight: 1.5 }}>
             Al continuar aceptas nuestros{' '}
-            <button style={{ color: '#6C63FF', background: 'none', border: 'none', cursor: 'pointer' }} className="hover:underline">Términos de uso</button>
+            <button onClick={() => setLegalModal('terminos')} style={{ color: '#6C63FF', background: 'none', border: 'none', cursor: 'pointer' }} className="hover:underline">Términos de uso</button>
             {' '}y{' '}
-            <button style={{ color: '#6C63FF', background: 'none', border: 'none', cursor: 'pointer' }} className="hover:underline">Política de privacidad</button>
+            <button onClick={() => setLegalModal('privacidad')} style={{ color: '#6C63FF', background: 'none', border: 'none', cursor: 'pointer' }} className="hover:underline">Política de privacidad</button>
           </p>
         </div>
       </motion.div>
+      <LegalModals open={legalModal} darkMode={darkMode} onClose={() => setLegalModal(null)} />
     </div>
   );
 }

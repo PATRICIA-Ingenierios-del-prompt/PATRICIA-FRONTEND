@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { tokenManager } from './tokenManager';
+import { SESSION_EXPIRED_KEY } from '../lib/sessionKeys';
 
 /**
  * Single HTTP client — always talks to the API Gateway (VITE_API_URL).
@@ -73,6 +74,7 @@ apiClient.interceptors.response.use(
       return apiClient(original);
     } catch {
       tokenManager.clearTokens();
+      sessionStorage.setItem(SESSION_EXPIRED_KEY, '1');
       window.location.reload();
       return Promise.reject(error);
     } finally {
