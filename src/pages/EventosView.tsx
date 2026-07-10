@@ -5,6 +5,7 @@ import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 import { useTheme } from '../store/ThemeContext';
 import { addToast } from '../components/ToastSystem';
 import { eventService } from '../services/eventService';
+import { friendlyError } from '../lib/errorMessages';
 import type { EventCategory, EventMapResponse, EventResponse, UUID } from '../types/patricia';
 import {
   ALL_CATEGORIES, CATEGORY_META, DARK_MAP_STYLES, ECI_CENTER, GMAPS_LOADER_ID, GOOGLE_MAPS_KEY, pinSvg,
@@ -184,7 +185,7 @@ function CreateEventModal({ onClose, onCreated }: { onClose: () => void; onCreat
       addToast({ type: 'logro', title: '¡Evento creado!', message: form.name });
       onCreated(); onClose();
     } catch (e: any) {
-      addToast({ type: 'reporte', title: 'No se pudo crear', message: e?.response?.data?.message ?? e?.message ?? 'Error' });
+      addToast({ type: 'reporte', title: 'No se pudo crear', message: friendlyError(e, 'No se pudo crear el evento. Intenta de nuevo.') });
     } finally { setSaving(false); }
   };
 
@@ -210,7 +211,7 @@ function CreateEventModal({ onClose, onCreated }: { onClose: () => void; onCreat
           </div>
           <input value={form.place} onChange={set('place')} placeholder="Nombre del lugar..." className="w-full rounded-xl px-4 py-3 text-sm outline-none" style={inputStyle} />
           <div>
-            <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>📍 Toca el mapa para ubicar el evento</p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>Toca el mapa para ubicar el evento</p>
             <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'rgba(108,99,255,0.2)' }}>
               <CampusMap events={[]} height={180} pickMode pickedPos={picked} onPick={setPicked} />
             </div>
@@ -257,7 +258,7 @@ export function EventosView({ onTrackEvent, enrolledIds, onEnroll }: {
       const details = await Promise.all(page.content.map(e => eventService.get(e.eventId).then(d => [e.eventId, d] as const).catch(() => null)));
       setDetailCache(new Map(details.filter((x): x is readonly [UUID, EventResponse] => x !== null)));
     } catch (e: any) {
-      setError(e?.response?.status === 401 ? 'Inicia sesión para ver los eventos.' : (e?.message ?? 'Error al cargar'));
+      setError(e?.response?.status === 401 ? 'Inicia sesión para ver los eventos.' : friendlyError(e, 'No se pudieron cargar los eventos. Intenta de nuevo.'));
     } finally { setLoading(false); }
   }, [scope]);
   useEffect(() => { void load(); }, [load]);
@@ -292,7 +293,7 @@ export function EventosView({ onTrackEvent, enrolledIds, onEnroll }: {
       setRaw(prev => prev.map(e => e.eventId === id ? { ...e, spotsLeft: Math.max(0, e.spotsLeft - 1) } : e));
       addToast({ type: 'logro', title: '¡Inscrito!', message: 'Ya eres parte del evento.' });
     } catch (e: any) {
-      addToast({ type: 'reporte', title: 'No se pudo inscribir', message: e?.response?.data?.message ?? e?.message ?? 'Error' });
+      addToast({ type: 'reporte', title: 'No se pudo inscribir', message: friendlyError(e, 'No te pudimos inscribir. Intenta de nuevo.') });
     }
   };
   const track = (id: UUID) => onTrackEvent ? onTrackEvent(id) : addToast({ type: 'info', title: 'Ubicación en vivo', message: 'Abre la vista de Ubicación.' });

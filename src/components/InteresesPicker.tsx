@@ -229,7 +229,7 @@ export function InteresesPicker({
               animate={shakeCount > 0 ? { x: [-4, 4, -4, 4, 0] } : {}}
               transition={{ duration: 0.35 }}
               style={{ fontSize: '0.75rem', color: '#FFB347' }}>
-              ✋ máximo alcanzado
+              máximo alcanzado
             </motion.span>
           )}
         </div>

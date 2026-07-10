@@ -10,6 +10,7 @@ import { locationService } from '../services/locationService';
 import { LocationSocket } from '../services/locationSocket';
 import type { EventCategory, EventResponse, GeoBroadcastMessage, ReportType, UUID } from '../types/patricia';
 import { CATEGORY_META, DARK_MAP_STYLES, ECI_CENTER, GMAPS_LOADER_ID, GOOGLE_MAPS_KEY, colorForUser, userDotSvg } from '../lib/maps';
+import { friendlyError } from '../lib/errorMessages';
 
 export interface EnrolledEvent { eventId: UUID; name: string; category: EventCategory; }
 type PositionMap = Map<UUID, GeoBroadcastMessage>;
@@ -109,7 +110,7 @@ function ReportModal({ eventId, onClose }: { eventId: UUID; onClose: () => void 
       await eventService.createReport(eventId, { reportType: type, description });
       addToast({ type: 'reporte', title: 'Reporte enviado', message: 'Se registró el incidente y se aseguró tu ubicación como evidencia.' });
       onClose();
-    } catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo reportar', message: e?.response?.data?.message ?? e?.message ?? 'Error' }); }
+    } catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo reportar', message: friendlyError(e, 'No se pudo enviar el reporte. Intenta de nuevo.') }); }
     finally { setSaving(false); }
   };
   return (

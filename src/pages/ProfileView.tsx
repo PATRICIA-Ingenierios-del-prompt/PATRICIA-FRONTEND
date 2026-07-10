@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Edit2, Camera, X, Loader2 } from 'lucide-react';
+import { Edit2, Camera, X, Loader2, GraduationCap, BookOpen, MapPin, Mail, User } from 'lucide-react';
 import { InteresesPicker, CATEGORIAS } from '../components/InteresesPicker';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
 import { useAuth } from '../store/AuthContext';
 import { userService, type PerfilResponse } from '../services/userService';
 import { addToast } from '../components/ToastSystem';
+import { friendlyError } from '../lib/errorMessages';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DAYS  = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
@@ -88,7 +89,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
       addToast({ type: 'info', title: 'Perfil actualizado', message: 'Tus cambios fueron guardados.' });
       onClose();
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'No se pudieron guardar los cambios.');
+      setError(friendlyError(e, 'No se pudieron guardar los cambios.'));
     } finally {
       setSaving(false);
     }
@@ -129,7 +130,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
             <button key={k} onClick={() => setTab(k)}
               className="flex-1 py-2 rounded-lg text-sm font-medium transition-all"
               style={{ background: tab === k ? '#6C63FF' : 'transparent', color: tab === k ? 'white' : t.textMuted }}>
-              {k === 'datos' ? '👤 Datos' : '🏷️ Intereses'}
+              {k === 'datos' ? 'Datos' : 'Intereses'}
             </button>
           ))}
         </div>
@@ -339,12 +340,12 @@ export function ProfileView() {
           <div className="rounded-2xl border p-6" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
             <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text, marginBottom: '16px' }}>Sobre mí</h3>
             <div className="space-y-3">
-              {carrera   && <div className="flex items-center gap-3"><span>🎓</span><span style={{ fontSize: '0.87rem', color: t.textSub }}>{carrera}</span></div>}
-              {semestre  && <div className="flex items-center gap-3"><span>📚</span><span style={{ fontSize: '0.87rem', color: t.textSub }}>{semestre}</span></div>}
-              <div className="flex items-center gap-3"><span>📍</span><span style={{ fontSize: '0.87rem', color: t.textSub }}>Escuela Colombiana de Ingeniería</span></div>
-              {userEmail && <div className="flex items-center gap-3"><span>✉️</span><span style={{ fontSize: '0.87rem', color: t.textSub }}>{userEmail}</span></div>}
+              {carrera   && <div className="flex items-center gap-3"><GraduationCap size={15} style={{ color: t.textMuted }} /><span style={{ fontSize: '0.87rem', color: t.textSub }}>{carrera}</span></div>}
+              {semestre  && <div className="flex items-center gap-3"><BookOpen size={15} style={{ color: t.textMuted }} /><span style={{ fontSize: '0.87rem', color: t.textSub }}>{semestre}</span></div>}
+              <div className="flex items-center gap-3"><MapPin size={15} style={{ color: t.textMuted }} /><span style={{ fontSize: '0.87rem', color: t.textSub }}>Escuela Colombiana de Ingeniería</span></div>
+              {userEmail && <div className="flex items-center gap-3"><Mail size={15} style={{ color: t.textMuted }} /><span style={{ fontSize: '0.87rem', color: t.textSub }}>{userEmail}</span></div>}
               {perfil?.genero && perfil.genero !== 'nd' && (
-                <div className="flex items-center gap-3"><span>👤</span><span style={{ fontSize: '0.87rem', color: t.textSub, textTransform: 'capitalize' }}>{perfil.genero}</span></div>
+                <div className="flex items-center gap-3"><User size={15} style={{ color: t.textMuted }} /><span style={{ fontSize: '0.87rem', color: t.textSub, textTransform: 'capitalize' }}>{perfil.genero}</span></div>
               )}
             </div>
           </div>
@@ -354,9 +355,9 @@ export function ProfileView() {
             <div className="flex items-center justify-between mb-4">
               <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text }}>Intereses</h3>
               <button onClick={() => setShowEdit(true)}
-                className="px-3 py-1.5 rounded-xl text-xs font-medium hover:opacity-80 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium hover:opacity-80 transition-all"
                 style={{ background: t.inputBg, color: '#6C63FF', border: '1px solid rgba(108,99,255,0.2)' }}>
-                ✏️ Editar
+                <Edit2 size={12} /> Editar
               </button>
             </div>
             <div className="flex flex-wrap gap-2">

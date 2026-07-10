@@ -435,7 +435,7 @@ export function ParquesBoard() {
   // Status bar text
   const statusText = (() => {
     if (gameStatus === 'WAITING_FOR_PLAYERS') return '⏳ Preparando la partida…';
-    if (winner !== null) return `🏆 ${playerNames[winner]} ganó`;
+    if (winner !== null) return `${playerNames[winner]} ganó`;
     if (!isMyTurn) return `Turno de ${playerNames[currentPlayer] ?? '?'}…`;
     if (hasDiced) return `Click en ficha para mover ${diceSum}`;
     return 'Tú — tira los dados';
@@ -451,7 +451,7 @@ export function ParquesBoard() {
           <DiceFace v={dice[0]} rolling={rolling} color={P_COLORS[currentPlayer]} isDark={isDark} />
           <DiceFace v={dice[1]} rolling={rolling} color={P_COLORS[currentPlayer]} isDark={isDark} />
         </div>
-        {isDouble && hasDiced && <p className="text-center mb-2" style={{ fontSize: '0.7rem', color: '#FFB347', fontWeight: 700 }}>🎯 ¡Doble! +1 turno</p>}
+        {isDouble && hasDiced && <p className="text-center mb-2" style={{ fontSize: '0.7rem', color: '#FFB347', fontWeight: 700 }}>¡Doble! +1 turno</p>}
         <motion.button onClick={rollDice}
           disabled={rolling || !isMyTurn || hasDiced || winner !== null || gameStatus !== 'IN_PROGRESS'}
           whileHover={!rolling && isMyTurn && !hasDiced ? { scale: 1.03 } : {}}
@@ -482,7 +482,7 @@ export function ParquesBoard() {
             {log.map((m, i) => (
               <p key={i} style={{
                 fontSize: '0.65rem',
-                color: m.includes('Turno') ? '#7FE7C4' : m.includes('🏆') ? '#FFB347' : 'var(--p-sub)',
+                color: m.includes('Turno') ? '#7FE7C4' : m.includes('GANÓ') ? '#FFB347' : 'var(--p-sub)',
                 padding: '3px 6px', borderRadius: 6, background: 'rgba(108,99,255,0.05)', lineHeight: 1.4,
               }}>{m}</p>
             ))}
@@ -493,12 +493,12 @@ export function ParquesBoard() {
       {/* Buttons */}
       <button onClick={resetGame} className={`py-2 rounded-xl text-sm font-medium ${mobile ? 'flex-1' : 'w-full'}`}
         style={{ background: winner !== null ? '#7FE7C4' : 'rgba(108,99,255,0.1)', color: winner !== null ? '#0F0E1A' : 'var(--p-muted)', minWidth: mobile ? 100 : 'auto' }}>
-        {winner !== null ? '🎮 Nueva' : '🔄 Nueva'}
+        Nueva
       </button>
 
       <button onClick={() => setShowRules(true)} className={`py-2 rounded-xl text-sm font-medium ${mobile ? 'flex-1' : 'w-full'}`}
         style={{ background: 'rgba(127,231,196,0.12)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.25)', minWidth: mobile ? 100 : 'auto' }}>
-        📖 Reglas
+        Reglas
       </button>
     </>
   );
@@ -618,7 +618,7 @@ export function ParquesBoard() {
               className="rounded-3xl border overflow-y-auto"
               style={{ background: isDark ? 'rgba(20,18,38,0.98)' : '#fff', borderColor: 'rgba(108,99,255,0.35)', width: 340, maxHeight: '80%', padding: '24px' }}>
               <div className="flex items-center justify-between mb-4">
-                <h3 style={{ fontWeight: 800, fontSize: '1.1rem', color: isDark ? '#F0EEFF' : '#1A1829' }}>📖 Reglas del Parqués</h3>
+                <h3 style={{ fontWeight: 800, fontSize: '1.1rem', color: isDark ? '#F0EEFF' : '#1A1829' }}>Reglas del Parqués</h3>
                 <button onClick={() => setShowRules(false)} style={{ color: isDark ? '#8B85B0' : '#9490B5', fontSize: '1.2rem', lineHeight: 1 }}>✕</button>
               </div>
               {[
@@ -663,7 +663,7 @@ export function ParquesBoard() {
               <p style={{ color: 'var(--p-muted)', marginBottom: 16, fontSize: '0.85rem' }}>Todas las fichas llegaron a la meta</p>
               <button onClick={resetGame} className="px-8 py-3 rounded-2xl font-semibold"
                 style={{ background: P_COLORS[winner], color: 'white' }}>
-                🎮 Nueva partida
+                Nueva partida
               </button>
             </motion.div>
           </motion.div>

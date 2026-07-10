@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Compass, Heart, Users, MessageSquare, Calendar, Smile, Image,
   Bell, Settings, ChevronLeft, ChevronRight, Search, Zap,
-  Sun, Moon, LogOut, Menu, MapPin
+  Sun, Moon, LogOut, Menu, MapPin, ShieldCheck
 } from 'lucide-react';
 import { HomeView } from './pages/HomeView';
 import { ChatsView } from './pages/ChatsView';
@@ -17,21 +17,26 @@ import { RegisterView } from './pages/RegisterView';
 import { LandingPage } from './pages/LandingPage';
 import { OnboardingView } from './pages/OnboardingView';
 import { MicrosoftCallback } from './pages/MicrosoftCallback';
+import { AdminView } from './pages/AdminView';
 import { AuthProvider, useAuth } from './store/AuthContext';
+import { ReportsProvider } from './store/ReportsContext';
+import { SupportProvider } from './store/SupportContext';
+import { isAdminEmail } from './lib/admin';
 import { userService } from './services/userService';
 import { tokenManager } from './services/tokenManager';
 import { ToastContainer, addToast } from './components/ToastSystem';
 import { AnimatedBackground } from './components/AnimatedBackground';
 import { ThemeContext, getTheme, useTheme } from './store/ThemeContext';
+import { LAST_APP_PATH_KEY, SESSION_EXPIRED_KEY } from './lib/sessionKeys';
 import { AccessibilityPanel, ColorBlindFilters, applyDyslexiaMode, getVisionFilter, type VisionMode } from './components/ColorAccessibility';
 import { ImageWithFallback } from './components/ImageWithFallback';
+import { LegalModals, type LegalModalType } from './components/LegalContent';
 import logoNuevoOscuroImg from './assets/logoNuevoOscuro.png';
 import logoNuevoClaroImg from './assets/logoNuevoClaro.png';
 import { useLocation, useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
-import { tokenManager } from './services/tokenManager';
 type AuthState = 'login' | 'loginform' | 'register' | 'callback' | 'onboarding' | 'app';
-type ViewId = 'home' | 'matching' | 'parches' | 'chats' | 'eventos' | 'bienestar' | 'album' | 'notificaciones' | 'ajustes' | 'perfil';
+type ViewId = 'home' | 'matching' | 'parches' | 'chats' | 'eventos' | 'bienestar' | 'album' | 'notificaciones' | 'ajustes' | 'perfil' | 'admin';
 
 
 const NAV_ITEMS: { id: ViewId; label: string; icon: React.ComponentType<any>; badge?: number }[] = [
@@ -57,6 +62,7 @@ const APP_VIEW_PATHS: Record<ViewId, string> = {
   notificaciones: '/app/notificaciones',
   ajustes: '/app/ajustes',
   perfil: '/app/perfil',
+  admin: '/app/admin',
 };
 
 const APP_ROUTE_SET = new Set(Object.values(APP_VIEW_PATHS));
@@ -88,14 +94,15 @@ const VIEW_LABELS: Record<ViewId, string> = {
   notificaciones: 'Notificaciones',
   ajustes:        'Ajustes',
   perfil:         'Mi Perfil',
+  admin:          'Panel Admin',
 };
 
 const NOTIFICATIONS_DATA = [
-  { id: 1, type: 'match' as const, text: '¡Nuevo match con Camila Rodríguez! 💜', time: '2 min', read: false },
+  { id: 1, type: 'match' as const, text: '¡Nuevo match con Camila Rodríguez!', time: '2 min', read: false },
   { id: 2, type: 'chat' as const,  text: 'Tu parche "Cálculo III" tiene 3 mensajes nuevos', time: '15 min', read: false },
-  { id: 3, type: 'evento' as const,text: 'El Hackathon ECI 2026 empieza mañana 🚀', time: '1h', read: false },
-  { id: 4, type: 'match' as const, text: 'Isabela te envió una solicitud de match ❤️', time: '2h', read: false },
-  { id: 5, type: 'xp' as const,    text: 'Subiste al Nivel 12 — ¡Eres un Explorador! ⬆️', time: '1d', read: true },
+  { id: 3, type: 'evento' as const,text: 'El Hackathon ECI 2026 empieza mañana', time: '1h', read: false },
+  { id: 4, type: 'match' as const, text: 'Isabela te envió una solicitud de match', time: '2h', read: false },
+  { id: 5, type: 'xp' as const,    text: 'Subiste al Nivel 12 — ¡Eres un Explorador!', time: '1d', read: true },
 ];
 
 const notifEmoji: Record<string, string> = { match: '💜', chat: '💬', evento: '🎉', reporte: '⚠️', xp: '⚡', logro: '🏆', info: 'ℹ️' };
@@ -346,7 +353,7 @@ function AlbumView() {
               <button onClick={() => { setShowMonasGuide(true); setGuidePage(0); }}
                 className="px-2.5 py-1 rounded-full text-xs font-semibold transition-all hover:opacity-85"
                 style={{ background: 'rgba(127,231,196,0.22)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.4)', backdropFilter: 'blur(8px)' }}>
-                🗺️ ¿Cómo se ganan?
+                ¿Cómo se ganan?
               </button>
             </div>
           </div>
@@ -826,6 +833,7 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
   const [notifToggles, setNotifToggles] = useState({ matches: true, parches: true, eventos: false });
   const [privacy, setPrivacy] = useState('publico');
   const [incognito, setIncognito] = useState(false);
+  const [legalModal, setLegalModal] = useState<LegalModalType>(null);
 
   const Toggle = ({ on, onToggle }: { on: boolean; onToggle: () => void }) => (
     <button onClick={onToggle}
@@ -842,9 +850,9 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
       <div className="flex gap-1 mb-5 p-1 rounded-2xl border xl:hidden overflow-x-auto"
         style={{ background: t.cardBg, borderColor: t.cardBorder }}>
         {[
-          { id: 'privacidad', label: '🔒 Privacidad' },
-          { id: 'notificaciones', label: '🔔 Notifs' },
-          { id: 'mas', label: '⚙️ Más' },
+          { id: 'privacidad', label: 'Privacidad' },
+          { id: 'notificaciones', label: 'Notifs' },
+          { id: 'mas', label: 'Más' },
         ].map(s => (
           <button key={s.id}
             className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
@@ -887,7 +895,6 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
           {/* Notificaciones */}
           <div className="rounded-2xl border overflow-hidden" style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
             <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: 'rgba(108,99,255,0.1)', background: 'rgba(108,99,255,0.05)' }}>
-              <span style={{ fontSize: '1rem' }}>🔔</span>
               <span style={{ fontWeight: 700, color: '#6C63FF', fontSize: '0.9rem' }}>Notificaciones</span>
             </div>
             {([
@@ -909,13 +916,12 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
           {/* Privacidad */}
           <div className="rounded-2xl border overflow-hidden" style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
             <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: 'rgba(108,99,255,0.1)', background: 'rgba(108,99,255,0.05)' }}>
-              <span style={{ fontSize: '1rem' }}>🔒</span>
               <span style={{ fontWeight: 700, color: '#6C63FF', fontSize: '0.9rem' }}>Privacidad</span>
             </div>
             <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--p-input)' }}>
               <p style={{ fontSize: '0.9rem', fontWeight: 500, marginBottom: '12px' }}>Visibilidad del perfil</p>
               <div className="flex gap-3">
-                {[{ val: 'publico', label: '🌍 Público' }, { val: 'privado', label: '🔒 Privado' }].map(opt => (
+                {[{ val: 'publico', label: 'Público' }, { val: 'privado', label: 'Privado' }].map(opt => (
                   <button key={opt.val} onClick={() => setPrivacy(opt.val)}
                     className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
                     style={{ background: privacy === opt.val ? 'rgba(108,99,255,0.2)' : 'transparent', color: privacy === opt.val ? '#6C63FF' : 'var(--p-muted)', border: `1px solid ${privacy === opt.val ? '#6C63FF' : 'rgba(108,99,255,0.2)'}` }}>
@@ -945,13 +951,18 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
               ))}
             </div>
             <div className="mt-4 pt-4 border-t space-y-2" style={{ borderColor: 'rgba(108,99,255,0.1)' }}>
-              {['Términos de uso', 'Política de privacidad', 'Centro de ayuda'].map(link => (
-                <button key={link} className="w-full text-left text-sm hover:underline" style={{ color: '#6C63FF' }}>{link}</button>
+              {([
+                { label: 'Términos de uso', type: 'terminos' as const },
+                { label: 'Política de privacidad', type: 'privacidad' as const },
+                { label: 'Centro de ayuda', type: 'ayuda' as const },
+              ]).map(link => (
+                <button key={link.type} onClick={() => setLegalModal(link.type)} className="w-full text-left text-sm hover:underline" style={{ color: '#6C63FF' }}>{link.label}</button>
               ))}
             </div>
           </div>
         </div>
       </div>
+      <LegalModals open={legalModal} darkMode={t.darkMode} onClose={() => setLegalModal(null)} />
     </div>
   );
 }
@@ -983,6 +994,8 @@ function AppCore() {
   const initials = displayName
     .split(' ').filter(Boolean).slice(0, 2)
     .map((w: string) => w[0].toUpperCase()).join('');
+  const isAdmin = isAdminEmail(userEmail);
+  const navItems = isAdmin ? [...NAV_ITEMS, { id: 'admin' as ViewId, label: 'Admin', icon: ShieldCheck }] : NAV_ITEMS;
 
   const setLandingTarget = (target: 'login' | 'register') => {
     setAuthState(target === 'login' ? 'loginform' : 'register');
@@ -1005,14 +1018,32 @@ function AppCore() {
     }
 
     const viewFromPath = getViewFromPath(currentPath);
+    if (viewFromPath === 'admin' && !isAdmin) {
+      navigate('/app/home', { replace: true });
+      return;
+    }
     if (activeView !== viewFromPath) {
       setActiveView(viewFromPath);
     }
 
     if (!APP_ROUTE_SET.has(currentPath)) {
       navigate('/app/home', { replace: true });
+      return;
     }
-  }, [authState, activeView, currentPath, isAppRoute, navigate]);
+
+    sessionStorage.setItem(LAST_APP_PATH_KEY, currentPath);
+  }, [authState, activeView, currentPath, isAppRoute, isAdmin, navigate]);
+
+  // If a previous session was force-logged-out (expired refresh token), explain why.
+  useEffect(() => {
+    if (!sessionStorage.getItem(SESSION_EXPIRED_KEY)) return;
+    sessionStorage.removeItem(SESSION_EXPIRED_KEY);
+    addToast({
+      type: 'reporte',
+      title: 'Tu sesión expiró',
+      message: 'Por seguridad cerramos tu sesión. Inicia sesión de nuevo.',
+    });
+  }, []);
 
   const goToAppView = (view: ViewId) => {
     setActiveView(view);
@@ -1036,7 +1067,7 @@ function AppCore() {
           addToast({
             type: 'info',
             title: 'Ya tienes una cuenta',
-            message: 'Este correo ya está registrado en U•link. ¡Bienvenido de vuelta! 💜',
+            message: 'Este correo ya está registrado en U•link. ¡Bienvenido de vuelta!',
             duration: 5000,
           });
         }
@@ -1045,11 +1076,13 @@ function AppCore() {
       }
     }
     setAuthState('app');
-    navigate('/app/home', { replace: true });
+    const lastPath = sessionStorage.getItem(LAST_APP_PATH_KEY);
+    navigate(lastPath && APP_ROUTE_SET.has(lastPath) ? lastPath : '/app/home', { replace: true });
   };
 
   const handleLogout = () => {
     window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    sessionStorage.removeItem(LAST_APP_PATH_KEY);
     setAuthState('login');
     setMobileMenuOpen(false);
     navigate('/', { replace: true });
@@ -1062,9 +1095,9 @@ function AppCore() {
   // Welcome + demo toasts on login
   useEffect(() => {
     if (authState !== 'app') return;
-    const t0 = setTimeout(() => addToast({ type: 'logro', title: '¡Bienvenido, Explorador! 🐒', message: '¡Qué bueno tenerte de vuelta en U•link!', duration: 5000 }), 600);
-    const t1 = setTimeout(() => addToast({ type: 'match', title: '¡Nuevo Match!', message: 'Tú y Camila Rodríguez se gustaron 💜' }), 3000);
-    const t2 = setTimeout(() => addToast({ type: 'xp', title: '+100 XP', message: 'Bonus de bienvenida desbloqueado ⚡' }), 5500);
+    const t0 = setTimeout(() => addToast({ type: 'logro', title: '¡Bienvenido, Explorador!', message: '¡Qué bueno tenerte de vuelta en U•link!', duration: 5000 }), 600);
+    const t1 = setTimeout(() => addToast({ type: 'match', title: '¡Nuevo Match!', message: 'Tú y Camila Rodríguez se gustaron' }), 3000);
+    const t2 = setTimeout(() => addToast({ type: 'xp', title: '+100 XP', message: 'Bonus de bienvenida desbloqueado' }), 5500);
     return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2); };
   }, [authState]);
 
@@ -1106,6 +1139,7 @@ function AppCore() {
       case 'notificaciones': return <NotificationsView />;
       case 'album':          return <AlbumView />;
       case 'ajustes':        return <AjustesView onLogout={handleLogout} onEditProfile={handleEditProfile} visionMode={visionMode} setVisionMode={setVisionMode} dyslexiaMode={dyslexiaMode} setDyslexiaMode={(v) => { setDyslexiaMode(v); applyDyslexiaMode(v); }} />;
+      case 'admin':           return isAdmin ? <AdminView /> : <HomeView onNavigate={goToAppView} />;
       default:               return <HomeView onNavigate={goToAppView} />;
     }
   };
@@ -1209,7 +1243,7 @@ function AppCore() {
 
               {/* Nav items */}
               <nav className="flex-1 overflow-y-auto px-2 space-y-0.5">
-                {NAV_ITEMS.map(item => {
+                {navItems.map(item => {
                   const isActive = activeView === item.id;
                   return (
                     <button key={item.id} onClick={() => goToAppView(item.id)}
@@ -1331,7 +1365,11 @@ function AppCore() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppCore />
+      <ReportsProvider>
+        <SupportProvider>
+          <AppCore />
+        </SupportProvider>
+      </ReportsProvider>
     </AuthProvider>
   );
 }

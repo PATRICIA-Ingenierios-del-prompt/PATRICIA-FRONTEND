@@ -130,7 +130,7 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
         <div className="flex-1 overflow-y-auto py-1">
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 gap-2 px-4 text-center">
-              <span style={{ fontSize: '1.5rem' }}>🔍</span>
+              <Search size={22} style={{ color: t.textMuted }} />
               <p style={{ fontSize: '0.78rem', color: t.textMuted }}>No se encontraron chats con "{search}"</p>
             </div>
           ) : filtered.map(contact => {
@@ -181,7 +181,7 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
                   </div>
                   <div className="flex items-center gap-1 mt-0.5">
                     <span style={{ fontSize: '0.6rem', color: '#7FE7C4', fontWeight: 600 }}>
-                      💜 {contact.match}% match
+                      {contact.match}% match
                     </span>
                   </div>
                 </div>
@@ -229,7 +229,7 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
         <div className="flex justify-center pt-4 pb-2">
           <div className="flex items-center gap-2 px-4 py-1.5 rounded-full"
             style={{ background: 'rgba(108,99,255,0.1)', border: '1px solid rgba(108,99,255,0.2)' }}>
-            <span style={{ fontSize: '0.75rem', color: '#6C63FF' }}>💜 {selected.match}% de compatibilidad con {selected.name.split(' ')[0]}</span>
+            <span style={{ fontSize: '0.75rem', color: '#6C63FF' }}>{selected.match}% de compatibilidad con {selected.name.split(' ')[0]}</span>
           </div>
         </div>
 
@@ -324,7 +324,7 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
             <div className="flex items-center gap-2 mb-5">
               <span className="px-2.5 py-1 rounded-full text-xs font-semibold"
                 style={{ background: 'rgba(108,99,255,0.12)', color: '#6C63FF' }}>
-                ⚡ {selected.match}% compatibilidad
+                {selected.match}% compatibilidad
               </span>
             </div>
             {/* Schedule */}

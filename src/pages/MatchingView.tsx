@@ -390,7 +390,7 @@ export function MatchingView() {
                     style={{ display:'inline-block' }}>⟳</motion.span>
                   Verificando que eres una persona real...
                 </span>
-              ) : '🤖 Verificar y acceder al Matching'}
+              ) : 'Verificar y acceder al Matching'}
             </motion.button>
 
             <p className="text-center mt-4" style={{ fontSize:'0.72rem', color: t.textMuted, lineHeight:1.5 }}>
@@ -416,7 +416,7 @@ export function MatchingView() {
     setMatches(p => [...p, { uid: `match-${req.id}-${Date.now()}`, profileId: req.id }]);
     setRequests(p => p.filter(r => r.id !== req.id));
     setViewProfile(null);
-    addToast({ type: 'match', title: '¡Es un Match! 🎉', message: `Tú y ${req.name} ahora son matches 💜`, duration: 5000 });
+    addToast({ type: 'match', title: '¡Es un Match!', message: `Tú y ${req.name} ahora son matches`, duration: 5000 });
   };
 
   const rejectRequest = (id: number) => {
@@ -508,7 +508,7 @@ export function MatchingView() {
                 {/* Top badges */}
                 <div className="absolute top-4 left-4 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full z-10"
                   style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)' }}>
-                  <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>⭐ Nv. {current.level}</span>
+                  <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>Nv. {current.level}</span>
                 </div>
                 <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full z-10"
                   style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)' }}>
@@ -616,7 +616,7 @@ export function MatchingView() {
           </div>
 
           <p style={{ fontSize: '0.7rem', color: t.textMuted, marginTop: '10px', textAlign: 'center' }}>
-            {hasSentTo(current.id) ? '💜 Solicitud enviada · esperando respuesta' : '↩ Anterior  ·  ✕ Pasar  ·  ✓ Solicitud'}
+            {hasSentTo(current.id) ? 'Solicitud enviada · esperando respuesta' : '↩ Anterior  ·  ✕ Pasar  ·  ✓ Solicitud'}
           </p>
 
         </div>

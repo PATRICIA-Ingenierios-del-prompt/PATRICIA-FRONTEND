@@ -60,7 +60,7 @@ function makeLogEntry(prev: BackendGameState | null, curr: BackendGameState): st
 
   if (curr.winnerId && !prev.winnerId) {
     const winnerName = curr.players.find(p => p.id === curr.winnerId)?.name ?? '?';
-    return `🏆 ¡${winnerName} GANÓ!`;
+    return `¡${winnerName} GANÓ!`;
   }
 
   if (curr.state === 'IN_PROGRESS' && prev.state === 'WAITING_FOR_PLAYERS') {
@@ -71,7 +71,7 @@ function makeLogEntry(prev: BackendGameState | null, curr: BackendGameState): st
     const { die1, die2 } = curr;
     const rollerName = currentName;
     const isDouble = die1 === die2;
-    return `${rollerName} sacó ${die1}+${die2}=${die1 + die2}${isDouble ? ' 🎯 ¡Doble!' : ''}`;
+    return `${rollerName} sacó ${die1}+${die2}=${die1 + die2}${isDouble ? ' ¡Doble!' : ''}`;
   }
 
   if (!curr.diceRolled && prev.diceRolled) {

@@ -5,6 +5,7 @@ import {
   Settings, Search, Crown, Shield, X, MessageCircle, FileText,
   Layers, Gamepad2, Volume2, VolumeX, MoreHorizontal,
   Phone, PhoneOff, Download, Video, VideoOff, Monitor, MonitorOff, ArrowLeft, ChevronRight, ChevronLeft,
+  KeyRound, LogOut, Trash2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ParquesBoard } from '../components/ParquesBoard';
@@ -19,6 +20,8 @@ import { Stroke, Point } from '../types/board';
 import { addToast } from '../components/ToastSystem';
 import { useTheme } from '../store/ThemeContext';
 import { useAuth } from '../store/AuthContext';
+import { useReports, type ReportCategory } from '../store/ReportsContext';
+import { friendlyError } from '../lib/errorMessages';
 import { parcheService } from '../services/parcheService';
 import { CATEGORY_META, ALL_CATEGORIES } from '../lib/maps';
 import type { ParcheSummaryResponse, EventCategory } from '../types/patricia';
@@ -302,15 +305,26 @@ function CollabCanvas({ parcheId }: { parcheId: number }) {
 
 
 
-function ReportModal({ memberName, onClose }: { memberName:string; onClose:()=>void }) {
-  const [reason, setReason] = useState('');
+function ReportModal({ memberName, parcheName, onClose }: { memberName:string; parcheName:string; onClose:()=>void }) {
+  const { addReport } = useReports();
+  const [reason, setReason] = useState<ReportCategory | ''>('');
+  const [description, setDescription] = useState('');
+  const canSubmit = !!reason && description.trim().length > 0;
+
+  const handleSubmit = () => {
+    if (!canSubmit) return;
+    addReport({ reportedUserName: memberName, parcheName, category: reason as ReportCategory, description: description.trim() });
+    addToast({ type: 'reporte', title: 'Reporte enviado', message: 'Gracias, nuestro equipo lo revisará pronto.' });
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background:'rgba(0,0,0,0.7)' }} onClick={onClose}>
       <div className="rounded-2xl p-6 w-96 border" style={{ background:'var(--p-card)', borderColor:'rgba(255,77,106,0.3)' }} onClick={e=>e.stopPropagation()}>
         <h3 style={{ fontWeight:700, marginBottom:'4px' }}>Denunciar a {memberName}</h3>
         <p style={{ fontSize:'0.8rem', color:'var(--p-muted)', marginBottom:'16px' }}>Tu reporte es anónimo</p>
         <div className="space-y-2 mb-4">
-          {['Comportamiento inapropiado','Spam o publicidad','Contenido ofensivo','Acoso o bullying','Otro'].map(r=>(
+          {(['Comportamiento inapropiado','Spam o publicidad','Contenido ofensivo','Acoso o bullying','Otro'] as ReportCategory[]).map(r=>(
             <button key={r} onClick={()=>setReason(r)}
               className="w-full text-left px-3 py-2 rounded-xl text-sm transition-all"
               style={{ background: reason===r ? 'rgba(255,77,106,0.15)' : 'rgba(108,99,255,0.06)', color: reason===r ? '#FF4D6A' : 'var(--p-sub)', border:`1px solid ${reason===r ? 'rgba(255,77,106,0.3)' : 'rgba(108,99,255,0.1)'}` }}>
@@ -318,9 +332,21 @@ function ReportModal({ memberName, onClose }: { memberName:string; onClose:()=>v
             </button>
           ))}
         </div>
+        <textarea
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          placeholder="Cuéntanos qué pasó..."
+          rows={3}
+          className="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none mb-4"
+          style={{ background:'var(--p-input)', color:'var(--p-text)', border:'1px solid rgba(108,99,255,0.15)' }}
+        />
         <div className="flex gap-2">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm" style={{ background:'var(--p-input)', color:'var(--p-muted)' }}>Cancelar</button>
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium" style={{ background:'#FF4D6A', color:'white' }}>Enviar</button>
+          <button onClick={handleSubmit} disabled={!canSubmit}
+            className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-40"
+            style={{ background:'#FF4D6A', color:'white', cursor: canSubmit ? 'pointer' : 'not-allowed' }}>
+            Enviar
+          </button>
         </div>
       </div>
     </div>
@@ -451,26 +477,26 @@ export function ParchesView({ linkedEvents = [] }: {
 
   const joinPublic = async (p: UiParche) => {
     try { await parcheService.join(p.id); addToast({ type: 'logro', title: '¡Te uniste!', message: p.name }); await loadMine(); }
-    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo unir', message: e?.response?.data?.message ?? e?.message ?? 'Error' }); }
+    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo unir', message: friendlyError(e, 'No te pudimos unir al parche. Intenta de nuevo.') }); }
   };
   const joinByCode = async () => {
     const code = joinCode.trim();
     if (!code) return;
     try { await parcheService.acceptInvite(code); addToast({ type: 'logro', title: '¡Te uniste al parche privado!', message: 'Código aceptado.' }); setJoinCode(''); await loadMine(); setScope('private'); }
-    catch (e: any) { addToast({ type: 'reporte', title: 'Código inválido', message: e?.response?.data?.message ?? e?.message ?? 'Error' }); }
+    catch (e: any) { addToast({ type: 'reporte', title: 'Código inválido', message: friendlyError(e, 'Ese código no es válido. Verifícalo e intenta de nuevo.') }); }
   };
   const leaveParche = async (p: UiParche) => {
     if (!meId) return;
     try { await parcheService.removeMember(p.id, meId); addToast({ type: 'info', title: 'Saliste del parche', message: p.name }); setSelectedParche(EMPTY_PARCHE); await Promise.all([loadMine(), loadPublicos()]); }
-    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo salir', message: e?.response?.data?.message ?? e?.message ?? 'Error' }); }
+    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo salir', message: friendlyError(e, 'No te pudimos sacar del parche. Intenta de nuevo.') }); }
   };
   const generateInvite = async (p: UiParche) => {
     try { const r = await parcheService.createInvite({ parcheId: p.id }); addToast({ type: 'logro', title: 'Código de invitación', message: `${r.token} · válido ${Math.round(r.expiresInSeconds / 60)} min` }); }
-    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo generar', message: e?.response?.data?.message ?? e?.message ?? 'Error' }); }
+    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo generar', message: friendlyError(e, 'No se pudo generar el código. Intenta de nuevo.') }); }
   };
   const deleteParcheHandler = async (p: UiParche) => {
     try { await parcheService.remove(p.id); addToast({ type: 'info', title: 'Parche eliminado', message: p.name }); setSelectedParche(EMPTY_PARCHE); await Promise.all([loadMine(), loadPublicos()]); }
-    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo eliminar', message: e?.response?.data?.message ?? e?.message ?? 'Error' }); }
+    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo eliminar', message: friendlyError(e, 'No se pudo eliminar el parche. Intenta de nuevo.') }); }
   };
   const createParcheHandler = async () => {
     if (!createName.trim()) { setCreateError('Ponle un nombre al parche.'); return; }
@@ -488,7 +514,7 @@ export function ParchesView({ linkedEvents = [] }: {
       addToast({ type: 'logro', title: '¡Parche creado!', message: created.name });
       setShowCreate(false); setCreateName(''); setCreateDesc(''); setCreateCapacity(''); setCreateFile(null);
       await Promise.all([loadMine(), loadPublicos()]);
-    } catch (e: any) { setCreateError(e?.response?.data?.message ?? e?.message ?? 'No se pudo crear el parche.'); }
+    } catch (e: any) { setCreateError(friendlyError(e, 'No se pudo crear el parche. Intenta de nuevo.')); }
     finally { setCreateSaving(false); }
   };
 
@@ -712,7 +738,7 @@ const realLeaveVoice = () => {
           </div>
           {/* Públicos / Privados toggle */}
           <div className="flex gap-1 p-0.5 rounded-xl" style={{ background:'var(--p-input)' }}>
-            {([['public','🌍 Públicos'],['private','🔒 Privados']] as const).map(([val,label]) => (
+            {([['public','Públicos'],['private','Privados']] as const).map(([val,label]) => (
               <button key={val} onClick={()=>setScope(val)}
                 className="flex-1 py-1 rounded-lg text-center transition-all"
                 style={{ background: scope===val ? '#6C63FF' : 'transparent', color: scope===val ? 'white' : 'var(--p-muted)', fontSize:'0.65rem', fontWeight: scope===val ? 700 : 400 }}>
@@ -772,7 +798,7 @@ const realLeaveVoice = () => {
         {/* Join a private parche by code (Privados only) */}
         {scope==='private' && (
           <div className="px-3 py-3 border-b" style={{ borderColor:'var(--p-divider)' }}>
-            <p style={{ fontSize:'0.68rem', color:'var(--p-muted)', marginBottom:6, fontWeight:600 }}>🔑 Unirme con código</p>
+            <p style={{ fontSize:'0.68rem', color:'var(--p-muted)', marginBottom:6, fontWeight:600 }}>Unirme con código</p>
             <div className="flex gap-1.5">
               <input value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())} placeholder="XXXX-XXXX"
                 onKeyDown={e=>{ if(e.key==='Enter') joinByCode(); }}
@@ -900,7 +926,7 @@ const realLeaveVoice = () => {
                 {parcheEventCount > 0 && (
                   <span className="px-2 py-0.5 rounded-full flex-shrink-0"
                     style={{ fontSize:'0.6rem', background:'rgba(255,179,71,0.15)', color:'#FFB347', border:'1px solid rgba(255,179,71,0.3)', fontWeight:600 }}>
-                    📅 {parcheEventCount} evento{parcheEventCount > 1 ? 's' : ''} vinculado{parcheEventCount > 1 ? 's' : ''}
+                    {parcheEventCount} evento{parcheEventCount > 1 ? 's' : ''} vinculado{parcheEventCount > 1 ? 's' : ''}
                   </span>
                 )}
               </div>
@@ -933,18 +959,18 @@ const realLeaveVoice = () => {
                       <button onClick={() => { setSettingsMenuOpen(false); void generateInvite(selectedParche); }}
                         className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left hover:opacity-80 transition-all border-b"
                         style={{ color:'var(--p-text)', borderColor:'var(--p-divider)' }}>
-                        🔑 Generar código de invitación
+                        <KeyRound size={14} /> Generar código de invitación
                       </button>
                     )}
                     <button onClick={() => { setSettingsMenuOpen(false); void leaveParche(selectedParche); }}
                       className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left hover:opacity-80 transition-all border-b"
                       style={{ color:'#FF4D6A', borderColor:'var(--p-divider)' }}>
-                      🚪 Salirse del parche
+                      <LogOut size={14} /> Salirse del parche
                     </button>
                     <button onClick={() => { setSettingsMenuOpen(false); void deleteParcheHandler(selectedParche); }}
                       className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left hover:opacity-80 transition-all"
                       style={{ color:'#FF4D6A' }}>
-                      🗑️ Eliminar parche <span style={{ fontSize:'0.62rem', color:'var(--p-muted)' }}>(dueño)</span>
+                      <Trash2 size={14} /> Eliminar parche <span style={{ fontSize:'0.62rem', color:'var(--p-muted)' }}>(dueño)</span>
                     </button>
                   </motion.div>
                 )}
@@ -1215,7 +1241,7 @@ const realLeaveVoice = () => {
                     <div className="w-full max-w-xs rounded-2xl p-4 border"
                       style={{ background:'rgba(108,99,255,0.05)', borderColor:'var(--p-divider)' }}>
                       <p style={{ fontSize:'0.8rem', fontWeight:600, marginBottom:'8px', color:'var(--p-muted)' }}>Partidas recientes</p>
-                      {[{g:'Parqués',result:'Victoria 🏆',with:'vs. Felipe A.',color:'#7FE7C4'},{g:'Parqués',result:'Derrota',with:'vs. Sofía M.',color:'#FF4D6A'}].map((h,i)=>(
+                      {[{g:'Parqués',result:'Victoria',with:'vs. Felipe A.',color:'#7FE7C4'},{g:'Parqués',result:'Derrota',with:'vs. Sofía M.',color:'#FF4D6A'}].map((h,i)=>(
                         <div key={i} className="flex items-center justify-between py-2 border-b last:border-0"
                           style={{ borderColor:'var(--p-input)' }}>
                           <span style={{ fontSize:'0.78rem' }}>{h.g} {h.with}</span>
@@ -1528,7 +1554,7 @@ const realLeaveVoice = () => {
                 <div className="flex gap-3">
                   <input value={createCapacity} onChange={e=>setCreateCapacity(e.target.value)} type="number" min={1} placeholder="Cupos máx..." className="w-28 rounded-xl px-4 py-3 text-sm outline-none"
                     style={{ background:'var(--p-input)', border:'1px solid rgba(108,99,255,0.2)', color:'var(--p-text)' }} />
-                  {[{val:'public',label:'🌍 Público'},{val:'private',label:'🔒 Privado'}].map(opt=>(
+                  {[{val:'public',label:'Público'},{val:'private',label:'Privado'}].map(opt=>(
                     <button key={opt.val} onClick={()=>setCreateType(opt.val as 'public'|'private')}
                       className="flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all"
                       style={{ background: createType===opt.val ? 'var(--p-divider)' : 'transparent', borderColor: createType===opt.val ? '#6C63FF' : 'rgba(108,99,255,0.2)', color: createType===opt.val ? '#6C63FF' : 'var(--p-muted)' }}>
@@ -1537,7 +1563,7 @@ const realLeaveVoice = () => {
                   ))}
                 </div>
                 {createType==='private' && (
-                  <p style={{ fontSize:'0.7rem', color:'var(--p-muted)', lineHeight:1.5 }}>🔒 Es privado: tras crearlo, genera un código de invitación desde el parche para que otros entren.</p>
+                  <p style={{ fontSize:'0.7rem', color:'var(--p-muted)', lineHeight:1.5 }}>Es privado: tras crearlo, genera un código de invitación desde el parche para que otros entren.</p>
                 )}
                 <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color:'var(--p-muted)' }}>
                   📎 {createFile ? createFile.name : 'Imagen (opcional)'}
@@ -1550,7 +1576,7 @@ const realLeaveVoice = () => {
                   <button onClick={createParcheHandler} disabled={createSaving}
                     className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-50"
                     style={{ background:'linear-gradient(135deg,#6C63FF,#8B7FFF)', color:'white' }}>
-                    {createSaving ? 'Creando…' : 'Crear Parche 🎪'}
+                    {createSaving ? 'Creando…' : 'Crear Parche'}
                   </button>
                 </div>
                 <AnimatePresence>
@@ -1569,7 +1595,7 @@ const realLeaveVoice = () => {
         )}
       </AnimatePresence>
 
-      {reportMember && <ReportModal memberName={reportMember} onClose={()=>setReportMember(null)} />}
+      {reportMember && <ReportModal memberName={reportMember} parcheName={selectedParche.name} onClose={()=>setReportMember(null)} />}
 
       {/* Member profile modal */}
       {viewMemberProfile && createPortal(
