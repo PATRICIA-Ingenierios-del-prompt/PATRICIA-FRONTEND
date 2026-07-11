@@ -1,6 +1,6 @@
 import { CreateBoardResponse, BoardResponse } from '../types/board';
 
-const API_BASE_URL = 'http://localhost:8086/api/boards';
+const API_BASE_URL = '/api/boards';
 
 export const boardApi = {
   createBoard: async (customId?: string): Promise<CreateBoardResponse> => {

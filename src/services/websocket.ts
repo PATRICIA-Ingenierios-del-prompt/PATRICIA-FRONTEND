@@ -2,7 +2,7 @@ import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { Stroke, CursorMessage } from '../types/board';
 
-const WS_URL = 'http://localhost:8086/ws';
+const WS_URL = '/ws';
 
 export class BoardWebSocketService {
   private client: Client;
