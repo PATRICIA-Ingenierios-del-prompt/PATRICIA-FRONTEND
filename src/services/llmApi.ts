@@ -1,10 +1,10 @@
 /**
  * llmApi.ts
  * Servicio para comunicarse con el LLM Backend (Spring Boot + Groq).
- * Base URL: http://localhost:8080/api
+ * Base URL: /api  →  proxy Vite  →  http://localhost:8086/api (LLM-Backend)
  */
 
-const BASE_URL = 'http://localhost:8080/api';
+const BASE_URL = '/api';
 
 /**
  * Envía un mensaje al chatbot y devuelve la respuesta del LLM.
