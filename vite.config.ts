@@ -78,8 +78,8 @@ export default defineConfig(({ mode }) => {
   '/api/events':    { target: gatewayUrl, changeOrigin: true },
   '/api/locations': { target: gatewayUrl, changeOrigin: true },
   // Comunicación MS directo
-  '/api/chat':  { target: 'http://localhost:8084', changeOrigin: true },
-  '/api/voice': { target: 'http://localhost:8084', changeOrigin: true },
+  '/api/chat':  { target: 'http://localhost:8086', changeOrigin: true },
+  '/api/voice': { target: 'http://localhost:8086', changeOrigin: true },
   '/ws-stomp':  { target: 'http://localhost:8084', changeOrigin: true, ws: true },
   '/ws/geo':    { target: gatewayUrl, changeOrigin: true, ws: true },
   '/api/games': { target: 'http://localhost:8085', changeOrigin: true },
