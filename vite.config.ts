@@ -42,6 +42,13 @@ export default defineConfig(({ mode }) => {
     target: gatewayUrl,
     changeOrigin: true,
   },
+  // Matching MS — vía Gateway (RouteConfig.java debe rutear /matching/** al
+  // servicio de Matching, puerto 8086; ver deploy/templates/service.yaml
+  // de PATRICIA_Matching_Backend).
+  '/matching': {
+    target: gatewayUrl,
+    changeOrigin: true,
+  },
   // Parches MS directo
   '/api/parches': {
     target: 'http://localhost:8083',

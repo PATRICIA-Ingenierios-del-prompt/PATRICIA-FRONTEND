@@ -182,3 +182,34 @@ export interface CommunicationChannels {
   voiceId: UUID | null;
 }
 
+/* ── Matching ── */
+// Mirrors matching-service's DTOs exactly (see MatchingController).
+// Note: these endpoints deliberately return ONLY candidatoId + scores —
+// no display data (name/photo/bio). The frontend must hydrate each id via
+// userService.getPerfil(candidatoId) against Users' public API.
+export type DecisionMatching = 'LIKE' | 'DESCARTE';
+
+export interface SugerenciaResponse {
+  candidatoId: UUID;
+  scoreTotal: number;
+  scoreIntereses: number;
+  scoreAcademico: number;
+  scoreDisponibilidad: number;
+  calculadoEn: string;
+}
+export interface DecisionRequest {
+  candidatoId: UUID;
+  decision: DecisionMatching;
+}
+export interface MatchResponse {
+  matchId: UUID;
+  otroUsuarioId: UUID;
+  scoreTotal: number;
+  confirmadoEn: string;
+}
+export interface DecisionResponse {
+  matchConfirmado: boolean;
+  match: MatchResponse | null;
+}
+
+
