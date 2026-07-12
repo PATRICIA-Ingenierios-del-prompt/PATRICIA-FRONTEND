@@ -11,6 +11,12 @@ export interface PerfilResponse {
   nombre?: string;
   apellidos?: string;
   email?: string;
+  /**
+   * Nombre real del campo en el backend (ver PerfilResponse.java en
+   * Users). Se normaliza a `foto` en getPerfil() de abajo para no romper
+   * el resto de la app, que ya lee `perfil.foto`.
+   */
+  urlFotoPerfil?: string;
   foto?: string;
   genero?: string;
   fechaNacimiento?: string;
@@ -24,6 +30,7 @@ export interface ActualizarPerfilPayload {
   semestre?: number | string;
   intereses?: string[];
   disponibilidad?: unknown;
+  foto?: string;
 }
 
 /** Payload completo del onboarding — enviado una sola vez al completar el registro */
@@ -44,11 +51,26 @@ const BASE = '/api/v1/usuarios';
 export const userService = {
   async getPerfil(userId: string): Promise<PerfilResponse> {
     const { data } = await apiClient.get<PerfilResponse>(BASE + '/' + userId + '/perfil');
-    return data;
+    // El backend devuelve `urlFotoPerfil`, no `foto` — se normaliza aquí una
+    // sola vez para que el resto de la app pueda seguir leyendo `perfil.foto`.
+    return { ...data, foto: data.foto ?? data.urlFotoPerfil };
+  },
+  /**
+   * Igual que getPerfil, pero para varios usuarios en paralelo — útil para
+   * hidratar cards de Matching (que solo traen IDs, no datos de perfil).
+   * Los que fallen (404, red) se omiten en vez de tumbar el resto del batch.
+   */
+  async getPerfiles(userIds: string[]): Promise<Record<string, PerfilResponse>> {
+    const resultados = await Promise.allSettled(userIds.map(id => userService.getPerfil(id)));
+    const porId: Record<string, PerfilResponse> = {};
+    resultados.forEach((r, i) => {
+      if (r.status === 'fulfilled') porId[userIds[i]] = r.value;
+    });
+    return porId;
   },
   async updatePerfil(userId: string, payload: ActualizarPerfilPayload): Promise<PerfilResponse> {
     const { data } = await apiClient.put<PerfilResponse>(BASE + '/' + userId + '/perfil', payload);
-    return data;
+    return { ...data, foto: data.foto ?? data.urlFotoPerfil };
   },
   async getIntereses(userId: string): Promise<string[]> {
     const { data } = await apiClient.get<string[]>(BASE + '/' + userId + '/intereses');
