@@ -11,9 +11,20 @@ import monoArte      from '../assets/monoArteN.png';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
 import { useAuth } from '../store/AuthContext';
+import { eventService } from '../services/eventService';
+import { CATEGORY_META } from '../lib/maps';
+import type { EventCategory, EventMapResponse, EventResponse } from '../types/patricia';
 
 type ViewId = 'home' | 'matching' | 'parches' | 'campus' | 'eventos' | 'bienestar' | 'album' | 'notificaciones' | 'ranking' | 'ajustes' | 'perfil';
 interface HomeViewProps { onNavigate: (v: ViewId) => void; }
+
+/** Vibra id → categoría real del backend de Eventos, para contar eventos de verdad. */
+const VIBRA_CATEGORY: Record<string, EventCategory> = {
+  musica: 'MUSIC', estudio: 'STUDY', 'aire-libre': 'SPORT',
+  gastronomia: 'VARIETY', videojuegos: 'ENTERTAINMENT', arte: 'ART',
+};
+
+interface LiveEvent { id: string; title: string; time: string; location: string; emoji: string; color: string; }
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -23,12 +34,12 @@ function getGreeting() {
 }
 
 const VIBRAS = [
-  { id: 'musica',      label: 'Música',      emoji: '🎵', color: '#FF6B9D', monoImg: monoMusica,    desc: 'Comparte ritmos, playlists y encuentra tu banda perfecta', eventos: 8  },
-  { id: 'estudio',     label: 'Estudio',     emoji: '📚', color: '#6C63FF', monoImg: monoEstudio,   desc: 'Grupos de estudio, tutorías y parches académicos ECI',     eventos: 23 },
-  { id: 'aire-libre',  label: 'Aire Libre',  emoji: '🌿', color: '#7FE7C4', monoImg: monoAireLibre, desc: 'Senderismo, parques, deporte y naturaleza cerca del campus', eventos: 6  },
-  { id: 'gastronomia', label: 'Gastronomía', emoji: '🍕', color: '#FFB347', monoImg: monoComida,    desc: 'Descubre sabores, recetas y los mejores spots de Bogotá',    eventos: 12 },
-  { id: 'videojuegos', label: 'Videojuegos', emoji: '🎮', color: '#5BC8FF', monoImg: monoJuegos,    desc: 'Gaming competitivo, torneos y esports universitarios',         eventos: 15 },
-  { id: 'arte',        label: 'Arte',        emoji: '🎨', color: '#A78BFA', monoImg: monoArte,      desc: 'Creación, diseño gráfico, fotografía y expresión libre',      eventos: 9  },
+  { id: 'musica',      label: 'Música',      emoji: '🎵', color: '#FF6B9D', monoImg: monoMusica,    desc: 'Comparte ritmos, playlists y encuentra tu banda perfecta' },
+  { id: 'estudio',     label: 'Estudio',     emoji: '📚', color: '#6C63FF', monoImg: monoEstudio,   desc: 'Grupos de estudio, tutorías y parches académicos ECI' },
+  { id: 'aire-libre',  label: 'Aire Libre',  emoji: '🌿', color: '#7FE7C4', monoImg: monoAireLibre, desc: 'Senderismo, parques, deporte y naturaleza cerca del campus' },
+  { id: 'gastronomia', label: 'Gastronomía', emoji: '🍕', color: '#FFB347', monoImg: monoComida,    desc: 'Descubre sabores, recetas y los mejores spots de Bogotá' },
+  { id: 'videojuegos', label: 'Videojuegos', emoji: '🎮', color: '#5BC8FF', monoImg: monoJuegos,    desc: 'Gaming competitivo, torneos y esports universitarios' },
+  { id: 'arte',        label: 'Arte',        emoji: '🎨', color: '#A78BFA', monoImg: monoArte,      desc: 'Creación, diseño gráfico, fotografía y expresión libre' },
 ];
 
 const PARCHES_GRID = [
@@ -64,32 +75,16 @@ const STORIES = [
   { avatar: 'JP', name: 'Juan P.', gradient: 'linear-gradient(135deg,#FF6B9D,#6C63FF)', active: true  },
 ];
 
-const FEED = [
-  {
-    user: 'Camila R.', avatar: 'CR', gradient: 'linear-gradient(135deg,#6C63FF,#FF6B9D)',
-    action: 'se inscribió al', target: 'Hackathon ECI 2026', emoji: '💻',
-    time: '5 min', likes: 12, liked: false, color: '#6C63FF',
-  },
-  {
-    user: 'Andrés T.', avatar: 'AT', gradient: 'linear-gradient(135deg,#A78BFA,#5BC8FF)',
-    action: 'se unió al parche', target: 'IEEE Student Branch', emoji: '⚡',
-    time: '18 min', likes: 7, liked: false, color: '#5BC8FF',
-  },
-  {
-    user: 'Sofía M.', avatar: 'SM', gradient: 'linear-gradient(135deg,#FFB347,#FF6B9D)',
-    action: 'compartió', target: 'Taller Bienestar: Mindfulness', emoji: '🌿',
-    time: '34 min', likes: 23, liked: false, color: '#7FE7C4',
-  },
-  {
-    user: 'Felipe A.', avatar: 'FA', gradient: 'linear-gradient(135deg,#7FE7C4,#6C63FF)',
-    action: 'alcanzó el', target: 'Nivel 12 en la ECI', emoji: '🏆',
-    time: '1h', likes: 41, liked: false, color: '#FFB347',
-  },
-];
+/** Fallback cuando no hay ningún evento en curso ahora mismo. */
+const FALLBACK_LIVE_EVENT: LiveEvent = {
+  id: 'fallback',
+  title: 'Presentación competencia All Stars en el auditorio principal',
+  time: '', location: '', emoji: '🎉', color: '#6C63FF',
+};
 
-
-function VibraCard({ vibra, onNavigate, expanded, onToggle, supportsHover }: {
+function VibraCard({ vibra, count, onNavigate, expanded, onToggle, supportsHover }: {
   vibra: typeof VIBRAS[0];
+  count: number;
   onNavigate: (v: ViewId) => void;
   expanded: boolean;
   onToggle: () => void;
@@ -147,12 +142,14 @@ function VibraCard({ vibra, onNavigate, expanded, onToggle, supportsHover }: {
                 {vibra.desc}
               </p>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-                  style={{ background: `${vibra.color}18` }}>
-                  <span style={{ fontSize: '0.72rem', color: vibra.color, fontWeight: 600 }}>
-                    {vibra.eventos} eventos disponibles
-                  </span>
-                </div>
+                {count > 0 ? (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+                    style={{ background: `${vibra.color}18` }}>
+                    <span style={{ fontSize: '0.72rem', color: vibra.color, fontWeight: 600 }}>
+                      {count} evento{count === 1 ? '' : 's'} disponible{count === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                ) : <div />}
                 <button onClick={(e) => { e.stopPropagation(); onNavigate('eventos'); }}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105"
                   style={{ background: '#7FE7C4', color: '#0F0E1A' }}>
@@ -163,8 +160,8 @@ function VibraCard({ vibra, onNavigate, expanded, onToggle, supportsHover }: {
           )}
         </AnimatePresence>
 
-        {!isOpen && (
-          <p style={{ fontSize: '0.75rem', color: 'var(--p-muted)' }}>{vibra.eventos} disponibles</p>
+        {!isOpen && count > 0 && (
+          <p style={{ fontSize: '0.75rem', color: 'var(--p-muted)' }}>{count} disponible{count === 1 ? '' : 's'}</p>
         )}
       </div>
     </motion.div>
@@ -202,8 +199,9 @@ function ParcheCard({ p, onJoin }: { p: typeof PARCHES_GRID[0]; onJoin: () => vo
   );
 }
 
-function FeedSection() {
+function FeedSection({ events, loading }: { events: LiveEvent[]; loading: boolean }) {
   const t = useTheme();
+  const items = events.length > 0 ? events : [FALLBACK_LIVE_EVENT];
 
   return (
     <section>
@@ -221,33 +219,34 @@ function FeedSection() {
           <span style={{ fontSize: '0.7rem', color: '#FF4D6A', fontWeight: 600 }}>Campus</span>
         </div>
       </div>
-      <div className="space-y-3">
-        {FEED.map((item, i) => (
-          <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-            className="flex items-center gap-3 p-4 rounded-2xl border"
-            style={{ background: t.cardBg, borderColor: t.cardBorder }}>
-            {/* Avatar */}
-            <div className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
-              style={{ background: item.gradient }}>
-              {item.avatar}
-            </div>
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <p style={{ fontSize: '0.85rem', color: t.text, lineHeight: 1.5 }}>
-                <span style={{ fontWeight: 700 }}>{item.user}</span>
-                <span style={{ color: t.textMuted }}> {item.action} </span>
-                <span style={{ fontWeight: 600, color: item.color }}>{item.target}</span>
-              </p>
-              <p style={{ fontSize: '0.68rem', color: t.textMuted, marginTop: '2px' }}>Hace {item.time}</p>
-            </div>
-            {/* Emoji badge */}
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-lg"
-              style={{ background: `${item.color}15` }}>
-              {item.emoji}
-            </div>
-          </motion.div>
-        ))}
-      </div>
+      {loading ? (
+        <p style={{ fontSize: '0.82rem', color: t.textMuted }}>Cargando…</p>
+      ) : (
+        <div className="space-y-3">
+          {items.map((item, i) => (
+            <motion.div key={item.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
+              className="flex items-center gap-3 p-4 rounded-2xl border"
+              style={{ background: t.cardBg, borderColor: t.cardBorder }}>
+              {/* Emoji badge */}
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
+                style={{ background: `${item.color}15` }}>
+                {item.emoji}
+              </div>
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <p style={{ fontSize: '0.85rem', color: t.text, lineHeight: 1.5, fontWeight: 600 }}>
+                  {item.title}
+                </p>
+                {(item.time || item.location) && (
+                  <p style={{ fontSize: '0.68rem', color: t.textMuted, marginTop: '2px' }}>
+                    {[item.time, item.location].filter(Boolean).join(' · ')}
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -262,6 +261,9 @@ export function HomeView({ onNavigate }: HomeViewProps) {
   const [joinedParches, setJoinedParches] = useState<number[]>([]);
   const [expandedVibra, setExpandedVibra] = useState<string | null>(null);
   const [supportsHover, setSupportsHover] = useState(true);
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
+  const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
+  const [loadingLive, setLoadingLive] = useState(true);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -276,6 +278,38 @@ export function HomeView({ onNavigate }: HomeViewProps) {
 
     mediaQuery.addListener(update);
     return () => mediaQuery.removeListener(update);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const page = await eventService.publicMap({ page: 0, size: 200 });
+        if (cancelled) return;
+        const counts: Record<string, number> = {};
+        page.content.forEach(e => { counts[e.category] = (counts[e.category] ?? 0) + 1; });
+        setCategoryCounts(counts);
+
+        const details = await Promise.all(page.content.map(e =>
+          eventService.get(e.eventId).then(d => ({ ev: e, d })).catch(() => null),
+        ));
+        if (cancelled) return;
+        const started = details.filter((x): x is { ev: EventMapResponse; d: EventResponse } => x !== null && x.d.started === true);
+        setLiveEvents(started.map(({ ev, d }) => ({
+          id: ev.eventId,
+          title: ev.name,
+          time: ev.startTime,
+          location: d.destination?.address ?? '',
+          emoji: CATEGORY_META[ev.category]?.emoji ?? '🎉',
+          color: CATEGORY_META[ev.category]?.color ?? '#6C63FF',
+        })));
+      } catch {
+        // Widget del dashboard — si falla, simplemente no mostramos eventos en vivo.
+      } finally {
+        if (!cancelled) setLoadingLive(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   return (
@@ -335,7 +369,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         </section>
 
         {/* ── 2. FEED ──────────────────────────────────────────────────── */}
-        <FeedSection />
+        <FeedSection events={liveEvents} loading={loadingLive} />
 
         {/* ── 4. EXPLORA VIBRAS ─────────────────────────────────────────── */}
         <section>
@@ -355,6 +389,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               <VibraCard
                 key={v.id}
                 vibra={v}
+                count={categoryCounts[VIBRA_CATEGORY[v.id]] ?? 0}
                 onNavigate={onNavigate}
                 supportsHover={supportsHover}
                 expanded={supportsHover ? false : expandedVibra === v.id}

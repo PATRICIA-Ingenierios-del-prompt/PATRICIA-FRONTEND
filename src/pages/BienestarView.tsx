@@ -60,13 +60,49 @@ const EMOCIONES = [
   { emoji: '😔', label: 'Mal',    color: '#FF6B9D', value: 2 },
   { emoji: '😰', label: 'Estres', color: '#FF4D6A', value: 1 },
 ];
-const DIARY_ENTRIES = [
-  { date: '10 Jun', emotion: '😊', note: 'Terminé el proyecto de IA. Muy contento con el resultado.', color: '#7FE7C4' },
-  { date: '9 Jun',  emotion: '😐', note: 'Parcial de Cálculo difícil pero creo que pasé.', color: '#FFB347' },
-  { date: '8 Jun',  emotion: '😰', note: 'Mucho trabajo, pocas horas de sueño. Me organizo mañana.', color: '#FF4D6A' },
-  { date: '7 Jun',  emotion: '🙂', note: 'Buen parche de estudio en la biblioteca.', color: '#6C63FF' },
-];
-const WEEK_MOODS = [3, 4, 2, 5, 3, 4, 3];
+
+interface DiaryEntry { isoDate: string; date: string; emotion: string; note: string; color: string }
+
+const DIARIO_STORAGE_KEY = 'patricia_diario_entries';
+
+function loadDiaryEntries(): DiaryEntry[] {
+  try {
+    const raw = localStorage.getItem(DIARIO_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveDiaryEntries(entries: DiaryEntry[]) {
+  try { localStorage.setItem(DIARIO_STORAGE_KEY, JSON.stringify(entries)); } catch { /* almacenamiento no disponible */ }
+}
+
+/** Racha de días consecutivos (incluyendo hoy) con una entrada de diario. */
+function computeStreak(entries: DiaryEntry[]): number {
+  const days = new Set(entries.map(e => e.isoDate));
+  let streak = 0;
+  const cursor = new Date();
+  while (days.has(cursor.toISOString().slice(0, 10))) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+/** Últimos 7 días (L→D de la semana actual) con el valor de emoción registrado, o null si no hay entrada. */
+function computeWeekMoods(entries: DiaryEntry[]): (number | null)[] {
+  const byDate = new Map(entries.map(e => [e.isoDate, EMOCIONES.find(em => em.emoji === e.emotion)?.value ?? null]));
+  const today = new Date();
+  const dow = (today.getDay() + 6) % 7; // 0 = lunes
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - dow);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return byDate.get(d.toISOString().slice(0, 10)) ?? null;
+  });
+}
 
 const BREATHING_MODES = [
   { id: '4-7-8',  name: 'Técnica 4-7-8',         desc: 'Reduce ansiedad y facilita el sueño',    phases: [{ label: 'Inhala', duration: 4000 }, { label: 'Mantén', duration: 7000 }, { label: 'Exhala', duration: 8000 }] },
@@ -116,7 +152,9 @@ export function BienestarView() {
   const [breathPhase, setBreathPhase] = useState(0);
   const [breathCycles, setBreathCycles] = useState(0);
   const [activePrompt, setActivePrompt] = useState(0);
-  const [savedToday, setSavedToday] = useState(false);
+  const [diaryEntries, setDiaryEntries] = useState<DiaryEntry[]>(() => loadDiaryEntries());
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const savedToday = diaryEntries.some(e => e.isoDate === todayIso);
   const [diaryError, setDiaryError] = useState<string | null>(null);
   const breathRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audioRef  = useRef<HTMLAudioElement | null>(null);
@@ -222,7 +260,9 @@ export function BienestarView() {
         style={{ background: 'linear-gradient(135deg, rgba(108,99,255,0.08), rgba(127,231,196,0.04))', borderColor: 'var(--p-border)' }}>
         <div>
           <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>¿Cómo te sientes hoy?</p>
-          <p style={{ fontSize: '0.75rem', color: t.textMuted }}>Check-in diario · Racha: 7 días 🔥</p>
+          <p style={{ fontSize: '0.75rem', color: t.textMuted }}>
+            Check-in diario{computeStreak(diaryEntries) > 0 ? ` · Racha: ${computeStreak(diaryEntries)} día${computeStreak(diaryEntries) === 1 ? '' : 's'} 🔥` : ''}
+          </p>
         </div>
         <div className="flex gap-4 ml-auto">
           {EMOCIONES.map(em => (
@@ -349,11 +389,15 @@ export function BienestarView() {
                       {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-                    style={{ background: 'rgba(255,179,71,0.15)', border: '1px solid rgba(255,179,71,0.3)' }}>
-                    <span style={{ fontSize: '0.75rem' }}>🔥</span>
-                    <span style={{ fontSize: '0.72rem', color: '#FFB347', fontWeight: 600 }}>7 días seguidos</span>
-                  </div>
+                  {computeStreak(diaryEntries) > 0 && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+                      style={{ background: 'rgba(255,179,71,0.15)', border: '1px solid rgba(255,179,71,0.3)' }}>
+                      <span style={{ fontSize: '0.75rem' }}>🔥</span>
+                      <span style={{ fontSize: '0.72rem', color: '#FFB347', fontWeight: 600 }}>
+                        {computeStreak(diaryEntries)} día{computeStreak(diaryEntries) === 1 ? '' : 's'} seguidos
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap gap-3 justify-center mb-6">
@@ -436,7 +480,19 @@ export function BienestarView() {
                     if (!diaryEmotion) { setDiaryError('Selecciona cómo te sientes antes de guardar.'); return; }
                     if (!diaryNote.trim()) { setDiaryError('Escribe algo en tu diario antes de guardar.'); return; }
                     setDiaryError(null);
-                    setSavedToday(true);
+                    const color = EMOCIONES.find(e => e.emoji === diaryEmotion)?.color ?? '#6C63FF';
+                    const entry: DiaryEntry = {
+                      isoDate: todayIso,
+                      date: new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }),
+                      emotion: diaryEmotion,
+                      note: diaryNote.trim(),
+                      color,
+                    };
+                    setDiaryEntries(prev => {
+                      const next = [entry, ...prev.filter(e => e.isoDate !== todayIso)];
+                      saveDiaryEntries(next);
+                      return next;
+                    });
                     setDiaryNote('');
                     setDiaryEmotion(null);
                   }}
@@ -480,52 +536,64 @@ export function BienestarView() {
             <div className="rounded-2xl border p-4" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
               <p style={{ fontWeight: 700, fontSize: '0.9rem', color: t.text, marginBottom: '14px' }}>Tu semana emocional</p>
               <div className="flex items-end gap-2" style={{ height: 90 }}>
-                {WEEK_MOODS.map((val, i) => {
+                {computeWeekMoods(diaryEntries).map((val, i) => {
                   const em = EMOCIONES.find(e => e.value === val);
                   return (
                     <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
                       <motion.div className="w-full rounded-t-xl"
-                        initial={{ height: 0 }} animate={{ height: `${val * 16}px` }}
+                        initial={{ height: 0 }} animate={{ height: `${(val ?? 0) * 16}px` }}
                         transition={{ duration: 0.8, delay: i * 0.08, ease: 'easeOut' }}
-                        style={{ background: `linear-gradient(180deg, ${em?.color || '#6C63FF'}, ${em?.color || '#6C63FF'}40)`, minHeight: 6 }} />
-                      <span style={{ fontSize: '0.88rem' }}>{em?.emoji}</span>
+                        style={{ background: val ? `linear-gradient(180deg, ${em?.color || '#6C63FF'}, ${em?.color || '#6C63FF'}40)` : 'var(--p-divider)', minHeight: 6 }} />
+                      <span style={{ fontSize: '0.88rem' }}>{em?.emoji ?? '—'}</span>
                       <span style={{ fontSize: '0.58rem', color: t.textMuted }}>{['L','M','X','J','V','S','D'][i]}</span>
                     </div>
                   );
                 })}
               </div>
-              <div className="mt-3 pt-3 border-t flex items-center justify-between"
-                style={{ borderColor: 'rgba(108,99,255,0.1)' }}>
-                <span style={{ fontSize: '0.72rem', color: t.textMuted }}>Promedio semanal</span>
-                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#7FE7C4' }}>
-                  {EMOCIONES.find(e => e.value === Math.round(WEEK_MOODS.reduce((a,b) => a+b,0)/WEEK_MOODS.length))?.emoji} {EMOCIONES.find(e => e.value === Math.round(WEEK_MOODS.reduce((a,b) => a+b,0)/WEEK_MOODS.length))?.label}
-                </span>
-              </div>
+              {(() => {
+                const vals = computeWeekMoods(diaryEntries).filter((v): v is number => v != null);
+                if (vals.length === 0) return null;
+                const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+                const em = EMOCIONES.find(e => e.value === avg);
+                return (
+                  <div className="mt-3 pt-3 border-t flex items-center justify-between"
+                    style={{ borderColor: 'rgba(108,99,255,0.1)' }}>
+                    <span style={{ fontSize: '0.72rem', color: t.textMuted }}>Promedio semanal</span>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#7FE7C4' }}>
+                      {em?.emoji} {em?.label}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Past entries */}
             <div>
               <p style={{ fontWeight: 700, fontSize: '0.9rem', color: t.text, marginBottom: '10px' }}>Entradas anteriores</p>
-              <div className="space-y-2.5">
-                {DIARY_ENTRIES.map((e, i) => (
-                  <motion.div key={i}
-                    initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 }}
-                    className="rounded-2xl border overflow-hidden cursor-pointer hover:shadow-md transition-all"
-                    style={{ background: t.cardBg, borderColor: `${e.color}25` }}>
-                    <div className="h-1" style={{ background: `linear-gradient(90deg, ${e.color}, ${e.color}60)` }} />
-                    <div className="flex items-start gap-3 p-3">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ background: `${e.color}15`, fontSize: '1.4rem' }}>
-                        {e.emotion}
+              {diaryEntries.length === 0 ? (
+                <p style={{ fontSize: '0.78rem', color: t.textMuted }}>Aún no tienes entradas. Escribe tu primer registro arriba.</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {diaryEntries.map((e, i) => (
+                    <motion.div key={e.isoDate}
+                      initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 }}
+                      className="rounded-2xl border overflow-hidden cursor-pointer hover:shadow-md transition-all"
+                      style={{ background: t.cardBg, borderColor: `${e.color}25` }}>
+                      <div className="h-1" style={{ background: `linear-gradient(90deg, ${e.color}, ${e.color}60)` }} />
+                      <div className="flex items-start gap-3 p-3">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                          style={{ background: `${e.color}15`, fontSize: '1.4rem' }}>
+                          {e.emotion}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p style={{ fontSize: '0.7rem', color: t.textMuted, marginBottom: '2px' }}>{e.date}</p>
+                          <p className="line-clamp-2" style={{ fontSize: '0.78rem', color: t.textSub, lineHeight: 1.5 }}>{e.note}</p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p style={{ fontSize: '0.7rem', color: t.textMuted, marginBottom: '2px' }}>{e.date}</p>
-                        <p className="line-clamp-2" style={{ fontSize: '0.78rem', color: t.textSub, lineHeight: 1.5 }}>{e.note}</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
