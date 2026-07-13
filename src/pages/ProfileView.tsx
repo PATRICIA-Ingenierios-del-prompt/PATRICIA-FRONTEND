@@ -209,7 +209,8 @@ export function ProfileView() {
   const [perfil, setPerfil] = useState<PerfilResponse | null>(null);
   const [loadingPerfil, setLoadingPerfil] = useState(true);
   const [showEdit, setShowEdit] = useState(false);
-  const [schedule, setSchedule] = useState<Set<string>>(new Set(['0-0','0-1','2-2','2-3','4-1','4-2']));
+  const [schedule, setSchedule] = useState<Set<string>>(new Set());
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -222,6 +223,35 @@ export function ProfileView() {
 
   const toggleSlot = (key: string) =>
     setSchedule(prev => { const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s; });
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !userId) return;
+    if (!file.type.startsWith('image/')) {
+      addToast({ type: 'reporte', title: 'Archivo inválido', message: 'El archivo debe ser una imagen (JPG, PNG, etc.)' });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      addToast({ type: 'reporte', title: 'Imagen muy grande', message: 'El máximo es 10 MB.' });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      setUploadingPhoto(true);
+      try {
+        const updated = await userService.updatePerfil(userId, { foto: dataUrl });
+        setPerfil(prev => ({ ...prev, ...updated, foto: updated.foto ?? dataUrl }));
+        addToast({ type: 'info', title: 'Foto actualizada', message: 'Tu foto de perfil fue guardada.' });
+      } catch (err) {
+        addToast({ type: 'reporte', title: 'No se pudo subir la foto', message: friendlyError(err, 'Intenta de nuevo.') });
+      } finally {
+        setUploadingPhoto(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const initials    = getInitials(perfil?.nombre, perfil?.apellidos, userEmail ?? undefined);
   const fullName    = [perfil?.nombre, perfil?.apellidos].filter(Boolean).join(' ') || userEmail || 'Usuario';
@@ -279,11 +309,12 @@ export function ProfileView() {
                   {initials}
                 </div>
               )}
-              <button onClick={() => setShowEdit(true)}
-                className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center"
+              <input type="file" accept="image/*" id="profile-photo-input" className="hidden" onChange={handlePhotoChange} disabled={uploadingPhoto} />
+              <label htmlFor="profile-photo-input" title="Cambiar foto de perfil"
+                className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center cursor-pointer"
                 style={{ background: '#6C63FF', boxShadow: '0 2px 8px rgba(108,99,255,0.5)' }}>
-                <Camera size={13} color="white" />
-              </button>
+                {uploadingPhoto ? <Loader2 size={13} color="white" className="animate-spin" /> : <Camera size={13} color="white" />}
+              </label>
               <div className="absolute top-2 right-2 w-4 h-4 rounded-full border-2"
                 style={{ background: '#7FE7C4', borderColor: t.darkMode ? '#1A1829' : '#fff' }} />
             </div>

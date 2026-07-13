@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Heart, MessageCircle, Check, Send, ArrowLeft, RotateCcw } from 'lucide-react';
+import { X, Heart, MessageCircle, Check, Send, ArrowLeft, RotateCcw, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
 import { useAuth } from '../store/AuthContext';
@@ -336,6 +336,50 @@ export function MatchingView() {
     }
   }, []);
 
+  // ── Buscar usuarios directamente (sin esperar a que aparezcan en el feed) ──
+  // No hay endpoint de búsqueda por nombre en el backend todavía: ampliamos el
+  // pool de sugerencias y filtramos en el cliente por nombre/carrera.
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchPool, setSearchPool] = useState<DisplayCandidate[] | null>(null);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  const [searchSentTo, setSearchSentTo] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!searchTerm.trim() || searchPool !== null || loadingSearch) return;
+    setLoadingSearch(true);
+    (async () => {
+      try {
+        const sugerencias = await matchingService.obtenerSugerencias(200);
+        const display = await hydrate(sugerencias.map(s => ({ id: s.candidatoId, scoreTotal: s.scoreTotal })));
+        setSearchPool(display);
+      } catch (e) {
+        addToast({ type: 'info', title: 'No se pudo buscar', message: friendlyError(e, 'Intenta de nuevo más tarde.') });
+      } finally {
+        setLoadingSearch(false);
+      }
+    })();
+  }, [searchTerm, searchPool, loadingSearch]);
+
+  const searchResults = (searchPool ?? []).filter(c => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return false;
+    return c.nombre.toLowerCase().includes(q) || c.apellidos.toLowerCase().includes(q) || c.carrera.toLowerCase().includes(q);
+  });
+
+  const sendSearchRequest = async (person: DisplayCandidate) => {
+    try {
+      const res = await matchingService.decidir(person.id, 'LIKE');
+      setSearchSentTo(prev => new Set(prev).add(person.id));
+      if (res.matchConfirmado) {
+        addToast({ type: 'match', title: '¡Es un Match!', message: `Tú y ${person.nombre} ahora son matches`, duration: 5000 });
+      } else {
+        addToast({ type: 'info', title: 'Solicitud enviada ✓', message: `Le enviaste una solicitud a ${person.nombre}` });
+      }
+    } catch (e) {
+      addToast({ type: 'info', title: 'No se pudo enviar la solicitud', message: friendlyError(e, 'Intenta de nuevo.') });
+    }
+  };
+
   // ── Requests (incoming likes) ───────────────────────────────────────────
   const [requests, setRequests] = useState<DisplayCandidate[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
@@ -432,9 +476,9 @@ export function MatchingView() {
 
   if (!hasPhoto) {
     return (
-      <div className="h-full overflow-y-auto pb-6 flex items-center justify-center">
+      <div className="h-full overflow-y-auto pt-6 pb-6 flex justify-center">
         <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md rounded-3xl border overflow-hidden"
+          className="w-full max-w-md rounded-3xl border overflow-hidden self-start"
           style={{ background: t.cardBg, borderColor: t.cardBorder, boxShadow: '0 24px 64px rgba(108,99,255,0.18)' }}>
 
           <div className="relative overflow-hidden px-6 pt-8 pb-6 text-center"
@@ -576,7 +620,64 @@ export function MatchingView() {
       {/* ── DISCOVER ── */}
       {tab === 'discover' && (
         <div className="flex flex-col items-center pb-6">
-          {loadingDiscover ? (
+          <div className="relative w-full max-w-sm mb-5">
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: t.textMuted }} />
+            <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+              placeholder="Buscar usuarios por nombre o carrera..."
+              className="w-full rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none"
+              style={{ background: t.inputBg, border: `1px solid ${t.cardBorder}`, color: t.text }} />
+          </div>
+
+          {searchTerm.trim() ? (
+            loadingSearch ? (
+              <p style={{ color: t.textMuted, fontSize: '0.85rem', padding: '48px 0' }}>Buscando...</p>
+            ) : searchResults.length === 0 ? (
+              <div className="text-center py-16 rounded-2xl border w-full max-w-sm" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
+                <Search size={32} style={{ color: t.textMuted, margin: '0 auto 12px' }} />
+                <p style={{ fontWeight: 600, color: t.text }}>Sin resultados para "{searchTerm}"</p>
+                <p style={{ fontSize: '0.82rem', color: t.textMuted, marginTop: '6px' }}>Prueba con otro nombre o carrera</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-2xl">
+                {searchResults.map(person => {
+                  const sent = searchSentTo.has(person.id);
+                  return (
+                    <div key={person.id} className="relative rounded-2xl overflow-hidden cursor-pointer group"
+                      style={{ aspectRatio: '3/4', boxShadow: '0 4px 20px rgba(0,0,0,0.25)' }}
+                      onClick={() => { setViewProfile(person); setViewProfileIsMatch(false); }}>
+                      <div className="absolute inset-0" style={{ background: person.foto ? undefined : person.gradient }}>
+                        {person.foto && <img src={person.foto} alt={person.nombre} className="w-full h-full object-cover" />}
+                      </div>
+                      <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 50%, transparent 75%)' }} />
+                      {!person.foto && (
+                        <div className="absolute inset-0 flex items-center justify-center" style={{ paddingBottom: '32%' }}>
+                          <div className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-white text-xl border-2 border-white/25"
+                            style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)' }}>
+                            {person.avatar}
+                          </div>
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <p style={{ fontWeight: 800, fontSize: '0.88rem', color: 'white', lineHeight: 1.2 }}>
+                          {person.nombre}{person.edad ? `, ${person.edad}` : ''}
+                        </p>
+                        <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', marginTop: '2px', marginBottom: '8px' }}>
+                          {person.carrera}
+                        </p>
+                        <button onClick={e => { e.stopPropagation(); if (!sent) sendSearchRequest(person); }}
+                          disabled={sent}
+                          className="w-full py-1.5 rounded-xl flex items-center justify-center gap-1.5 transition-all hover:scale-105 disabled:opacity-60"
+                          style={{ background: sent ? 'rgba(127,231,196,0.15)' : 'rgba(127,231,196,0.3)', border: '1px solid rgba(127,231,196,0.6)' }}>
+                          <Heart size={12} fill="#7FE7C4" style={{ color: '#7FE7C4' }} />
+                          <span style={{ fontSize: '0.7rem', color: '#7FE7C4', fontWeight: 600 }}>{sent ? 'Enviada' : 'Solicitud'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          ) : loadingDiscover ? (
             <p style={{ color: t.textMuted, fontSize: '0.85rem', padding: '48px 0' }}>Cargando sugerencias...</p>
           ) : !current ? (
             <div className="text-center py-16 rounded-2xl border w-full max-w-sm" style={{ background: t.cardBg, borderColor: t.cardBorder }}>

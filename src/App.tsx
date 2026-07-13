@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Compass, Heart, Users, MessageSquare, Calendar, Smile, Image,
-  Bell, Settings, ChevronLeft, ChevronRight, Search, Zap,
+  Bell, Settings, ChevronLeft, ChevronRight, Zap,
   Sun, Moon, LogOut, Menu, MapPin, ShieldCheck
 } from 'lucide-react';
 import { HomeView } from './pages/HomeView';
@@ -23,6 +23,7 @@ import { ReportsProvider } from './store/ReportsContext';
 import { SupportProvider } from './store/SupportContext';
 import { isAdminEmail } from './lib/admin';
 import { userService } from './services/userService';
+import { matchingService } from './services/matchingService';
 import { tokenManager } from './services/tokenManager';
 import { ToastContainer, addToast } from './components/ToastSystem';
 import { AnimatedBackground } from './components/AnimatedBackground';
@@ -41,8 +42,8 @@ type ViewId = 'home' | 'matching' | 'parches' | 'chats' | 'eventos' | 'bienestar
 
 const NAV_ITEMS: { id: ViewId; label: string; icon: React.ComponentType<any>; badge?: number }[] = [
   { id: 'home',          label: 'Descubrir',       icon: Compass },
-  { id: 'matching',      label: 'Matching',         icon: Heart,  badge: 3 },
-  { id: 'parches',       label: 'Parches',          icon: Users,  badge: 10 },
+  { id: 'matching',      label: 'Matching',         icon: Heart },
+  { id: 'parches',       label: 'Parches',          icon: Users },
   { id: 'eventos',       label: 'Eventos',          icon: Calendar },
   { id: 'ubicacion',     label: 'Ubicación en vivo', icon: MapPin },
   { id: 'bienestar',     label: 'Bienestar 24/7',   icon: Smile },
@@ -97,46 +98,81 @@ const VIEW_LABELS: Record<ViewId, string> = {
   admin:          'Panel Admin',
 };
 
-const NOTIFICATIONS_DATA = [
-  { id: 1, type: 'match' as const, text: '¡Nuevo match con Camila Rodríguez!', time: '2 min', read: false },
-  { id: 2, type: 'chat' as const,  text: 'Tu parche "Cálculo III" tiene 3 mensajes nuevos', time: '15 min', read: false },
-  { id: 3, type: 'evento' as const,text: 'El Hackathon ECI 2026 empieza mañana', time: '1h', read: false },
-  { id: 4, type: 'match' as const, text: 'Isabela te envió una solicitud de match', time: '2h', read: false },
-  { id: 5, type: 'xp' as const,    text: 'Subiste al Nivel 12 — ¡Eres un Explorador!', time: '1d', read: true },
-];
+type NotificationItem = { id: string; type: 'match' | 'chat' | 'evento' | 'reporte' | 'xp' | 'logro' | 'info'; text: string; time: string; read: boolean };
 
 const notifEmoji: Record<string, string> = { match: '💜', chat: '💬', evento: '🎉', reporte: '⚠️', xp: '⚡', logro: '🏆', info: 'ℹ️' };
 
+/**
+ * Sin microservicio de notificaciones todavía: por ahora armamos la lista a
+ * partir de señales reales que sí existen (solicitudes de match pendientes).
+ * Cuando exista un endpoint de notificaciones dedicado, reemplazar este fetch.
+ */
 function NotificationsView() {
   const t = useTheme();
-  const [notifs, setNotifs] = useState(NOTIFICATIONS_DATA);
+  const [notifs, setNotifs] = useState<NotificationItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const ids = await matchingService.solicitudesRecibidas();
+        if (cancelled) return;
+        setNotifs(ids.map(id => ({
+          id: `solicitud-${id}`,
+          type: 'match',
+          text: 'Tienes una nueva solicitud de match esperando tu respuesta.',
+          time: 'reciente',
+          read: false,
+        })));
+      } catch {
+        if (!cancelled) setNotifs([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="h-full overflow-y-auto pb-6">
       <div className="flex items-center justify-between mb-6">
         <h2 style={{ fontWeight: 700, fontSize: '1.3rem', color: t.text }}>Notificaciones</h2>
-        <button onClick={() => setNotifs(p => p.map(n => ({ ...n, read: true })))}
-          className="text-sm hover:opacity-70" style={{ color: '#6C63FF' }}>
-          Marcar todas como leídas
-        </button>
+        {notifs.length > 0 && (
+          <button onClick={() => setNotifs(p => p.map(n => ({ ...n, read: true })))}
+            className="text-sm hover:opacity-70" style={{ color: '#6C63FF' }}>
+            Marcar todas como leídas
+          </button>
+        )}
       </div>
-      <div className="space-y-3">
-        {notifs.map(n => (
-          <div key={n.id}
-            className="flex items-start gap-4 p-4 rounded-2xl border cursor-pointer transition-all"
-            style={{ background: n.read ? t.cardBg : 'var(--p-input)', borderColor: n.read ? t.cardBorder : 'rgba(108,99,255,0.3)' }}
-            onClick={() => setNotifs(p => p.map(x => x.id === n.id ? { ...x, read: true } : x))}>
-            <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl flex-shrink-0"
-              style={{ background: 'rgba(108,99,255,0.1)' }}>
-              {notifEmoji[n.type]}
+      {loading ? (
+        <p style={{ fontSize: '0.85rem', color: t.textMuted, padding: '48px 0', textAlign: 'center' }}>Cargando notificaciones...</p>
+      ) : notifs.length === 0 ? (
+        <div className="text-center py-16 rounded-2xl border" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
+          <Bell size={32} style={{ color: t.textMuted, margin: '0 auto 12px' }} />
+          <p style={{ fontWeight: 600, color: t.text }}>No tienes notificaciones por ahora</p>
+          <p style={{ fontSize: '0.82rem', color: t.textMuted, marginTop: '6px' }}>Te avisaremos aquí cuando pase algo nuevo</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {notifs.map(n => (
+            <div key={n.id}
+              className="flex items-start gap-4 p-4 rounded-2xl border cursor-pointer transition-all"
+              style={{ background: n.read ? t.cardBg : 'var(--p-input)', borderColor: n.read ? t.cardBorder : 'rgba(108,99,255,0.3)' }}
+              onClick={() => setNotifs(p => p.map(x => x.id === n.id ? { ...x, read: true } : x))}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl flex-shrink-0"
+                style={{ background: 'rgba(108,99,255,0.1)' }}>
+                {notifEmoji[n.type]}
+              </div>
+              <div className="flex-1">
+                <p style={{ fontSize: '0.88rem', color: n.read ? t.textMuted : t.text, fontWeight: n.read ? 400 : 500 }}>{n.text}</p>
+                <p style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '4px' }}>Hace {n.time}</p>
+              </div>
+              {!n.read && <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1" style={{ background: '#6C63FF' }} />}
             </div>
-            <div className="flex-1">
-              <p style={{ fontSize: '0.88rem', color: n.read ? t.textMuted : t.text, fontWeight: n.read ? 400 : 500 }}>{n.text}</p>
-              <p style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '4px' }}>Hace {n.time}</p>
-            </div>
-            {!n.read && <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1" style={{ background: '#6C63FF' }} />}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -981,7 +1017,7 @@ function AppCore() {
   const [activeView, setActiveView] = useState<ViewId>('home');
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [pendingRequests, setPendingRequests] = useState(0);
   const [darkMode, setDarkMode] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
@@ -995,7 +1031,8 @@ function AppCore() {
     .split(' ').filter(Boolean).slice(0, 2)
     .map((w: string) => w[0].toUpperCase()).join('');
   const isAdmin = isAdminEmail(userEmail);
-  const navItems = isAdmin ? [...NAV_ITEMS, { id: 'admin' as ViewId, label: 'Admin', icon: ShieldCheck }] : NAV_ITEMS;
+  const navItemsBase = NAV_ITEMS.map(item => item.id === 'matching' && pendingRequests > 0 ? { ...item, badge: pendingRequests } : item);
+  const navItems = isAdmin ? [...navItemsBase, { id: 'admin' as ViewId, label: 'Admin', icon: ShieldCheck }] : navItemsBase;
 
   const setLandingTarget = (target: 'login' | 'register') => {
     setAuthState(target === 'login' ? 'loginform' : 'register');
@@ -1092,13 +1129,21 @@ function AppCore() {
     goToAppView('perfil');
   };
 
-  // Welcome + demo toasts on login
+  // Welcome toast on login
   useEffect(() => {
     if (authState !== 'app') return;
     const t0 = setTimeout(() => addToast({ type: 'logro', title: '¡Bienvenido, Explorador!', message: '¡Qué bueno tenerte de vuelta en U•link!', duration: 5000 }), 600);
-    const t1 = setTimeout(() => addToast({ type: 'match', title: '¡Nuevo Match!', message: 'Tú y Camila Rodríguez se gustaron' }), 3000);
-    const t2 = setTimeout(() => addToast({ type: 'xp', title: '+100 XP', message: 'Bonus de bienvenida desbloqueado' }), 5500);
-    return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2); };
+    return () => clearTimeout(t0);
+  }, [authState]);
+
+  // Solicitudes de match pendientes reales — alimenta el badge de Matching y el punto de la campana.
+  useEffect(() => {
+    if (authState !== 'app') return;
+    let cancelled = false;
+    matchingService.solicitudesRecibidas()
+      .then(ids => { if (!cancelled) setPendingRequests(ids.length); })
+      .catch(() => { if (!cancelled) setPendingRequests(0); });
+    return () => { cancelled = true; };
   }, [authState]);
 
   if (authState === 'callback')
@@ -1298,28 +1343,19 @@ function AppCore() {
           <h1 style={{ fontWeight: 700, fontSize: '1.05rem', whiteSpace: 'nowrap', color: theme.text }}>
             {VIEW_LABELS[activeView]}
           </h1>
-          <div className="flex-1 max-w-md hidden sm:block">
-            <div className="relative">
-              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: theme.textMuted }} />
-              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                placeholder=""
-                className="w-full rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none"
-                style={{ background: theme.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: theme.text }} />
-            </div>
-          </div>
+          <div className="flex-1" />
           <div className="flex items-center gap-2 ml-auto">
             <button onClick={() => goToAppView('chats')}
               className="relative w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-70 transition-all"
               style={{ background: 'rgba(108,99,255,0.1)' }}
               title="Chats">
               <MessageSquare size={17} style={{ color: 'var(--p-muted)' }} />
-              <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: '#FF4D6A' }} />
             </button>
             <button onClick={() => goToAppView('notificaciones')}
               className="relative w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-70 transition-all"
               style={{ background: 'rgba(108,99,255,0.1)' }}>
               <Bell size={17} style={{ color: 'var(--p-muted)' }} />
-              <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: '#FF4D6A' }} />
+              {pendingRequests > 0 && <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: '#FF4D6A' }} />}
             </button>
             {/* Theme toggle in topbar */}
             <button onClick={() => setDarkMode(d => !d)}
