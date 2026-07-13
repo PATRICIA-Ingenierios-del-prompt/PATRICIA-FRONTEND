@@ -5,8 +5,9 @@ import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 import { useTheme } from '../store/ThemeContext';
 import { addToast } from '../components/ToastSystem';
 import { eventService } from '../services/eventService';
+import { parcheService } from '../services/parcheService';
 import { friendlyError } from '../lib/errorMessages';
-import type { EventCategory, EventMapResponse, EventResponse, UUID } from '../types/patricia';
+import type { EventCategory, EventMapResponse, EventResponse, ParcheSummaryResponse, UUID } from '../types/patricia';
 import {
   ALL_CATEGORIES, CATEGORY_META, DARK_MAP_STYLES, ECI_CENTER, GMAPS_LOADER_ID, GOOGLE_MAPS_KEY, pinSvg,
 } from '../lib/maps';
@@ -171,18 +172,34 @@ function CreateEventModal({ onClose, onCreated }: { onClose: () => void; onCreat
   const [capacity, setCapacity] = useState('');
   const [category, setCategory] = useState<EventCategory>('TECHNOLOGY');
   const [picked, setPicked] = useState<{ lat: number; lng: number } | null>(null);
+  const [withMeeting, setWithMeeting] = useState(false);
+  const [pickedMeeting, setPickedMeeting] = useState<{ lat: number; lng: number } | null>(null);
+  const [meetingPlace, setMeetingPlace] = useState('');
+  const [myParches, setMyParches] = useState<ParcheSummaryResponse[]>([]);
+  const [parcheId, setParcheId] = useState<UUID | ''>('');
   const [saving, setSaving] = useState(false);
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm(f => ({ ...f, [k]: e.target.value }));
   const inputStyle: React.CSSProperties = { background: t.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text };
 
+  // My parches, to optionally link the event (POST /api/events/linked requires membership).
+  useEffect(() => {
+    parcheService.mine().then(p => setMyParches(p.content)).catch(() => setMyParches([]));
+  }, []);
+
   const submit = async () => {
     if (!form.name || !form.date || !form.start || !form.end) { addToast({ type: 'info', title: 'Faltan datos', message: 'Nombre, fecha y horas son obligatorios.' }); return; }
-    if (!picked) { addToast({ type: 'info', title: 'Ubicación', message: 'Toca el mapa para ubicar el evento.' }); return; }
+    if (!picked) { addToast({ type: 'info', title: 'Destino', message: 'Toca el mapa para marcar dónde será el evento.' }); return; }
+    if (withMeeting && !pickedMeeting) { addToast({ type: 'info', title: 'Punto de encuentro', message: 'Marca el punto de encuentro en su mapa, o desactiva la casilla.' }); return; }
     setSaving(true);
     try {
-      const dest = { latitude: picked.lat, longitude: picked.lng, address: form.place || null, placeId: null };
-      await eventService.create({ name: form.name, description: form.description, category, maxCapacity: Number(capacity) || 1, eventDate: form.date, startTime: form.start, endTime: form.end, meetingPoint: dest, destination: dest });
-      addToast({ type: 'logro', title: '¡Evento creado!', message: form.name });
+      const destination = { latitude: picked.lat, longitude: picked.lng, address: form.place || null, placeId: null };
+      const meetingPoint = withMeeting && pickedMeeting
+        ? { latitude: pickedMeeting.lat, longitude: pickedMeeting.lng, address: meetingPlace || null, placeId: null }
+        : null;
+      const body = { name: form.name, description: form.description, category, maxCapacity: Number(capacity) || 1, eventDate: form.date, startTime: form.start, endTime: form.end, meetingPoint, destination };
+      if (parcheId) await eventService.createLinked({ ...body, parcheId });
+      else await eventService.create(body);
+      addToast({ type: 'logro', title: '¡Evento creado!', message: parcheId ? `${form.name} · vinculado al parche` : form.name });
       onCreated(); onClose();
     } catch (e: any) {
       addToast({ type: 'reporte', title: 'No se pudo crear', message: friendlyError(e, 'No se pudo crear el evento. Intenta de nuevo.') });
@@ -191,7 +208,7 @@ function CreateEventModal({ onClose, onCreated }: { onClose: () => void; onCreat
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
-      <div className="rounded-2xl p-6 w-[480px] border max-h-[88vh] overflow-y-auto" style={{ background: t.cardBg, borderColor: 'rgba(108,99,255,0.3)' }} onClick={e => e.stopPropagation()}>
+      <div className="rounded-2xl p-5 sm:p-6 w-full max-w-[480px] border max-h-[88vh] overflow-y-auto" style={{ background: t.cardBg, borderColor: 'rgba(108,99,255,0.3)' }} onClick={e => e.stopPropagation()}>
         <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 20, color: t.text }}>Crear Evento</h3>
         <div className="space-y-4">
           <input value={form.name} onChange={set('name')} placeholder="Título del evento..." className="w-full rounded-xl px-4 py-3 text-sm outline-none" style={inputStyle} />
@@ -204,20 +221,50 @@ function CreateEventModal({ onClose, onCreated }: { onClose: () => void; onCreat
               ); })}
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <input type="date" value={form.date} onChange={set('date')} className="rounded-xl px-3 py-3 text-sm outline-none" style={inputStyle} />
-            <input type="time" value={form.start} onChange={set('start')} className="rounded-xl px-3 py-3 text-sm outline-none" style={inputStyle} />
-            <input type="time" value={form.end} onChange={set('end')} className="rounded-xl px-3 py-3 text-sm outline-none" style={inputStyle} />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <input type="date" value={form.date} onChange={set('date')} className="w-full min-w-0 rounded-xl px-3 py-3 text-sm outline-none" style={inputStyle} />
+            <input type="time" value={form.start} onChange={set('start')} className="w-full min-w-0 rounded-xl px-3 py-3 text-sm outline-none" style={inputStyle} />
+            <input type="time" value={form.end} onChange={set('end')} className="w-full min-w-0 rounded-xl px-3 py-3 text-sm outline-none" style={inputStyle} />
           </div>
           <input value={form.place} onChange={set('place')} placeholder="Nombre del lugar..." className="w-full rounded-xl px-4 py-3 text-sm outline-none" style={inputStyle} />
           <div>
-            <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>Toca el mapa para ubicar el evento</p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>Destino <span style={{ color: '#FF4D6A' }}>*</span> — toca el mapa para marcar dónde será el evento</p>
             <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'rgba(108,99,255,0.2)' }}>
               <CampusMap events={[]} height={180} pickMode pickedPos={picked} onPick={setPicked} />
             </div>
-            {picked && <p style={{ fontSize: '0.7rem', color: '#6C63FF', marginTop: 4 }}>✓ {picked.lat.toFixed(5)}, {picked.lng.toFixed(5)}</p>}
+            {picked && <p style={{ fontSize: '0.7rem', color: '#6C63FF', marginTop: 4 }}>✓ Destino: {picked.lat.toFixed(5)}, {picked.lng.toFixed(5)}</p>}
           </div>
+          {/* Optional meeting point — where the group gathers before heading to the destination */}
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" checked={withMeeting}
+              onChange={e => { setWithMeeting(e.target.checked); if (!e.target.checked) { setPickedMeeting(null); setMeetingPlace(''); } }}
+              className="w-4 h-4 rounded" style={{ accentColor: '#7FE7C4' }} />
+            <span style={{ fontSize: '0.8rem', color: 'var(--p-muted)', fontWeight: 600 }}>Agregar punto de encuentro (opcional)</span>
+          </label>
+          {withMeeting && (
+            <div>
+              <input value={meetingPlace} onChange={e => setMeetingPlace(e.target.value)} placeholder="Nombre del punto de encuentro..." className="w-full rounded-xl px-4 py-3 text-sm outline-none mb-2" style={inputStyle} />
+              <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>Toca el mapa para marcar dónde se encuentran antes del evento</p>
+              <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'rgba(127,231,196,0.35)' }}>
+                <CampusMap events={[]} height={180} pickMode pickedPos={pickedMeeting} onPick={setPickedMeeting} />
+              </div>
+              {pickedMeeting && <p style={{ fontSize: '0.7rem', color: '#7FE7C4', marginTop: 4 }}>✓ Encuentro: {pickedMeeting.lat.toFixed(5)}, {pickedMeeting.lng.toFixed(5)}</p>}
+            </div>
+          )}
           <input type="number" value={capacity} onChange={e => setCapacity(e.target.value)} placeholder="Cupos máximos..." className="w-full rounded-xl px-4 py-3 text-sm outline-none" style={inputStyle} />
+          {/* Optional parche link */}
+          <div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>Vincular a un parche (opcional)</p>
+            <select value={parcheId} onChange={e => setParcheId(e.target.value as UUID | '')}
+              className="w-full rounded-xl px-4 py-3 text-sm outline-none appearance-none"
+              style={inputStyle}>
+              <option value="">Sin vincular — evento independiente</option>
+              {myParches.map(p => (
+                <option key={p.parcheId} value={p.parcheId}>{p.name}{p.visibility === 'PRIVATE' ? ' 🔒' : ''}</option>
+              ))}
+            </select>
+            {parcheId && <p style={{ fontSize: '0.7rem', color: '#FFB347', marginTop: 4 }}>El evento quedará vinculado al parche y se notificará a sus miembros.</p>}
+          </div>
           <div className="flex gap-3">
             <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm" style={{ background: 'rgba(108,99,255,0.1)', color: 'var(--p-muted)' }}>Cancelar</button>
             <button onClick={submit} disabled={saving} className="flex-1 py-2.5 rounded-xl text-sm font-medium disabled:opacity-50" style={{ background: '#6C63FF', color: 'white' }}>{saving ? 'Publicando…' : 'Publicar Evento'}</button>

@@ -408,6 +408,9 @@ export function ParchesView({ linkedEvents = [] }: {
   const [voiceCamOn, setVoiceCamOn] = useState(true);
   const [voiceScreenShare, setVoiceScreenShare] = useState(false);
   const [memberMenuOpen, setMemberMenuOpen] = useState<string|null>(null);
+  const [inviteModal, setInviteModal] = useState<{ token: string; expiresInSeconds: number } | null>(null);
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const [inviteLoading, setInviteLoading] = useState(false);
   const [createType, setCreateType] = useState<'public'|'private'>('public');
   const [createCategory, setCreateCategory] = useState<EventCategory>('TECHNOLOGY');
   const [createError, setCreateError] = useState<string | null>(null);
@@ -491,8 +494,19 @@ export function ParchesView({ linkedEvents = [] }: {
     catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo salir', message: friendlyError(e, 'No te pudimos sacar del parche. Intenta de nuevo.') }); }
   };
   const generateInvite = async (p: UiParche) => {
-    try { const r = await parcheService.createInvite({ parcheId: p.id }); addToast({ type: 'logro', title: 'Código de invitación', message: `${r.token} · válido ${Math.round(r.expiresInSeconds / 60)} min` }); }
+    setInviteLoading(true);
+    try { const r = await parcheService.createInvite({ parcheId: p.id }); setInviteCopied(false); setInviteModal({ token: r.token, expiresInSeconds: r.expiresInSeconds }); }
     catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo generar', message: friendlyError(e, 'No se pudo generar el código. Intenta de nuevo.') }); }
+    finally { setInviteLoading(false); }
+  };
+  const copyInviteCode = async () => {
+    if (!inviteModal) return;
+    try { await navigator.clipboard.writeText(inviteModal.token); setInviteCopied(true); }
+    catch {
+      // Clipboard API can fail (permissions/insecure context) — fallback selection
+      const ta = document.createElement('textarea'); ta.value = inviteModal.token; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); setInviteCopied(true); } finally { document.body.removeChild(ta); }
+    }
   };
   const deleteParcheHandler = async (p: UiParche) => {
     try { await parcheService.remove(p.id); addToast({ type: 'info', title: 'Parche eliminado', message: p.name }); setSelectedParche(EMPTY_PARCHE); await Promise.all([loadMine(), loadPublicos()]); }
@@ -936,6 +950,13 @@ const realLeaveVoice = () => {
             </div>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            {selectedParche.type==='private' && isMember(selectedParche) && (
+              <button onClick={()=>void generateInvite(selectedParche)} disabled={inviteLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-50"
+                style={{ background:'rgba(127,231,196,0.16)', color:'#7FE7C4', border:'1px solid rgba(127,231,196,0.35)' }}>
+                <KeyRound size={14} /> {inviteLoading ? 'Generando…' : isMobile ? 'Invitar' : 'Invitar al parche'}
+              </button>
+            )}
             <button onClick={()=>setShowMembers(v=>!v)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-all"
               style={{ background: showMembers ? 'rgba(108,99,255,0.2)' : 'var(--p-input)', color:'var(--p-muted)' }}>
@@ -1517,11 +1538,11 @@ const realLeaveVoice = () => {
       <AnimatePresence>
         {showCreate && (
           <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
             style={{ background:'rgba(0,0,0,0.75)' }}
             onClick={()=>setShowCreate(false)}>
             <motion.div initial={{ scale:0.9 }} animate={{ scale:1 }} exit={{ scale:0.9 }}
-              className="rounded-3xl p-6 w-[420px] border"
+              className="rounded-3xl p-5 sm:p-6 w-full max-w-[420px] max-h-[90vh] overflow-y-auto border"
               style={{ background:'var(--p-card)', borderColor:'rgba(108,99,255,0.3)' }}
               onClick={e=>e.stopPropagation()}>
               <div className="flex items-center justify-between mb-5">
@@ -1540,7 +1561,7 @@ const realLeaveVoice = () => {
                 {/* Category picker (real backend categories) */}
                 <div>
                   <p style={{ fontSize:'0.8rem', fontWeight:600, marginBottom:'8px', color:'var(--p-sub)' }}>Categoría <span style={{ color:'#FF4D6A' }}>*</span></p>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {ALL_CATEGORIES.map(cat=>{ const m = CATEGORY_META[cat]; const on = createCategory===cat; return (
                       <button key={cat} onClick={()=>setCreateCategory(cat)}
                         className="flex flex-col items-center gap-1 py-2.5 rounded-xl border transition-all"
@@ -1589,6 +1610,43 @@ const realLeaveVoice = () => {
                     </motion.div>
                   )}
                 </AnimatePresence>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Invite code modal ────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {inviteModal && (
+          <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+            style={{ background:'rgba(0,0,0,0.75)' }}
+            onClick={()=>setInviteModal(null)}>
+            <motion.div initial={{ scale:0.9, y:12 }} animate={{ scale:1, y:0 }} exit={{ scale:0.9, y:12 }}
+              className="rounded-3xl p-6 w-full max-w-sm border text-center"
+              style={{ background:'var(--p-card)', borderColor:'rgba(127,231,196,0.35)' }}
+              onClick={e=>e.stopPropagation()}>
+              <div className="w-12 h-12 mx-auto mb-3 rounded-2xl flex items-center justify-center"
+                style={{ background:'rgba(127,231,196,0.14)' }}>
+                <KeyRound size={22} style={{ color:'#7FE7C4' }} />
+              </div>
+              <h3 style={{ fontWeight:700, fontSize:'1.05rem', color:'var(--p-text)' }}>Código de invitación</h3>
+              <p style={{ fontSize:'0.75rem', color:'var(--p-muted)', marginTop:4, marginBottom:16 }}>
+                Compártelo para que entren a <strong>{selectedParche.name}</strong> · válido {Math.max(1, Math.round(inviteModal.expiresInSeconds / 60))} min
+              </p>
+              <div className="rounded-2xl px-4 py-4 mb-4 select-all"
+                style={{ background:'var(--p-input)', border:'1px dashed rgba(127,231,196,0.5)', fontSize:'1.35rem', fontWeight:800, letterSpacing:'0.14em', color:'#7FE7C4', wordBreak:'break-all', userSelect:'all' }}>
+                {inviteModal.token}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={()=>setInviteModal(null)} className="flex-1 py-2.5 rounded-xl text-sm"
+                  style={{ background:'var(--p-input)', color:'var(--p-muted)' }}>Cerrar</button>
+                <button onClick={()=>void copyInviteCode()}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+                  style={{ background: inviteCopied ? 'rgba(127,231,196,0.2)' : '#7FE7C4', color: inviteCopied ? '#7FE7C4' : '#0F0E1A', border: inviteCopied ? '1px solid rgba(127,231,196,0.5)' : 'none' }}>
+                  {inviteCopied ? '✓ Copiado' : 'Copiar código'}
+                </button>
               </div>
             </motion.div>
           </motion.div>
