@@ -33,9 +33,9 @@ function MicrosoftLogo({ size = 20 }: { size?: number }) {
 
 const VALID_DOMAINS = ['@mail.escuelaing.edu.co', '@escuelaing.edu.co'];
 
-const MICROSOFT_CLIENT_ID  = '2f99fb73-56a7-49d2-a199-8e47c687251b';
+const MICROSOFT_CLIENT_ID  = 'd378f378-5c84-4dc8-8ce6-85bf56b42a45';
 const MICROSOFT_TENANT     = 'common';
-const MICROSOFT_REDIRECT   = 'http://localhost:3000/auth/callback';
+const MICROSOFT_REDIRECT   = window.location.origin + '/auth/callback';
 
 export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode }: LoginViewProps) {
   const { login } = useAuth();
