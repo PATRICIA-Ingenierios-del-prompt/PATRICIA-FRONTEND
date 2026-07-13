@@ -1,21 +1,49 @@
-import { useState, useRef, useEffect } from 'react';
-import { Search, Send, Smile, Paperclip, MoreHorizontal, Check, CheckCheck, X, ArrowLeft } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Search, Send, Smile, Paperclip, MoreHorizontal, ArrowLeft, Heart } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '../store/ThemeContext';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { addToast } from '../components/ToastSystem';
+import { friendlyError } from '../lib/errorMessages';
+import { matchingService } from '../services/matchingService';
+import { userService, type PerfilResponse } from '../services/userService';
+import type { MatchResponse } from '../types/patricia';
+
+// ── Visual-only helpers (el backend no manda color de avatar) ───────────────
+const GRADIENTS = [
+  'linear-gradient(135deg,#6C63FF,#FF6B9D)',
+  'linear-gradient(135deg,#7FE7C4,#6C63FF)',
+  'linear-gradient(135deg,#FFB347,#FF6B9D)',
+  'linear-gradient(135deg,#A78BFA,#5BC8FF)',
+  'linear-gradient(135deg,#FF6B9D,#FFB347)',
+];
+function gradientFor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return GRADIENTS[hash % GRADIENTS.length];
+}
+function getInitials(nombre?: string, apellidos?: string): string {
+  const full = [nombre, apellidos].filter(Boolean).join(' ');
+  const parts = full.split(' ').filter(Boolean).slice(0, 2);
+  return parts.length ? parts.map(w => w[0]!.toUpperCase()).join('') : '?';
+}
+
+const DISPONIBILIDAD_LABEL: Record<string, string> = {
+  DISPONIBLE: 'Disponible',
+  OCUPADO: 'Ocupado',
+  NO_MOLESTAR: 'No molestar',
+};
 
 interface Contact {
-  id: number;
+  matchId: string;
+  userId: string;
   name: string;
   program: string;
   avatar: string;
   gradient: string;
-  status: 'online' | 'away' | 'offline';
-  lastMsg: string;
-  lastTime: string;
-  unread: number;
-  match: number;
+  foto?: string;
+  matchPct?: number;
+  disponibilidad?: string;
 }
 
 interface Message {
@@ -23,91 +51,74 @@ interface Message {
   text: string;
   time: string;
   isMe: boolean;
-  read: boolean;
 }
-
-const CONTACTS: Contact[] = [
-  { id: 1, name: 'Camila Rodríguez', program: 'Ing. Sistemas', avatar: 'CR', gradient: 'linear-gradient(135deg,#6C63FF,#FF6B9D)', status: 'online', lastMsg: '¿Hacemos parche de estudio mañana? 📚', lastTime: '10:34', unread: 2, match: 96 },
-  { id: 2, name: 'Felipe Arango',    program: 'Ing. Industrial', avatar: 'FA', gradient: 'linear-gradient(135deg,#7FE7C4,#6C63FF)', status: 'away',   lastMsg: '¡El parcial estuvo brutal jaja 😅',  lastTime: 'Ayer',   unread: 0, match: 88 },
-  { id: 3, name: 'Sofía Martínez',   program: 'Ing. Civil',     avatar: 'SM', gradient: 'linear-gradient(135deg,#FFB347,#FF6B9D)', status: 'online', lastMsg: 'Te mando los apuntes ahora mismo',  lastTime: 'Ayer',   unread: 0, match: 82 },
-  { id: 4, name: 'Andrés Torres',    program: 'Ing. Eléctrica', avatar: 'AT', gradient: 'linear-gradient(135deg,#A78BFA,#5BC8FF)', status: 'offline',lastMsg: '¿Quedamos para el hackathon?',       lastTime: 'Lun',    unread: 0, match: 77 },
-  { id: 5, name: 'María González',   program: 'Ing. Ambiental', avatar: 'MG', gradient: 'linear-gradient(135deg,#FF6B9D,#FFB347)', status: 'online', lastMsg: 'Vi tu post del proyecto de IA 🔥',  lastTime: 'Lun',    unread: 0, match: 74 },
-];
-
-const CHAT_HISTORY: Record<number, Message[]> = {
-  1: [
-    { id:1, text:'Hola! Vi que tienes un 96% de compatibilidad conmigo 😄', time:'10:00', isMe:false, read:true },
-    { id:2, text:'¡Hola Camila! Sí, en serio? Qué bueno! Hola :)', time:'10:02', isMe:true, read:true },
-    { id:3, text:'Jeje sí! Vi que también te gusta Python y la IA. Yo estoy trabajando en un proyecto de NLP', time:'10:05', isMe:false, read:true },
-    { id:4, text:'Qué interesante! Yo también estoy aprendiendo TensorFlow para un proyecto de visión por computadora 🤖', time:'10:08', isMe:true, read:true },
-    { id:5, text:'¡Qué chévere! Oye, ¿hacemos parche de estudio mañana? Tengo el parcial de Cálculo pasado mañana 📚', time:'10:34', isMe:false, read:false },
-    { id:6, text:'¿Quedamos a las 3pm en la biblio del bloque E?', time:'10:34', isMe:false, read:false },
-  ],
-  2: [
-    { id:1, text:'Ey! Cómo te fue en el parcial de Estadística?', time:'Ayer 09:20', isMe:true, read:true },
-    { id:2, text:'¡El parcial estuvo brutal jaja 😅 Creo que la cagué en la parte de regresión', time:'Ayer 09:45', isMe:false, read:true },
-    { id:3, text:'Uy no... a mí tampoco me fue bien en eso. Para el próximo hacemos parche', time:'Ayer 10:00', isMe:true, read:true },
-  ],
-  3: [
-    { id:1, text:'Hola Sofía! Tienes los apuntes de Mecánica de Suelos?', time:'Ayer 14:00', isMe:true, read:true },
-    { id:2, text:'Te mando los apuntes ahora mismo', time:'Ayer 14:05', isMe:false, read:true },
-    { id:3, text:'📎 apuntes_mecanica_suelos.pdf', time:'Ayer 14:06', isMe:false, read:true },
-    { id:4, text:'Gracias! Eres la mejor 🙌', time:'Ayer 14:08', isMe:true, read:true },
-  ],
-};
-
-const STATUS_COLOR: Record<string, string> = { online: '#7FE7C4', away: '#FFB347', offline: '#555' };
 
 type ViewId = 'home' | 'matching' | 'parches' | 'campus' | 'eventos' | 'bienestar' | 'album' | 'notificaciones' | 'ranking' | 'ajustes' | 'perfil';
 
-const SCHED_DAYS = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
-const SCHED_SLOTS = ['8-10', '10-12', '12-14', '14-16', '16-18', '18-20'];
-function contactSchedule(id: number): Set<string> {
-  const patterns = [
-    ['0-1','0-2','1-0','2-1','3-0','4-2'],
-    ['0-0','1-2','2-0','3-1','4-0','4-2'],
-    ['1-1','2-2','3-0','3-3','4-1','4-3'],
-    ['0-2','1-1','2-3','3-2','4-0','4-3'],
-    ['0-0','0-3','1-2','2-1','3-0','4-1'],
-  ];
-  const s = new Set<string>();
-  patterns[id % patterns.length].forEach(k => s.add(k));
-  return s;
-}
-
 export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId) => void }) {
   const t = useTheme();
-  const [selected, setSelected] = useState<Contact>(CONTACTS[0]);
-  const [messages, setMessages] = useState<Message[]>(CHAT_HISTORY[1] || []);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(true);
+  const [selected, setSelected] = useState<Contact | null>(null);
+  const [messagesByMatch, setMessagesByMatch] = useState<Record<string, Message[]>>({});
   const [input, setInput] = useState('');
   const [search, setSearch] = useState('');
   const [showContactProfile, setShowContactProfile] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setMessages(CHAT_HISTORY[selected.id] || []);
-  }, [selected.id]);
+  const loadContacts = useCallback(async () => {
+    setLoadingContacts(true);
+    try {
+      const raw: MatchResponse[] = await matchingService.listarMatches();
+      const perfiles = await userService.getPerfiles(raw.map(m => m.otroUsuarioId));
+      const built: Contact[] = raw.map(m => {
+        const p: PerfilResponse | undefined = perfiles[m.otroUsuarioId];
+        return {
+          matchId: m.matchId,
+          userId: m.otroUsuarioId,
+          name: [p?.nombre, p?.apellidos].filter(Boolean).join(' ') || 'Usuario',
+          program: p?.carrera || 'Programa no especificado',
+          avatar: getInitials(p?.nombre, p?.apellidos),
+          gradient: gradientFor(m.otroUsuarioId),
+          foto: p?.foto,
+          matchPct: m.scoreTotal != null ? Math.round(m.scoreTotal * 100) : undefined,
+          disponibilidad: (p as any)?.disponibilidad,
+        };
+      });
+      setContacts(built);
+    } catch (e) {
+      addToast({ type: 'info', title: 'No se pudieron cargar tus chats', message: friendlyError(e, 'Intenta de nuevo más tarde.') });
+    } finally {
+      setLoadingContacts(false);
+    }
+  }, []);
+
+  useEffect(() => { void loadContacts(); }, [loadContacts]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [selected, messagesByMatch]);
 
   const send = () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !selected) return;
     if (!navigator.onLine) {
       addToast({ type: 'reporte', title: 'Sin conexión', message: 'Verifica tu conexión a internet para enviar mensajes.' });
       return;
     }
     const now = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-    setMessages(p => [...p, { id: p.length + 1, text: input, time: now, isMe: true, read: false }]);
+    setMessagesByMatch(prev => {
+      const list = prev[selected.matchId] ?? [];
+      return { ...prev, [selected.matchId]: [...list, { id: list.length + 1, text: input, time: now, isMe: true }] };
+    });
     setInput('');
   };
 
-  const filtered = CONTACTS.filter(c =>
+  const filtered = contacts.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     c.program.toLowerCase().includes(search.toLowerCase())
   );
 
+  const messages = selected ? (messagesByMatch[selected.matchId] ?? []) : [];
   const cardStyle = { background: t.cardBg, borderColor: t.cardBorder };
 
   return (
@@ -128,15 +139,26 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
         </div>
 
         <div className="flex-1 overflow-y-auto py-1">
-          {filtered.length === 0 ? (
+          {loadingContacts ? (
+            <p style={{ fontSize: '0.78rem', color: t.textMuted, textAlign: 'center', padding: '32px 16px' }}>Cargando chats...</p>
+          ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 gap-2 px-4 text-center">
-              <Search size={22} style={{ color: t.textMuted }} />
-              <p style={{ fontSize: '0.78rem', color: t.textMuted }}>No se encontraron chats con "{search}"</p>
+              {contacts.length === 0 ? (
+                <>
+                  <Heart size={22} style={{ color: t.textMuted }} />
+                  <p style={{ fontSize: '0.78rem', color: t.textMuted }}>Aún no tienes matches. Ve a Matching para conectar con alguien.</p>
+                </>
+              ) : (
+                <>
+                  <Search size={22} style={{ color: t.textMuted }} />
+                  <p style={{ fontSize: '0.78rem', color: t.textMuted }}>No se encontraron chats con "{search}"</p>
+                </>
+              )}
             </div>
           ) : filtered.map(contact => {
-            const isActive = selected.id === contact.id;
+            const isActive = selected?.matchId === contact.matchId;
             return (
-              <button key={contact.id} onClick={() => setSelected(contact)}
+              <button key={contact.matchId} onClick={() => setSelected(contact)}
                 className="w-full text-left px-3 py-2.5 mx-2 flex items-start gap-3 transition-all rounded-xl"
                 style={{
                   width: 'calc(100% - 16px)',
@@ -147,43 +169,29 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
                   boxShadow: isActive ? '0 2px 12px rgba(108,99,255,0.15)' : 'none',
                 }}>
                 {/* Avatar */}
-                <div className="relative flex-shrink-0">
-                  <div className="w-11 h-11 rounded-full flex items-center justify-center ring-2"
-                    style={{
-                      background: contact.gradient,
-                      fontSize: '0.72rem', fontWeight: 800, color: 'white',
-                      ringColor: isActive ? 'rgba(108,99,255,0.5)' : 'transparent',
-                      outline: isActive ? '2px solid rgba(108,99,255,0.45)' : 'none',
-                      outlineOffset: '2px',
-                    }}>
-                    {contact.avatar}
-                  </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2"
-                    style={{ background: STATUS_COLOR[contact.status], borderColor: t.darkMode ? '#13111F' : '#FAFAFF' }} />
+                <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
+                  style={{
+                    background: contact.gradient,
+                    fontSize: '0.72rem', fontWeight: 800, color: 'white',
+                    outline: isActive ? '2px solid rgba(108,99,255,0.45)' : 'none',
+                    outlineOffset: '2px',
+                  }}>
+                  {contact.foto ? <img src={contact.foto} alt={contact.name} className="w-full h-full object-cover" /> : contact.avatar}
                 </div>
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span style={{
-                      fontSize: '0.85rem', fontWeight: isActive ? 700 : 600,
-                      color: isActive ? '#6C63FF' : t.text,
-                    }}>{contact.name.split(' ')[0]}</span>
-                    <span style={{ fontSize: '0.65rem', color: t.textMuted }}>{contact.lastTime}</span>
-                  </div>
-                  <div className="flex items-center justify-between mt-0.5">
-                    <p className="truncate" style={{ fontSize: '0.72rem', color: t.textMuted, maxWidth: '130px' }}>{contact.lastMsg}</p>
-                    {contact.unread > 0 && (
-                      <span className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                        style={{ background: '#FF4D6A', fontSize: '0.6rem', fontWeight: 700, color: 'white' }}>
-                        {contact.unread}
+                  <span style={{
+                    fontSize: '0.85rem', fontWeight: isActive ? 700 : 600,
+                    color: isActive ? '#6C63FF' : t.text,
+                  }}>{contact.name.split(' ')[0]}</span>
+                  <p className="truncate" style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '2px' }}>{contact.program}</p>
+                  {contact.matchPct != null && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span style={{ fontSize: '0.6rem', color: '#7FE7C4', fontWeight: 600 }}>
+                        {contact.matchPct}% match
                       </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <span style={{ fontSize: '0.6rem', color: '#7FE7C4', fontWeight: 600 }}>
-                      {contact.match}% match
-                    </span>
-                  </div>
+                    </div>
+                  )}
                 </div>
               </button>
             );
@@ -192,18 +200,19 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
       </div>
 
       {/* ── Chat area ── */}
+      {!selected ? (
+        <div className="flex-1 flex items-center justify-center" style={{ background: t.darkMode ? '#0D0B1E' : t.bg }}>
+          <p style={{ fontSize: '0.85rem', color: t.textMuted }}>Selecciona un chat para empezar a conversar</p>
+        </div>
+      ) : (
       <div className="flex-1 flex flex-col" style={{ background: t.darkMode ? '#0D0B1E' : t.bg }}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b flex-shrink-0"
           style={{ background: t.darkMode ? '#13111F' : t.cardBg, borderColor: t.divider }}>
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{ background: selected.gradient, fontSize: '0.7rem', fontWeight: 800, color: 'white' }}>
-                {selected.avatar}
-              </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2"
-                style={{ background: STATUS_COLOR[selected.status], borderColor: t.cardBg }} />
+            <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden"
+              style={{ background: selected.gradient, fontSize: '0.7rem', fontWeight: 800, color: 'white' }}>
+              {selected.foto ? <img src={selected.foto} alt={selected.name} className="w-full h-full object-cover" /> : selected.avatar}
             </div>
             <div>
               <button onClick={() => setShowContactProfile(true)}
@@ -212,9 +221,7 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
                 onMouseLeave={e => { (e.target as HTMLElement).style.textDecorationColor = 'transparent'; }}>
                 {selected.name}
               </button>
-              <p style={{ fontSize: '0.7rem', color: selected.status === 'online' ? '#7FE7C4' : t.textMuted }}>
-                {selected.status === 'online' ? '● En línea' : selected.status === 'away' ? '● Ausente' : '● Desconectado'}
-              </p>
+              <p style={{ fontSize: '0.7rem', color: t.textMuted }}>{selected.program}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -226,16 +233,25 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
         </div>
 
         {/* Match badge */}
-        <div className="flex justify-center pt-4 pb-2">
-          <div className="flex items-center gap-2 px-4 py-1.5 rounded-full"
-            style={{ background: 'rgba(108,99,255,0.1)', border: '1px solid rgba(108,99,255,0.2)' }}>
-            <span style={{ fontSize: '0.75rem', color: '#6C63FF' }}>{selected.match}% de compatibilidad con {selected.name.split(' ')[0]}</span>
+        {selected.matchPct != null && (
+          <div className="flex justify-center pt-4 pb-2">
+            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full"
+              style={{ background: 'rgba(108,99,255,0.1)', border: '1px solid rgba(108,99,255,0.2)' }}>
+              <span style={{ fontSize: '0.75rem', color: '#6C63FF' }}>{selected.matchPct}% de compatibilidad con {selected.name.split(' ')[0]}</span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2"
           style={{ background: t.darkMode ? '#0D0B1E' : t.bg }}>
+          {messages.length === 0 && (
+            <div className="h-full flex items-center justify-center text-center px-6">
+              <p style={{ fontSize: '0.82rem', color: t.textMuted }}>
+                Aún no hay mensajes con {selected.name.split(' ')[0]}. ¡Escribe el primero!
+              </p>
+            </div>
+          )}
           {messages.map(msg => (
             <motion.div key={msg.id}
               initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
@@ -251,19 +267,10 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
                     border: msg.isMe ? 'none' : `1px solid ${t.darkMode ? 'rgba(108,99,255,0.25)' : 'rgba(108,99,255,0.2)'}`,
                     fontSize: '0.87rem', lineHeight: 1.5,
                   }}>
-                  {msg.text.startsWith('📎') ? (
-                    <div className="flex items-center gap-2">
-                      <span>📎</span>
-                      <span style={{ fontSize: '0.82rem' }}>{msg.text.replace('📎 ', '')}</span>
-                    </div>
-                  ) : msg.text}
+                  {msg.text}
                 </div>
                 <div className={`flex items-center gap-1 mt-1 ${msg.isMe ? 'justify-end' : ''}`}>
                   <span style={{ fontSize: '0.6rem', color: t.textMuted }}>{msg.time}</span>
-                  {msg.isMe && (msg.read
-                    ? <CheckCheck size={12} style={{ color: '#7FE7C4' }} />
-                    : <Check size={12} style={{ color: t.textMuted }} />
-                  )}
                 </div>
               </div>
             </motion.div>
@@ -290,67 +297,51 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
           </div>
         </div>
       </div>
+      )}
     </div>
 
     {/* Contact profile modal */}
-    {showContactProfile && createPortal(
+    {showContactProfile && selected && createPortal(
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)' }}
         onClick={() => setShowContactProfile(false)}>
         <div className="rounded-3xl border w-full max-w-sm overflow-hidden"
           style={{ background: t.cardBg, borderColor: t.cardBorder }}
           onClick={e => e.stopPropagation()}>
           {/* Hero */}
-          <div className="relative h-36 flex items-center justify-center" style={{ background: selected.gradient }}>
+          <div className="relative h-36 flex items-center justify-center overflow-hidden" style={{ background: selected.foto ? undefined : selected.gradient }}>
+            {selected.foto && <img src={selected.foto} alt={selected.name} className="absolute inset-0 w-full h-full object-cover" />}
             <button onClick={() => setShowContactProfile(false)}
-              className="absolute top-4 left-4 w-8 h-8 rounded-full flex items-center justify-center"
+              className="absolute top-4 left-4 w-8 h-8 rounded-full flex items-center justify-center z-10"
               style={{ background: 'rgba(0,0,0,0.3)' }}>
               <ArrowLeft size={16} color="white" />
             </button>
-            <div className="w-20 h-20 rounded-full flex items-center justify-center border-4 border-white/30 font-black text-white text-2xl"
-              style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)' }}>
-              {selected.avatar}
-            </div>
-            <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full"
-              style={{ background: 'rgba(0,0,0,0.4)' }}>
-              <div className="w-1.5 h-1.5 rounded-full" style={{ background: STATUS_COLOR[selected.status] }} />
-              <span style={{ fontSize: '0.7rem', color: 'white', fontWeight: 600 }}>
-                {selected.status === 'online' ? 'En línea' : selected.status === 'away' ? 'Ausente' : 'Desconectado'}
-              </span>
-            </div>
+            {!selected.foto && (
+              <div className="w-20 h-20 rounded-full flex items-center justify-center border-4 border-white/30 font-black text-white text-2xl"
+                style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)' }}>
+                {selected.avatar}
+              </div>
+            )}
           </div>
           <div className="p-5">
             <h3 style={{ fontWeight: 800, fontSize: '1.15rem', color: t.text }}>{selected.name}</h3>
             <p style={{ fontSize: '0.8rem', color: t.textMuted, marginBottom: '12px' }}>{selected.program}</p>
-            <div className="flex items-center gap-2 mb-5">
-              <span className="px-2.5 py-1 rounded-full text-xs font-semibold"
-                style={{ background: 'rgba(108,99,255,0.12)', color: '#6C63FF' }}>
-                {selected.match}% compatibilidad
-              </span>
-            </div>
-            {/* Schedule */}
-            <p style={{ fontWeight: 700, fontSize: '0.8rem', color: t.text, marginBottom: '8px' }}>Disponibilidad semanal</p>
-            <div style={{ overflowX: 'auto' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '36px repeat(6, 1fr)', gap: 2, minWidth: 260 }}>
-                <div />
-                {SCHED_DAYS.map(d => (
-                  <div key={d} style={{ textAlign: 'center', fontSize: '0.58rem', fontWeight: 700, color: t.textMuted }}>{d}</div>
-                ))}
-                {SCHED_SLOTS.map((slot, si) => {
-                  const sched = contactSchedule(selected.id);
-                  return (
-                    <>
-                      <div key={`l${si}`} style={{ fontSize: '0.52rem', color: t.textMuted, display: 'flex', alignItems: 'center' }}>{slot}</div>
-                      {SCHED_DAYS.map((_, di) => {
-                        const active = sched.has(`${di}-${si}`);
-                        return (
-                          <div key={`${di}-${si}`} style={{ height: 16, borderRadius: 3, background: active ? 'linear-gradient(135deg,#6C63FF,#A78BFA)' : t.inputBg, border: `1px solid ${active ? 'transparent' : t.cardBorder}` }} />
-                        );
-                      })}
-                    </>
-                  );
-                })}
+            {selected.matchPct != null && (
+              <div className="flex items-center gap-2 mb-3">
+                <span className="px-2.5 py-1 rounded-full text-xs font-semibold"
+                  style={{ background: 'rgba(108,99,255,0.12)', color: '#6C63FF' }}>
+                  {selected.matchPct}% compatibilidad
+                </span>
               </div>
-            </div>
+            )}
+            {selected.disponibilidad && (
+              <div className="flex items-center gap-2">
+                <span style={{ fontWeight: 700, fontSize: '0.82rem', color: t.text }}>Disponibilidad:</span>
+                <span className="px-2.5 py-1 rounded-full text-xs font-semibold"
+                  style={{ background: 'var(--p-divider)', color: '#6C63FF' }}>
+                  {DISPONIBILIDAD_LABEL[selected.disponibilidad] ?? selected.disponibilidad}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>,
