@@ -220,10 +220,25 @@ export function LocationView({ eventId: presetEventId, enrolledEvents = [], onCo
   const [active, setActive] = useState<{ id: UUID; center: { lat: number; lng: number } | null; name: string } | null>(
     presetEventId ? { id: presetEventId, center: null, name: enrolledEvents.find(e => e.eventId === presetEventId)?.name ?? 'Evento' } : null,
   );
+  // Source of truth: the backend (GET /api/events/me). The in-memory prop only
+  // reflects joins made this session and forgets everything on refresh — and
+  // never includes events the user CREATED (owner is auto-inscribed server-side).
+  const [joined, setJoined] = useState<EnrolledEvent[]>(enrolledEvents);
+  useEffect(() => {
+    let alive = true;
+    eventService.myJoinedEvents({ page: 0, size: 200 }).then(pg => {
+      if (!alive) return;
+      const fromServer = pg.content.map(e => ({ eventId: e.eventId, name: e.name, category: e.category }));
+      const ids = new Set(fromServer.map(e => e.eventId));
+      setJoined([...fromServer, ...enrolledEvents.filter(e => !ids.has(e.eventId))]);
+    }).catch(() => { if (alive) setJoined(enrolledEvents); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enrolledEvents.length]);
   useEffect(() => {
     if (presetEventId) { setActive({ id: presetEventId, center: null, name: enrolledEvents.find(e => e.eventId === presetEventId)?.name ?? 'Evento' }); onConsumePreset?.(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [presetEventId]);
   if (active) return <Tracker eventId={active.id} presetCenter={active.center} name={active.name} onBack={() => setActive(null)} />;
-  return <EnrolledList enrolled={enrolledEvents} onPick={(id, center, name) => setActive({ id, center, name })} />;
+  return <EnrolledList enrolled={joined} onPick={(id, center, name) => setActive({ id, center, name })} />;
 }
