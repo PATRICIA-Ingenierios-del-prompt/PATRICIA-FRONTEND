@@ -12,6 +12,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
 import { useAuth } from '../store/AuthContext';
 import { eventService } from '../services/eventService';
+import { parcheService } from '../services/parcheService';
+import { logrosService } from '../services/logrosService';
 import { CATEGORY_META } from '../lib/maps';
 import type { EventCategory, EventMapResponse, EventResponse } from '../types/patricia';
 
@@ -58,12 +60,6 @@ const EVENTO_DESTACADO = {
   date: 'Sáb 20 Jun', time: '8:00 AM', location: 'Auditorio Principal',
   color: '#6C63FF', participants: 156, capacity: 200,
 };
-
-const HERO_STATS = [
-  { label: 'XP Total',  value: '2.3K+' },
-  { label: 'Parches',   value: '7' },
-  { label: 'Monas',     value: '4/12' },
-];
 
 const STORIES = [
   { avatar: 'CR', name: 'Camila',  gradient: 'linear-gradient(135deg,#6C63FF,#FF6B9D)', active: true  },
@@ -254,7 +250,7 @@ function FeedSection({ events, loading }: { events: LiveEvent[]; loading: boolea
 export function HomeView({ onNavigate }: HomeViewProps) {
   const t = useTheme();
   const greeting = getGreeting();
-  const { userName, userEmail } = useAuth();
+  const { userName, userEmail, userId } = useAuth();
   const firstName = (userName ?? userEmail ?? 'Explorador').split(' ')[0];
   const initials  = (userName ?? userEmail ?? '?')
     .split(' ').filter(Boolean).slice(0, 2).map((w: string) => w[0].toUpperCase()).join('');
@@ -264,6 +260,33 @@ export function HomeView({ onNavigate }: HomeViewProps) {
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
   const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
   const [loadingLive, setLoadingLive] = useState(true);
+  const [misParchesCount, setMisParchesCount] = useState<number | null>(null);
+  const [albumStats, setAlbumStats] = useState<{ unlocked: number; total: number; xp: number } | null>(null);
+  const heroStats = [
+    { label: 'XP Total', value: albumStats != null ? String(albumStats.xp) : '—' },
+    { label: 'Parches',  value: misParchesCount != null ? String(misParchesCount) : '—' },
+    { label: 'Monas',    value: albumStats != null ? `${albumStats.unlocked}/${albumStats.total}` : '—' },
+  ];
+
+  useEffect(() => {
+    let cancelled = false;
+    parcheService.mine({ page: 0, size: 1 })
+      .then(page => { if (!cancelled) setMisParchesCount(page.totalElements); })
+      .catch(() => { if (!cancelled) setMisParchesCount(0); });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    logrosService.getLogros(userId)
+      .then(data => {
+        if (cancelled) return;
+        setAlbumStats({ unlocked: data.logros.filter(l => l.desbloqueado).length, total: data.logros.length, xp: data.xpTotal });
+      })
+      .catch(() => { if (!cancelled) setAlbumStats({ unlocked: 0, total: 13, xp: 0 }); });
+    return () => { cancelled = true; };
+  }, [userId]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -344,7 +367,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             </div>
             {/* Quick stats */}
             <div className="flex gap-3 mt-5">
-              {HERO_STATS.map(s => (
+              {heroStats.map(s => (
                 <div key={s.label} className="flex-1 px-3 py-2.5 rounded-xl border text-center"
                   style={{ background: 'rgba(108,99,255,0.08)', borderColor: 'rgba(108,99,255,0.2)' }}>
                   <p style={{ fontWeight: 800, fontSize: '1rem', color: '#6C63FF' }}>{s.value}</p>
