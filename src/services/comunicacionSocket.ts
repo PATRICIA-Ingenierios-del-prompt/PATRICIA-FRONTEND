@@ -55,6 +55,11 @@ export class ComunicacionSocket {
       brokerURL: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}${WS_URL}`,
       beforeConnect: async () => {
         const token = tokenManager.getAccessToken() ?? '';
+        // The gateway validates the JWT on the HTTP upgrade itself; browsers
+        // can't set headers on a WebSocket handshake, so the token rides
+        // ?access_token= (same mechanism as /ws/geo) and the gateway strips it
+        // before forwarding. The CONNECT header stays for the MS's own check.
+        this.client.brokerURL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}${WS_URL}?access_token=${encodeURIComponent(token)}`;
         this.client.connectHeaders = { Authorization: `Bearer ${token}` };
       },
       reconnectDelay: 4000,
