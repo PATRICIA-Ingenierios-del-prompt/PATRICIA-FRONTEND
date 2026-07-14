@@ -24,6 +24,7 @@ import { SupportProvider } from './store/SupportContext';
 import { isAdminEmail } from './lib/admin';
 import { userService } from './services/userService';
 import { matchingService } from './services/matchingService';
+import { logrosService } from './services/logrosService';
 import { tokenManager } from './services/tokenManager';
 import { ToastContainer, addToast } from './components/ToastSystem';
 import { AnimatedBackground } from './components/AnimatedBackground';
@@ -221,6 +222,41 @@ import monoARTEImg     from './assets/monoArteNew.png';
 import monoAIREImg     from './assets/monoAireLibreNew.png';
 import monoCOMIDAImg   from './assets/monoFoodieNew.png';
 
+
+/** Metadatos visuales por mona — el backend no manda color/imagen/rareza, solo datos de logro. */
+const MONA_VISUALS: Record<string, { color: string; img: string; rarity: 'Común' | 'Rara' | 'Épica' | 'Legendaria' }> = {
+  MONA_CODER:      { color: '#6C63FF', img: monoCODERImg,   rarity: 'Épica' },
+  MONA_DJ:         { color: '#5BC8FF', img: monoDJImg,      rarity: 'Épica' },
+  MONA_CIENTIFICA: { color: '#A78BFA', img: monoCIENTImg,   rarity: 'Rara' },
+  MONA_CULTURA:    { color: '#FF9BAE', img: monoCULTImg,    rarity: 'Rara' },
+  MONA_TRANQUILA:  { color: '#7FE7C4', img: monoTRANQImg,   rarity: 'Común' },
+  MONA_RESPIRA:    { color: '#00D9FF', img: monoRESPIRAImg, rarity: 'Común' },
+  MONA_MUSICA:     { color: '#FF6B9D', img: monoMUSICAImg,  rarity: 'Rara' },
+  MONA_GAMER:      { color: '#FFB347', img: monoJUEGOSImg,  rarity: 'Épica' },
+  MONA_ESTUDIOSA:  { color: '#6C63FF', img: monoESTUDIOImg, rarity: 'Común' },
+  MONA_ARTE:       { color: '#FF9BAE', img: monoARTEImg,    rarity: 'Épica' },
+  MONA_AIRE_LIBRE: { color: '#7FE7C4', img: monoAIREImg,    rarity: 'Legendaria' },
+  MONA_FOODIE:     { color: '#FFB347', img: monoCOMIDAImg,  rarity: 'Legendaria' },
+  MONA_SOCIAL:     { color: '#FF6B9D', img: monoSOCIALImg,  rarity: 'Épica' },
+};
+const DEFAULT_MONA_VISUAL = { color: '#8B85B0', img: monoULinkImg, rarity: 'Común' as const };
+
+interface DisplayMona {
+  codigo: string; name: string; desc: string; xp: number; unlocked: boolean;
+  color: string; img: string; rarity: 'Común' | 'Rara' | 'Épica' | 'Legendaria';
+}
+
+const ALBUM_SEEN_KEY = 'patricia_album_seen_codigos';
+
+function loadSeenCodigos(): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem(ALBUM_SEEN_KEY) ?? '[]')); }
+  catch { return new Set(); }
+}
+function saveSeenCodigos(codigos: Set<string>) {
+  try { localStorage.setItem(ALBUM_SEEN_KEY, JSON.stringify(Array.from(codigos))); } catch { /* almacenamiento no disponible */ }
+}
+
+/** Tarjeta de "raspar" para revelar una mona que el backend ya confirmó como desbloqueada. */
 function ScratchCanvas({ onComplete }: { onComplete: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDown = useRef(false);
@@ -304,6 +340,7 @@ function ScratchCanvas({ onComplete }: { onComplete: () => void }) {
 }
 
 function AlbumView() {
+  const { userId } = useAuth();
   const t = useTheme();
   const ad = t.darkMode;
   const aText    = ad ? 'white'                        : '#2A1F6E';
@@ -319,48 +356,56 @@ function AlbumView() {
 
   const [showMonasGuide, setShowMonasGuide] = useState(false);
   const [guidePage, setGuidePage] = useState(0);
-  const [unlockedByUser, setUnlockedByUser] = useState(new Set<number>());
-  const [justUnlocked, setJustUnlocked] = useState<null | { id: number; name: string; rarity: string; xp: number; color: string; img: string; how: string }>(null);
   const [albumPage, setAlbumPage] = useState(0);
-  const [scratchPopupMona, setScratchPopupMona] = useState<null | { id: number; name: string; rarity: string; xp: number; color: string; img: string; how: string }>(null);
+  const [justUnlocked, setJustUnlocked] = useState<DisplayMona | null>(null);
+  const [scratchPopupMona, setScratchPopupMona] = useState<DisplayMona | null>(null);
+  const [monas, setMonas] = useState<DisplayMona[]>([]);
+  const [xpTotal, setXpTotal] = useState(0);
+  const [loadingMonas, setLoadingMonas] = useState(true);
+  // Monas que el usuario ya "raspó" para revelar — el backend solo nos dice si las ganó,
+  // la revelación (y su animación) es un momento local que se recuerda entre visitas.
+  const [revealedCodigos, setRevealedCodigos] = useState<Set<string>>(() => loadSeenCodigos());
 
-  const CAN_UNLOCK_IDS = [4, 8, 10];
-
-  const ALL_MONAS = [
-    { id:  1, name: 'Mona Coder',      rarity: 'Épica',      xp: 500,  color: '#6C63FF', img: monoCODERImg,   unlocked: true,  how: 'Únete a un parche de estudio con programación' },
-    { id:  2, name: 'Mona DJ',         rarity: 'Épica',      xp: 500,  color: '#5BC8FF', img: monoDJImg,      unlocked: true,  how: 'Crea o únete a un parche o evento de música' },
-    { id:  3, name: 'Mona Científica', rarity: 'Rara',       xp: 300,  color: '#A78BFA', img: monoCIENTImg,   unlocked: true,  how: 'Crea o únete a un parche o evento de física o química' },
-    { id:  4, name: 'Mona Cultura',    rarity: 'Rara',       xp: 300,  color: '#FF9BAE', img: monoCULTImg,    unlocked: false, how: 'Crea o únete a un parche o evento de cultura' },
-    { id:  5, name: 'Mona Tranquila',  rarity: 'Común',      xp: 100,  color: '#7FE7C4', img: monoTRANQImg,   unlocked: true,  how: 'Únete o crea un parche de relajación y realiza los 3 ejercicios de bienestar' },
-    { id:  6, name: 'Mona Respira',    rarity: 'Común',      xp: 100,  color: '#00D9FF', img: monoRESPIRAImg, unlocked: false, how: 'Realiza los 3 ejercicios de relajación en Bienestar' },
-    { id:  7, name: 'Mona Música',     rarity: 'Rara',       xp: 300,  color: '#FF6B9D', img: monoMUSICAImg,  unlocked: true,  how: 'Crea o únete a un parche o evento de música' },
-    { id:  8, name: 'Mona Gamer',      rarity: 'Épica',      xp: 500,  color: '#FFB347', img: monoJUEGOSImg,  unlocked: false, how: 'Gana 3 rondas de Parqués y únete o crea un parche de juegos' },
-    { id:  9, name: 'Mona Estudiosa',  rarity: 'Común',      xp: 100,  color: '#6C63FF', img: monoESTUDIOImg, unlocked: true,  how: 'Crea o únete a 3 parches de estudio diferentes' },
-    { id: 10, name: 'Mona Arte',       rarity: 'Épica',      xp: 500,  color: '#FF9BAE', img: monoARTEImg,    unlocked: false, how: 'Crea o únete a un evento o parche de arte' },
-    { id: 11, name: 'Mona Aire Libre', rarity: 'Legendaria', xp: 1000, color: '#7FE7C4', img: monoAIREImg,    unlocked: false, how: 'Únete a un parche de recreación o deporte' },
-    { id: 12, name: 'Mona Foodie',     rarity: 'Legendaria', xp: 1000, color: '#FFB347', img: monoCOMIDAImg,  unlocked: false, how: 'Crea o únete a un parche de comida' },
-    { id: 13, name: 'Mona Social',     rarity: 'Épica',      xp: 500,  color: '#FF6B9D', img: monoSOCIALImg,  unlocked: false, how: 'Ten más de 10 matches en la app' },
-  ];
+  useEffect(() => {
+    if (!userId) { setLoadingMonas(false); return; }
+    let cancelled = false;
+    logrosService.getLogros(userId)
+      .then(data => {
+        if (cancelled) return;
+        const display: DisplayMona[] = data.logros.map(l => {
+          const v = MONA_VISUALS[l.codigo] ?? DEFAULT_MONA_VISUAL;
+          return { codigo: l.codigo, name: l.nombre, desc: l.descripcion, xp: l.xp, unlocked: l.desbloqueado, ...v };
+        });
+        setMonas(display);
+        setXpTotal(data.xpTotal);
+      })
+      .catch(() => { if (!cancelled) setMonas([]); })
+      .finally(() => { if (!cancelled) setLoadingMonas(false); });
+    return () => { cancelled = true; };
+  }, [userId]);
 
   const rarityColor: Record<string, string> = { 'Común': '#8B85B0', 'Rara': '#7FE7C4', 'Épica': '#6C63FF', 'Legendaria': '#FFB347' };
 
-  const isUnlocked = (mona: typeof ALL_MONAS[0]) => mona.unlocked || unlockedByUser.has(mona.id);
-  const canScratch = (mona: typeof ALL_MONAS[0]) => CAN_UNLOCK_IDS.includes(mona.id) && !isUnlocked(mona);
+  const isRevealed = (mona: DisplayMona) => mona.unlocked && revealedCodigos.has(mona.codigo);
+  const canScratch = (mona: DisplayMona) => mona.unlocked && !revealedCodigos.has(mona.codigo);
 
-  const handleScratchComplete = (mona: typeof ALL_MONAS[0]) => {
+  const handleScratchComplete = (mona: DisplayMona) => {
     setScratchPopupMona(null);
-    setUnlockedByUser(prev => { const s = new Set(prev); s.add(mona.id); return s; });
+    setRevealedCodigos(prev => {
+      const s = new Set(prev);
+      s.add(mona.codigo);
+      saveSeenCodigos(s);
+      return s;
+    });
     setTimeout(() => {
       setJustUnlocked(mona);
       addToast({ type: 'logro', title: '¡Mona desbloqueada!', message: `¡Conseguiste la ${mona.name}!` });
     }, 300);
   };
 
-  const PAGES = [ALL_MONAS.slice(0, 8), ALL_MONAS.slice(8)];
-
-  const unlockedCount = ALL_MONAS.filter(m => isUnlocked(m)).length;
-  const xpEarned = ALL_MONAS.filter(m => isUnlocked(m)).reduce((sum, m) => sum + m.xp, 0);
-  const hasScratchable = CAN_UNLOCK_IDS.some(id => !isUnlocked(ALL_MONAS.find(m => m.id === id)!));
+  const PAGES = [monas.slice(0, 8), monas.slice(8)];
+  const unlockedCount = monas.filter(m => m.unlocked).length;
+  const hasScratchable = monas.some(canScratch);
 
   return (
     <div className="h-full overflow-y-auto pb-6">
@@ -381,10 +426,10 @@ function AlbumView() {
             <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', marginTop: '3px' }}>U•link · Colección Exclusiva ECI</p>
             <div className="flex items-center gap-2 mt-3 flex-wrap">
               <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={{ background: 'rgba(255,255,255,0.18)', color: 'white', backdropFilter: 'blur(8px)' }}>
-                {unlockedCount}/{ALL_MONAS.length} coleccionadas
+                {unlockedCount}/{monas.length} coleccionadas
               </span>
               <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={{ background: 'rgba(255,179,71,0.28)', color: '#FFD95A', backdropFilter: 'blur(8px)' }}>
-                ⚡ {xpEarned.toLocaleString()} XP
+                ⚡ {xpTotal.toLocaleString()} XP
               </span>
               <button onClick={() => { setShowMonasGuide(true); setGuidePage(0); }}
                 className="px-2.5 py-1 rounded-full text-xs font-semibold transition-all hover:opacity-85"
@@ -399,13 +444,17 @@ function AlbumView() {
       {/* Progress bar */}
       <div className="flex items-center justify-between mb-2">
         <p style={{ fontSize: '0.75rem', color: t.textMuted }}>Progreso del álbum</p>
-        <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6C63FF' }}>{Math.round((unlockedCount / ALL_MONAS.length) * 100)}%</p>
+        <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6C63FF' }}>{monas.length > 0 ? Math.round((unlockedCount / monas.length) * 100) : 0}%</p>
       </div>
       <div className="h-2 rounded-full mb-5 overflow-hidden" style={{ background: t.divider }}>
-        <motion.div initial={{ width: 0 }} animate={{ width: `${(unlockedCount / ALL_MONAS.length) * 100}%` }}
+        <motion.div initial={{ width: 0 }} animate={{ width: `${monas.length > 0 ? (unlockedCount / monas.length) * 100 : 0}%` }}
           transition={{ duration: 1.5, ease: 'easeOut' }}
           className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #6C63FF, #7FE7C4)' }} />
       </div>
+
+      {loadingMonas && (
+        <p style={{ fontSize: '0.82rem', color: t.textMuted, textAlign: 'center', padding: '24px 0' }}>Cargando álbum...</p>
+      )}
 
       {/* Scratch hint banner */}
       {hasScratchable && (
@@ -414,7 +463,7 @@ function AlbumView() {
           style={{ background: 'rgba(108,99,255,0.12)', border: '1px solid rgba(108,99,255,0.3)' }}>
           <motion.span animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 1 }} style={{ fontSize: '1.1rem' }}>✦</motion.span>
           <p style={{ fontSize: '0.8rem', color: '#A89BFF', fontWeight: 500 }}>
-            Tienes monas listas para desbloquear. <strong style={{ color: '#6C63FF' }}>¡Tócalas para rasparlas!</strong>
+            ¡Ganaste monas nuevas! <strong style={{ color: '#6C63FF' }}>Tócalas para rasparlas y verlas.</strong>
           </p>
         </motion.div>
       )}
@@ -472,14 +521,15 @@ function AlbumView() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: albumPage === 0 ? 50 : -50 }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
-              className="grid grid-cols-4 gap-2.5">
-              {PAGES[albumPage].map(mona => {
-                const unlk = isUnlocked(mona);
+              className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-2.5">
+              {PAGES[albumPage].map((mona, i) => {
+                const unlk = isRevealed(mona);
                 const scratchable = canScratch(mona);
-                const rc = rarityColor[mona.rarity as keyof typeof rarityColor];
+                const rc = rarityColor[mona.rarity];
+                const displayNum = albumPage * 8 + i + 1;
 
                 return (
-                  <motion.div key={mona.id}
+                  <motion.div key={mona.codigo}
                     whileHover={unlk ? { scale: 1.06, y: -6, transition: { duration: 0.18 } } : scratchable ? { scale: 1.04, y: -3, transition: { duration: 0.18 } } : {}}
                     whileTap={scratchable ? { scale: 0.95 } : {}}
                     onClick={() => scratchable && setScratchPopupMona(mona)}
@@ -507,7 +557,7 @@ function AlbumView() {
                     {/* #number badge */}
                     <div style={{ position:'absolute', top:9, left:7, zIndex:4 }}>
                       <span style={{ display:'block', padding:'2px 5px', borderRadius:4, background:aNumBg, backdropFilter:'blur(6px)', color:aNumTxt, fontSize:'0.42rem', fontFamily:'monospace', fontWeight:900, letterSpacing:'0.04em' }}>
-                        #{String(mona.id).padStart(2,'0')}
+                        #{String(displayNum).padStart(2,'0')}
                       </span>
                     </div>
 
@@ -517,9 +567,7 @@ function AlbumView() {
                         style={{
                           width:'100%', height:'100%', objectFit:'contain',
                           opacity: unlk ? 1 : scratchable ? 0.07 : 0.14,
-                          filter: unlk
-                            ? `drop-shadow(0 6px 20px ${mona.color}70)`
-                            : (!unlk && !scratchable) ? 'grayscale(1)' : 'grayscale(1)',
+                          filter: unlk ? `drop-shadow(0 6px 20px ${mona.color}70)` : 'grayscale(1)',
                         }} />
                     </div>
 
@@ -613,14 +661,14 @@ function AlbumView() {
 
               {/* Scratch area */}
               <div className="relative mx-6 mb-4 rounded-2xl overflow-hidden"
-                style={{ width: 320, height: 320, background: t.darkMode ? '#12102A' : '#D8D1FF' }}>
+                style={{ width: 'min(320px, 100%)', aspectRatio: '1 / 1', background: t.darkMode ? '#12102A' : '#D8D1FF' }}>
                 {/* Mona visible underneath */}
-                <div className="absolute inset-0 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center p-3">
                   <ImageWithFallback
                     src={scratchPopupMona.img}
                     alt={scratchPopupMona.name}
-                    className="object-contain"
-                    style={{ width: 300, height: 300, filter: `drop-shadow(0 8px 28px ${scratchPopupMona.color}70)` }}
+                    className="object-contain w-full h-full"
+                    style={{ filter: `drop-shadow(0 8px 28px ${scratchPopupMona.color}70)` }}
                   />
                 </div>
                 {/* Canvas on top */}
@@ -702,7 +750,7 @@ function AlbumView() {
           { rarity:'Legendaria', color:'#FFB347', xp:1000, gradient:'linear-gradient(135deg,#7A4A00 0%,#FFB347 100%)' },
         ];
         const pg = GUIDE_PAGES[guidePage];
-        const pageMonas = ALL_MONAS.filter(m => m.rarity === pg.rarity);
+        const pageMonas = monas.filter(m => m.rarity === pg.rarity);
         return (
           <AnimatePresence>
             {showMonasGuide && (
@@ -762,9 +810,9 @@ function AlbumView() {
                         transition={{ duration:0.28, ease:'easeOut' }}
                         className="grid grid-cols-1 gap-4">
                         {pageMonas.map(mona => {
-                          const unlk = isUnlocked(mona);
+                          const unlk = mona.unlocked;
                           return (
-                            <div key={mona.id} className="rounded-2xl border overflow-hidden"
+                            <div key={mona.codigo} className="rounded-2xl border overflow-hidden"
                               style={{
                                 background: unlk
                                   ? (t.darkMode ? `linear-gradient(135deg,${mona.color}18,${mona.color}06)` : `linear-gradient(135deg,${mona.color}10,${mona.color}04)`)
@@ -807,7 +855,7 @@ function AlbumView() {
                                       textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:5 }}>
                                       Cómo ganarla
                                     </p>
-                                    <p style={{ fontSize:'0.82rem', color: t.textSub, lineHeight:1.6 }}>{mona.how}</p>
+                                    <p style={{ fontSize:'0.82rem', color: t.textSub, lineHeight:1.6 }}>{mona.desc}</p>
                                   </div>
                                 </div>
                               </div>
