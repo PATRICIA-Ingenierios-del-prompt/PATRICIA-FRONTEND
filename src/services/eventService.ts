@@ -39,6 +39,11 @@ export const eventService = {
     const { data } = await apiClient.get<Page<EventMapResponse>>(`${BASE}/map`, { params: pageParams(page) });
     return data;
   },
+  /** Unfinished events the caller joined (owner or participant), started included. */
+  async myJoinedEvents(page?: Pageable): Promise<Page<EventMapResponse>> {
+    const { data } = await apiClient.get<Page<EventMapResponse>>(`${BASE}/me`, { params: pageParams(page) });
+    return data;
+  },
   /** Open events of parches the caller belongs to (incl. private ones). */
   async myParchesEvents(page?: Pageable): Promise<Page<EventMapResponse>> {
     const { data } = await apiClient.get<Page<EventMapResponse>>(`${BASE}/me/parches/events`, { params: pageParams(page) });
