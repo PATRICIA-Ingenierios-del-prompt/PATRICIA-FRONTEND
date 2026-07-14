@@ -669,11 +669,10 @@ const realLeaveVoice = () => {
     if (!msgInput.trim()) { addToast({ type: 'info', title: 'Mensaje vacío', message: 'Escribe algo antes de enviar.' }); return; }
     if (chatId && socketRef.current?.connected) {
       socketRef.current.sendMessage(chatId, msgInput);
+      setMsgInput('');
     } else {
-      // fallback local mientras el canal se configura
-      setMessages(prev => [...prev, { id: prev.length + 1, userId: 'ME', user: 'Tú', text: msgInput, time: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }), reactions: [], type: 'text' }]);
+      addToast({ type: 'info', title: 'Chat conectándose…', message: 'El canal del parche aún no está listo. Intenta en unos segundos.' });
     }
-    setMsgInput('');
   };
 
   const addReaction = (msgId:number, emoji:string) => {
@@ -1032,7 +1031,13 @@ const realLeaveVoice = () => {
                       </div>
                     </div>
                   ))}
-                  {rtMessages.length > 0 ? rtMessages.map((msg, i) => {
+                  {rtMessages.length === 0 && (
+                    <div className="flex flex-col items-center justify-center gap-2 py-14 text-center">
+                      <span style={{ fontSize:'1.6rem' }}>💬</span>
+                      <p style={{ fontSize:'0.85rem', color:'var(--p-muted)' }}>{chatId ? 'Aún no hay mensajes. ¡Escribe el primero!' : 'Conectando el chat del parche…'}</p>
+                    </div>
+                  )}
+                  {rtMessages.map((msg, i) => {
                     const isMe = msg.senderId === meId;
                     return (
                       <motion.div key={msg.id ?? i} initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }}
@@ -1045,107 +1050,6 @@ const realLeaveVoice = () => {
                           </div>
                           <span style={{ fontSize:'0.6rem', color:'var(--p-muted)' }}>{new Date(msg.sentAt).toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' })}</span>
                         </div>
-                      </motion.div>
-                    );
-                  }) : messages.map((msg, i) => {
-                    const isMe = msg.userId==='ME';
-                    const showAvatar = i===0 || messages[i-1].userId!==msg.userId;
-                    return (
-                      <motion.div key={msg.id}
-                        initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }}
-                        onHoverStart={()=>setHoveredMsg(msg.id)}
-                        onHoverEnd={()=>{setHoveredMsg(null); setShowReactionPicker(null);}}
-                        className="flex items-start gap-3 group relative px-2 py-0.5 rounded-xl transition-all"
-                        style={{ background: hoveredMsg===msg.id ? 'rgba(108,99,255,0.06)' : 'transparent', flexDirection: isMe ? 'row-reverse' : 'row' }}>
-                        {/* Avatar */}
-                        {showAvatar && !isMe && (
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
-                            style={{ background:'linear-gradient(135deg,#6C63FF,#7FE7C4)', fontSize:'0.6rem', fontWeight:700, color:'white' }}>
-                            {msg.avatar}
-                          </div>
-                        )}
-                        {!showAvatar && !isMe && <div className="w-8 flex-shrink-0" />}
-
-                        <div className={`flex flex-col gap-0.5 max-w-[70%] ${isMe ? 'items-end' : 'items-start'}`}>
-                          {showAvatar && !isMe && (
-                            <div className="flex items-center gap-2">
-                              <span style={{ fontSize:'0.78rem', fontWeight:600, color:'#6C63FF' }}>{msg.user}</span>
-                              <span style={{ fontSize:'0.65rem', color:'var(--p-muted)' }}>{msg.time}</span>
-                            </div>
-                          )}
-                          {/* Bubble — respects theme */}
-                          <div className="px-3.5 py-2 rounded-2xl"
-                            style={{
-                              background: isMe
-                                ? 'linear-gradient(135deg,#6C63FF,#8B7FFF)'
-                                : t.darkMode ? 'rgba(37,31,61,0.95)' : '#EDE9FF',
-                              color: isMe ? '#FFFFFF' : t.darkMode ? '#F0EEFF' : '#1A1829',
-                              borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                              border: isMe ? 'none' : `1px solid ${t.darkMode ? 'rgba(108,99,255,0.2)' : 'rgba(108,99,255,0.25)'}`,
-                            }}>
-                            {msg.type==='link' ? (
-                              <div className="flex items-center gap-2 cursor-pointer hover:opacity-80"
-                                onClick={() => window.open(msg.text, '_blank', 'noopener')}>
-                                <FileText size={14} style={{ color:'#FFB347', flexShrink:0 }} />
-                                <span style={{ fontSize:'0.78rem', color: isMe ? 'rgba(255,255,255,0.85)' : '#6C63FF', textDecoration:'underline', wordBreak:'break-all' }}>
-                                  {msg.text.replace('https://', '')}
-                                </span>
-                              </div>
-                            ) : (
-                              <p style={{ fontSize:'0.85rem', lineHeight:1.55 }}>{msg.text}</p>
-                            )}
-                          </div>
-                          {/* Reactions */}
-                          {msg.reactions.length>0 && (
-                            <div className={`flex gap-1 flex-wrap ${isMe ? 'justify-end' : ''}`}>
-                              {msg.reactions.map(r=>(
-                                <motion.button key={r.emoji}
-                                  whileHover={{ scale:1.2 }} whileTap={{ scale:0.9 }}
-                                  onClick={()=>addReaction(msg.id,r.emoji)}
-                                  className="flex items-center gap-1 px-2 py-0.5 rounded-full transition-all"
-                                  style={{ background:'var(--p-divider)', border:'1px solid rgba(108,99,255,0.2)', fontSize:'0.8rem' }}>
-                                  {r.emoji}<span style={{ fontSize:'0.68rem', color:'var(--p-muted)' }}>{r.count}</span>
-                                </motion.button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Hover actions */}
-                        <AnimatePresence>
-                          {hoveredMsg===msg.id && (
-                            <motion.div initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0, scale:0.9 }}
-                              className="absolute top-0 flex items-center gap-1 px-1.5 py-1 rounded-xl border shadow-lg"
-                              style={{ [isMe?'left':'right']:0, background:'var(--p-card)', borderColor:'rgba(108,99,255,0.2)', zIndex:10 }}>
-                              <button onClick={()=>setShowReactionPicker(showReactionPicker===msg.id?null:msg.id)}
-                                className="w-6 h-6 rounded-lg flex items-center justify-center hover:opacity-70"
-                                style={{ background:'rgba(108,99,255,0.1)' }}>
-                                <Smile size={12} style={{ color:'var(--p-muted)' }} />
-                              </button>
-                              <button className="w-6 h-6 rounded-lg flex items-center justify-center hover:opacity-70"
-                                style={{ background:'rgba(108,99,255,0.1)' }}>
-                                <MoreHorizontal size={12} style={{ color:'var(--p-muted)' }} />
-                              </button>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-
-                        {/* Reaction picker */}
-                        <AnimatePresence>
-                          {showReactionPicker===msg.id && (
-                            <motion.div initial={{ opacity:0, y:4 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0 }}
-                              className="absolute top-8 flex gap-1 p-2 rounded-2xl border shadow-xl"
-                              style={{ [isMe?'left':'right']:0, background:'var(--p-card)', borderColor:'rgba(108,99,255,0.3)', zIndex:20 }}>
-                              {QUICK_REACTIONS.map(em=>(
-                                <motion.button key={em} whileHover={{ scale:1.3 }} whileTap={{ scale:0.8 }}
-                                  onClick={()=>addReaction(msg.id,em)}
-                                  style={{ fontSize:'1.1rem' }}>
-                                  {em}
-                                </motion.button>
-                              ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
                       </motion.div>
                     );
                   })}
