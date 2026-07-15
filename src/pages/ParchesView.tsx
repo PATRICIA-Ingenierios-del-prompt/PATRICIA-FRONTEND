@@ -127,9 +127,12 @@ function memberHash(userId: string): number {
 }
 const QUICK_REACTIONS = ['👍','❤️','😂','🔥','🙏','✅','👏','😮'];
 
-// ── useBoard error surfacing in CollabCanvas ──
-function CollabCanvas({ parcheId }: { parcheId: number }) {
-  const { boardId, strokes, remoteCursors, isConnected, error: boardError, sendStroke, sendCursor, clearBoard } = useBoard(parcheId, 'ME');
+// ── Real-time canvas (Board MS) ──
+// canvasId is the board provisioned for this parche (CollaborationTools.canvasId,
+// null until the Board MS reports parche.board.ready). names maps member UUIDs
+// to display names so remote cursors show who is drawing.
+function CollabCanvas({ canvasId, meId, names }: { canvasId: string | null; meId: string; names: Record<string, string> }) {
+  const { boardId, strokes, remoteCursors, isConnected, error: boardError, sendStroke, sendCursor, clearBoard } = useBoard(canvasId, meId);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -222,7 +225,7 @@ function CollabCanvas({ parcheId }: { parcheId: number }) {
     
     const now = Date.now();
     if (now - lastCursorSend.current > 33) {
-      sendCursor({ userId: 'ME', x: pos.x, y: pos.y });
+      sendCursor({ userId: meId, x: pos.x, y: pos.y });
       lastCursorSend.current = now;
     }
 
@@ -250,6 +253,20 @@ function CollabCanvas({ parcheId }: { parcheId: number }) {
   const clear = () => {
     clearBoard();
   };
+
+  // Canvas not provisioned yet (Board MS is async via RabbitMQ): honest
+  // waiting state instead of a socket error against a null board.
+  if (!canvasId) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 h-full text-center px-8">
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ background:'rgba(108,99,255,0.12)' }}>🎨</div>
+        <p style={{ fontWeight:700, fontSize:'0.95rem', color:'var(--p-text)' }}>El lienzo se está preparando</p>
+        <p style={{ fontSize:'0.8rem', color:'var(--p-muted)', maxWidth:340, lineHeight:1.6 }}>
+          Se crea automáticamente unos segundos después del parche. Sal y vuelve a entrar a esta pestaña para reintentar.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full relative">
@@ -312,7 +329,7 @@ function CollabCanvas({ parcheId }: { parcheId: number }) {
               <path d="M5.65376 21.5034L3 3L21.8496 11.2335L13.1254 13.9234L5.65376 21.5034Z" fill="#FFB347" stroke="white" strokeWidth="1.5" strokeLinejoin="round"/>
             </svg>
             <div style={{ background: '#FFB347', color: 'white', fontSize: '10px', padding: '2px 6px', borderRadius: '8px', position: 'absolute', top: 20, left: 10, whiteSpace: 'nowrap' }}>
-              {cursor.userId}
+              {names[cursor.userId] ?? `Estudiante ${cursor.userId.slice(0, 4)}`}
             </div>
           </div>
         ))}
@@ -431,6 +448,7 @@ export function ParchesView({ linkedEvents = [] }: {
   const [voiceConnected, setVoiceConnected] = useState(false);
   const [voiceMuted, setVoiceMuted] = useState(false);
   const [chatId, setChatId]                     = useState<string | null>(null);
+  const [canvasId, setCanvasId]                 = useState<string | null>(null);
   const [rtMessages, setRtMessages]             = useState<ChatMessage[]>([]);
   const [voiceParticipants, setVoiceParticipants] = useState<VoiceEvent[]>([]);
   const socketRef  = useRef<ComunicacionSocket | null>(null);
@@ -653,10 +671,12 @@ useEffect(() => {
   setRtMessages([]);
   setVoiceParticipants([]);
   setChatId(null);
+  setCanvasId(null);
 
   let alive = true;
   parcheService.get(selectedParche.id).then(detail => {
     if (!alive) return;
+    setCanvasId(detail.collabs?.canvasId ?? null);
     const cid = (detail as any).communication?.chatId;
     if (!cid) return;
     setChatId(cid);
@@ -1283,7 +1303,10 @@ const realLeaveVoice = () => {
             )}
 
             {/* ── LIENZO ── */}
-            {activeTab==='lienzo' && <CollabCanvas parcheId={selectedParche.id} />}
+            {activeTab==='lienzo' && (
+              <CollabCanvas canvasId={canvasId} meId={meId ?? ''}
+                names={Object.fromEntries(members.map(m => [m.userId, m.isSelf ? 'Tú' : m.name.split(' ')[0]]))} />
+            )}
 
             {/* ── JUEGOS ── */}
             {activeTab==='juegos' && (

@@ -74,6 +74,12 @@ export interface ParcheResponse {
   memberCount: number;
   pictureUrl: string;
   communication: CommunicationChannels | null;
+  /** Board/Parques ids provisioned async after creation; fields null until each MS reports ready. */
+  collabs: CollaborationTools | null;
+}
+export interface CollaborationTools {
+  parquesId: UUID | null;
+  canvasId: UUID | null;
 }
 export interface ParcheSummaryResponse {
   parcheId: UUID;
