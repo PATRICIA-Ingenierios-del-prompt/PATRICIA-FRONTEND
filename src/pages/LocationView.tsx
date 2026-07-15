@@ -167,7 +167,39 @@ function Tracker({ eventId, presetCenter, name, onBack }: { eventId: UUID; prese
     });
     socketRef.current = sock;
     sock.activate();
-    return () => { alive = false; sock.deactivate(); socketRef.current = null; };
+
+    // Publish our own position so we (and everyone else on the map) show up.
+    // watchPosition fires on the browser's own cadence, which can be much
+    // tighter than we want to hit the socket with — throttle to one send
+    // every 4s regardless of how often the browser reports a fix.
+    let watchId: number | null = null;
+    let lastSentAt = 0;
+    const MIN_INTERVAL_MS = 4000;
+    if ('geolocation' in navigator) {
+      watchId = navigator.geolocation.watchPosition(
+        pos => {
+          const now = Date.now();
+          if (now - lastSentAt < MIN_INTERVAL_MS) return;
+          lastSentAt = now;
+          if (socketRef.current?.connected) {
+            socketRef.current.sendPosition(eventId, pos.coords.latitude, pos.coords.longitude);
+          }
+        },
+        err => {
+          if (err.code === err.PERMISSION_DENIED) {
+            addToast({ type: 'reporte', title: 'Ubicación', message: 'Activa el permiso de ubicación para que los demás te vean en el mapa.' });
+          }
+        },
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+      );
+    }
+
+    return () => {
+      alive = false;
+      sock.deactivate();
+      socketRef.current = null;
+      if (watchId != null) navigator.geolocation.clearWatch(watchId);
+    };
   }, [eventId, upsert]);
 
   const people = useMemo(() => [...positions.values()].sort((a, b) => b.recordedAt.localeCompare(a.recordedAt)), [positions]);
