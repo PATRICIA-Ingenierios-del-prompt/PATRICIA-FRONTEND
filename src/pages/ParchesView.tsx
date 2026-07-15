@@ -674,7 +674,16 @@ useEffect(() => {
           setVoiceParticipants(prev =>
             prev.find(p => p.senderUserId === evt.senderUserId) ? prev : [...prev, evt]
           );
-          if (voiceConnectedRef.current && evt.senderUserId !== meId) initiateOffer(evt.senderUserId, cid);
+          // NO se inicia oferta aquí. El que entra (newcomer) es quien
+          // siempre inicia -- ver realJoinVoice, que al unirse trae la
+          // lista de participantes activos y ofrece a cada uno. Si el que
+          // YA estaba en la llamada también ofreciera al recibir este JOIN,
+          // ambos lados mandan OFFER casi al mismo tiempo (glare): cada uno
+          // termina creando un RTCPeerConnection nuevo al recibir la oferta
+          // del otro (createPeer sobreescribe el peer existente en el mapa),
+          // y las candidatas ICE de la conexión descartada se siguen
+          // enviando y se aplican al peer equivocado -- se ven "conectados"
+          // en la UI pero el audio nunca fluye en ninguna dirección.
         } else {
           setVoiceParticipants(prev => prev.filter(p => p.senderUserId !== evt.senderUserId));
           closePeer(evt.senderUserId);
@@ -708,6 +717,14 @@ function createPeer(remoteId: string, cid: string): RTCPeerConnection {
     let a = document.getElementById(`va-${remoteId}`) as HTMLAudioElement;
     if (!a) { a = Object.assign(document.createElement('audio'), { id: `va-${remoteId}`, autoplay: true }); document.body.appendChild(a); }
     a.srcObject = evt.streams[0];
+    // autoplay puede quedar bloqueado por la política del navegador aunque
+    // venga de un click reciente (join) -- play() explícito con catch para
+    // no dejarlo fallar en silencio; si falla, queda logueado en consola
+    // en vez de que parezca simplemente "no hay audio" sin ninguna pista.
+    a.play().catch(err => console.warn(`[voice] audio autoplay bloqueado para ${remoteId}:`, err));
+  };
+  pc.oniceconnectionstatechange = () => {
+    console.log(`[voice] ICE state con ${remoteId}:`, pc.iceConnectionState);
   };
   pc.onicecandidate = evt => {
     if (evt.candidate) socketRef.current?.sendVoiceSignal(cid, { signalType: 'ICE_CANDIDATE', targetUserId: remoteId, signalData: JSON.stringify(evt.candidate) });
