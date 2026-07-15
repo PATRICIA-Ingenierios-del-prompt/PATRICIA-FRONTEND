@@ -150,7 +150,7 @@ export const userService = {
   async subirFotoPerfil(userId: string, dataUrl: string): Promise<FotoUploadResponse> {
     const { data } = await apiClient.post<FotoUploadResponse>(
       `${BASE}/${userId}/foto/base64`,
-      { foto: dataUrl },
+      { dataUrl },
     );
     return { ...data, foto: data.foto ?? data.urlFotoPerfil };
   },
@@ -165,7 +165,7 @@ export const userService = {
   async subirFotoAlbum(userId: string, dataUrl: string): Promise<AlbumFotoResponse> {
     const { data } = await apiClient.post<AlbumFotoResponse>(
       `${BASE}/${userId}/fotos/base64`,
-      { foto: dataUrl },
+      { dataUrl },
     );
     return data;
   },
