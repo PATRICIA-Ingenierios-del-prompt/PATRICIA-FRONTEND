@@ -61,6 +61,12 @@ export const parcheService = {
     return data;
   },
 
+  /** Member IDs of a parche (names live in Users MS — resolve via userService.getPerfiles). */
+  async getMembers(parcheId: UUID): Promise<UUID[]> {
+    const { data } = await apiClient.get<UUID[]>(`${BASE}/${parcheId}/members`);
+    return data;
+  },
+
   /* invites */
   async createInvite(body: CreateInviteRequest): Promise<InviteTokenResponse> {
     const { data } = await apiClient.post<InviteTokenResponse>(INVITES, body);

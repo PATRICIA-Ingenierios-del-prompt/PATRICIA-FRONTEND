@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Plus, Users, Lock, Globe, Mic, MicOff, Send, Smile,
-  Settings, Search, Crown, Shield, X, MessageCircle, FileText,
+  Settings, Search, X, MessageCircle, FileText,
   Layers, Gamepad2, Volume2, VolumeX, MoreHorizontal,
   Phone, PhoneOff, Download, Video, VideoOff, Monitor, MonitorOff, ArrowLeft, ChevronRight, ChevronLeft,
   KeyRound, LogOut, Trash2,
@@ -23,6 +23,7 @@ import { useAuth } from '../store/AuthContext';
 import { useReports, type ReportCategory } from '../store/ReportsContext';
 import { friendlyError } from '../lib/errorMessages';
 import { parcheService } from '../services/parcheService';
+import { userService } from '../services/userService';
 import { CATEGORY_META, ALL_CATEGORIES } from '../lib/maps';
 import type { ParcheSummaryResponse, EventCategory } from '../types/patricia';
 import { ComunicacionSocket, type ChatMessage, type VoiceEvent, type VoiceSignalPayload } from '../services/comunicacionSocket';
@@ -99,16 +100,31 @@ const LINKS_DATA = [
   { name:'Video clase — Transformada Laplace', url:'https://youtube.com/watch?v=laplace-eci', sharedBy:'Prof. García', date:'Hace 2 semanas',icon:'🎬', color:'#FF6B9D' },
 ];
 
-const MEMBERS_DATA = [
-  { name:'Valentina Torres', avatar:'VT', role:'admin',  status:'online',  gradient:'linear-gradient(135deg,#6C63FF,#FF6B9D)', mono: monoCoderImg },
-  { name:'Santiago Méndez',  avatar:'SM', role:'mod',    status:'online',  gradient:'linear-gradient(135deg,#7FE7C4,#6C63FF)', mono: monoDJImg },
-  { name:'Isabela Ramos',    avatar:'IR', role:'member', status:'away',    gradient:'linear-gradient(135deg,#FFB347,#FF6B9D)', mono: monoArteImg },
-  { name:'Carlos Ruiz',      avatar:'CR', role:'member', status:'offline', gradient:'linear-gradient(135deg,#A78BFA,#5BC8FF)', mono: monoCientImg },
-  { name:'María González',   avatar:'MG', role:'member', status:'online',  gradient:'linear-gradient(135deg,#FF6B9D,#FFB347)', mono: monoCultImg },
-  { name:'Tú',               avatar:'ME', role:'member', status:'online',  gradient:'linear-gradient(135deg,#6C63FF,#7FE7C4)', mono: monoPatriciaImg },
-];
+/** Real parche member, hydrated from Parches (IDs) + Users (names/fotos). */
+interface UiMember {
+  userId: string;
+  name: string;          // "Nombre Apellidos" from Users MS, or a fallback label
+  isSelf: boolean;
+  gradient: string;      // deterministic per-user card background
+  mono: string;          // profile photo if set; otherwise a deterministic mono
+}
 
-const STATUS_COLOR: Record<string, string> = { online:'#7FE7C4', away:'#FFB347', offline:'#4A4468' };
+// Card-art pools: each user gets a stable gradient/mono pair derived from
+// their UUID so the parqués-card look survives the move to real data.
+const MEMBER_GRADIENTS = [
+  'linear-gradient(135deg,#6C63FF,#FF6B9D)',
+  'linear-gradient(135deg,#7FE7C4,#6C63FF)',
+  'linear-gradient(135deg,#FFB347,#FF6B9D)',
+  'linear-gradient(135deg,#A78BFA,#5BC8FF)',
+  'linear-gradient(135deg,#FF6B9D,#FFB347)',
+  'linear-gradient(135deg,#6C63FF,#7FE7C4)',
+];
+const MEMBER_MONOS = [monoCoderImg, monoDJImg, monoArteImg, monoCientImg, monoCultImg, monoPatriciaImg];
+function memberHash(userId: string): number {
+  let h = 0;
+  for (let i = 0; i < userId.length; i++) h = (h * 31 + userId.charCodeAt(i)) >>> 0;
+  return h;
+}
 const QUICK_REACTIONS = ['👍','❤️','😂','🔥','🙏','✅','👏','😮'];
 
 // ── useBoard error surfacing in CollabCanvas ──
@@ -404,7 +420,9 @@ export function ParchesView({ linkedEvents = [] }: {
   const [showCreate, setShowCreate] = useState(false);
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [reportMember, setReportMember] = useState<string|null>(null);
-  const [viewMemberProfile, setViewMemberProfile] = useState<typeof MEMBERS_DATA[0] | null>(null);
+  const [viewMemberProfile, setViewMemberProfile] = useState<UiMember | null>(null);
+  const [members, setMembers] = useState<UiMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
   const [messages, setMessages] = useState(INIT_MESSAGES);
   const [msgInput, setMsgInput] = useState('');
   const [hoveredMsg, setHoveredMsg] = useState<number|null>(null);
@@ -491,6 +509,52 @@ export function ParchesView({ linkedEvents = [] }: {
 
   const membershipIds = new Set(mine.map(p => p.id));
   const isMember = (p: UiParche) => !!p.id && membershipIds.has(p.id);
+
+  // Real members: IDs from Parches MS, names/fotos resolved against Users MS.
+  // Session-level cache so the same UUID is never re-fetched across parches.
+  const perfilCache = useRef<Map<string, { name: string; foto?: string }>>(new Map());
+  useEffect(() => {
+    const parcheId = selectedParche.id;
+    if (!parcheId || !membershipIds.has(parcheId)) { setMembers([]); return; }
+    let alive = true;
+    setMembersLoading(true);
+    (async () => {
+      try {
+        const ids = await parcheService.getMembers(parcheId);
+        const missing = ids.filter(id => !perfilCache.current.has(id));
+        if (missing.length > 0) {
+          const perfiles = await userService.getPerfiles(missing);
+          for (const id of missing) {
+            const p = perfiles[id];
+            const fullName = p ? `${p.nombre ?? ''} ${p.apellidos ?? ''}`.trim() : '';
+            perfilCache.current.set(id, {
+              name: fullName || `Estudiante ${id.slice(0, 4)}`,
+              foto: p?.foto || undefined,
+            });
+          }
+        }
+        if (!alive) return;
+        setMembers(ids.map(id => {
+          const cached = perfilCache.current.get(id)!;
+          const h = memberHash(id);
+          return {
+            userId: id,
+            name: id === meId ? `${cached.name} (Tú)` : cached.name,
+            isSelf: id === meId,
+            gradient: MEMBER_GRADIENTS[h % MEMBER_GRADIENTS.length],
+            mono: cached.foto ?? MEMBER_MONOS[h % MEMBER_MONOS.length],
+          };
+        }));
+      } catch {
+        if (alive) setMembers([]);
+      } finally {
+        if (alive) setMembersLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+    // membershipIds is rebuilt every render; keying on `mine` keeps this stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedParche.id, mine, meId]);
   const privateSearch = search.trim().toLowerCase();
   const list = scope === 'public' ? publicos : mine.filter(p => p.type === 'private' && (!privateSearch || p.name.toLowerCase().includes(privateSearch)));
 
@@ -512,7 +576,25 @@ export function ParchesView({ linkedEvents = [] }: {
   const generateInvite = async (p: UiParche) => {
     setInviteLoading(true);
     try { const r = await parcheService.createInvite({ parcheId: p.id }); setInviteCopied(false); setInviteModal({ token: r.token, expiresInSeconds: r.expiresInSeconds }); }
-    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo generar', message: friendlyError(e, 'No se pudo generar el código. Intenta de nuevo.') }); }
+    catch (e: any) {
+      // The backend is precise about WHY (403 owner-only; 409 full/public) —
+      // surface that instead of a generic "try again" that would never work.
+      const status = e?.response?.status;
+      const backendMsg: string = e?.response?.data?.error ?? '';
+      let title = 'No se pudo generar';
+      let message = friendlyError(e, 'No se pudo generar el código. Intenta de nuevo.');
+      if (status === 403) {
+        title = 'Solo el creador puede invitar';
+        message = 'Los códigos de invitación solo los genera quien creó el parche. Pídele el código directamente.';
+      } else if (status === 409 && backendMsg.includes('maximum capacity')) {
+        title = 'Parche lleno';
+        message = 'Este parche ya alcanzó su capacidad máxima; no se pueden generar más invitaciones.';
+      } else if (status === 409 && backendMsg.includes('public')) {
+        title = 'Parche público';
+        message = 'Los parches públicos no usan código: cualquiera puede unirse desde la lista de parches.';
+      }
+      addToast({ type: 'reporte', title, message });
+    }
     finally { setInviteLoading(false); }
   };
   const copyInviteCode = async () => {
@@ -1231,7 +1313,7 @@ const realLeaveVoice = () => {
                     <div className="text-center">
                       <p style={{ fontWeight:700, fontSize:'1.05rem' }}>Canal de Voz — {selectedParche.name}</p>
                       <p style={{ fontSize:'0.82rem', color:'var(--p-muted)', marginTop:'4px' }}>
-                        {MEMBERS_DATA.filter(m=>m.status==='online').length} miembros disponibles
+                        {members.length} miembro{members.length !== 1 ? 's' : ''} en el parche
                       </p>
                     </div>
                     <button onClick={realJoinVoice}
@@ -1368,23 +1450,27 @@ const realLeaveVoice = () => {
                   <div className="flex items-center gap-2 mb-3 px-1">
                     <div className="flex-1 h-px" style={{ background:'rgba(108,99,255,0.25)' }} />
                     <p style={{ fontSize:'0.65rem', fontWeight:700, color:'rgba(108,99,255,0.7)', textTransform:'uppercase', letterSpacing:'0.12em', whiteSpace:'nowrap' }}>
-                      🃏 {MEMBERS_DATA.length} miembros
+                      🃏 {membersLoading ? 'Cargando…' : `${members.length} miembro${members.length !== 1 ? 's' : ''}`}
                     </p>
                     <div className="flex-1 h-px" style={{ background:'rgba(108,99,255,0.25)' }} />
                   </div>
 
                   {/* Parqués home-square grid */}
+                  {!membersLoading && members.length === 0 && (
+                    <p style={{ fontSize:'0.72rem', color:'var(--p-muted)', textAlign:'center', lineHeight:1.6 }}>
+                      No pudimos cargar los miembros. Intenta cerrar y abrir este panel.
+                    </p>
+                  )}
                   <div className="grid grid-cols-2 gap-2.5">
-                    {MEMBERS_DATA.map(m => (
-                      <div key={m.name} className="relative group cursor-pointer"
-                        onClick={()=>setMemberMenuOpen(memberMenuOpen===m.name?null:m.name)}>
+                    {members.map(m => (
+                      <div key={m.userId} className="relative group cursor-pointer"
+                        onClick={()=>setMemberMenuOpen(memberMenuOpen===m.userId?null:m.userId)}>
                         {/* Parqués corner-zone card */}
                         <div className="rounded-2xl overflow-hidden border-2 transition-all"
                           style={{
                             background: m.gradient,
-                            borderColor: m.status==='offline' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)',
-                            opacity: m.status==='offline' ? 0.5 : 1,
-                            boxShadow: m.status==='online' ? '0 4px 16px rgba(0,0,0,0.35)' : 'none',
+                            borderColor: m.isSelf ? 'rgba(127,231,196,0.6)' : 'rgba(255,255,255,0.3)',
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
                           }}>
                           {/* Inner radial glow (home area highlight) */}
                           <div className="absolute inset-0 pointer-events-none" style={{
@@ -1398,40 +1484,27 @@ const realLeaveVoice = () => {
                                 background:'rgba(255,255,255,0.4)', boxShadow:'0 0 4px rgba(255,255,255,0.3)' }} />
                           ))}
 
-                          {/* Role badge */}
-                          {m.role==='admin' && <Crown size={10} color="#FFB347" className="absolute top-2 left-2 z-10" style={{ filter:'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }} />}
-                          {m.role==='mod'   && <Shield size={10} color="white" className="absolute top-2 left-2 z-10" style={{ filter:'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }} />}
-
-                          {/* Status dot */}
-                          <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full z-10"
-                            style={{ background:STATUS_COLOR[m.status], border:'1.5px solid rgba(0,0,0,0.3)', boxShadow:`0 0 6px ${STATUS_COLOR[m.status]}` }} />
-
-                          {/* Mono image — clean, no bars */}
+                          {/* Member image: real profile photo (cover) or mono fallback (contain) */}
                           <div className="relative h-24 flex items-end justify-center overflow-hidden pt-3">
                             <img src={m.mono} alt={m.name}
-                              className="h-[108%] w-full object-contain object-bottom relative z-10"
-                              style={{
-                                filter: m.status==='offline'
-                                  ? 'grayscale(0.8) brightness(0.7)'
-                                  : 'drop-shadow(0 -6px 14px rgba(0,0,0,0.4))',
-                                marginBottom:'-1px',
-                              }} />
+                              className={`relative z-10 ${MEMBER_MONOS.includes(m.mono) ? 'h-[108%] w-full object-contain object-bottom' : 'absolute inset-0 h-full w-full object-cover pt-0'}`}
+                              style={{ filter:'drop-shadow(0 -6px 14px rgba(0,0,0,0.4))', marginBottom:'-1px' }} />
                           </div>
 
                           {/* Name plate */}
                           <div className="px-2 py-1.5 text-center" style={{ background:'rgba(0,0,0,0.4)', backdropFilter:'blur(4px)' }}>
                             <p style={{ fontSize:'0.7rem', fontWeight:700, color:'rgba(255,255,255,0.95)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                              {m.name.split(' ')[0]}
+                              {m.isSelf ? 'Tú' : m.name.split(' ')[0]}
                             </p>
-                            <p style={{ fontSize:'0.58rem', color: STATUS_COLOR[m.status], fontWeight:600 }}>
-                              {m.status==='online'?'En línea':m.status==='away'?'Ausente':'Desconectado'}
+                            <p style={{ fontSize:'0.58rem', color:'rgba(255,255,255,0.55)', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                              {m.isSelf ? m.name.replace(' (Tú)', '') : 'Miembro'}
                             </p>
                           </div>
                         </div>
 
                         {/* Context menu */}
                         <AnimatePresence>
-                          {memberMenuOpen===m.name && (
+                          {memberMenuOpen===m.userId && (
                             <motion.div initial={{ opacity:0, scale:0.9, y:-4 }} animate={{ opacity:1, scale:1, y:0 }} exit={{ opacity:0 }}
                               className="absolute left-0 top-full mt-1 rounded-xl border shadow-xl z-20 py-1 w-36"
                               style={{ background: t.darkMode ? '#1A1829' : t.cardBg, borderColor:'rgba(108,99,255,0.3)' }}
@@ -1605,32 +1678,20 @@ const realLeaveVoice = () => {
                 style={{ background:'rgba(0,0,0,0.35)', border:'1px solid rgba(255,255,255,0.2)' }}>
                 <ArrowLeft size={16} color="white" />
               </button>
-              {/* Mono image */}
+              {/* Profile photo (cover) or mono fallback (contain) */}
               <img src={viewMemberProfile.mono} alt={viewMemberProfile.name}
-                style={{ height:140, objectFit:'contain', position:'relative', zIndex:1, filter:'drop-shadow(0 8px 24px rgba(0,0,0,0.4))' }} />
-              {/* Role badge */}
-              {viewMemberProfile.role !== 'member' && (
-                <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-1 rounded-full"
-                  style={{ background:'rgba(0,0,0,0.45)', border:'1px solid rgba(255,255,255,0.2)' }}>
-                  {viewMemberProfile.role === 'admin'
-                    ? <Crown size={11} style={{ color:'#FFB347' }} />
-                    : <Shield size={11} style={{ color:'#7FE7C4' }} />}
-                  <span style={{ fontSize:'0.62rem', color:'white', fontWeight:700 }}>
-                    {viewMemberProfile.role === 'admin' ? 'Admin' : 'Moderador'}
-                  </span>
-                </div>
-              )}
+                style={MEMBER_MONOS.includes(viewMemberProfile.mono)
+                  ? { height:140, objectFit:'contain', position:'relative', zIndex:1, filter:'drop-shadow(0 8px 24px rgba(0,0,0,0.4))' }
+                  : { position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} />
             </div>
 
             <div className="p-5">
-              {/* Name + status */}
+              {/* Name */}
               <div className="flex items-center gap-2 mb-1">
                 <h3 style={{ fontWeight:800, fontSize:'1.15rem', color:'white' }}>{viewMemberProfile.name}</h3>
-                <div className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ background: viewMemberProfile.status==='online' ? '#7FE7C4' : viewMemberProfile.status==='away' ? '#FFB347' : '#4A4468' }} />
               </div>
               <p style={{ fontSize:'0.78rem', color:'rgba(255,255,255,0.45)', marginBottom:'16px' }}>
-                {viewMemberProfile.status==='online' ? 'En línea' : viewMemberProfile.status==='away' ? 'Ausente' : 'Desconectado'} · Miembro del parche
+                Miembro del parche
               </p>
 
               {/* Schedule */}
