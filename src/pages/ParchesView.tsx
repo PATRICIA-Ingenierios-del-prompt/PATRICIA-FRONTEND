@@ -30,14 +30,30 @@ import { apiClient } from '../services/apiClient';
 
 /** Render-ready parche derived from the backend summary. */
 interface UiParche {
-  id: string; name: string; emoji: string; color: string;
+  id: string; name: string; emoji: string; color: string; pictureUrl?: string;
   type: 'public' | 'private'; category: string;
   live: number; unread: number; memberCount: number; maxCapacity: number;
 }
 const EMPTY_PARCHE: UiParche = { id: '', name: '', emoji: '✨', color: '#6C63FF', type: 'public', category: 'VARIETY', live: 0, unread: 0, memberCount: 0, maxCapacity: 0 };
 function toUiParche(p: ParcheSummaryResponse): UiParche {
   const meta = CATEGORY_META[p.category as keyof typeof CATEGORY_META] ?? CATEGORY_META.VARIETY;
-  return { id: p.parcheId, name: p.name, emoji: meta.emoji, color: meta.color, type: p.visibility === 'PRIVATE' ? 'private' : 'public', category: p.category, live: 0, unread: 0, memberCount: p.memberCount, maxCapacity: p.maxCapacity };
+  return { id: p.parcheId, name: p.name, emoji: meta.emoji, color: meta.color, pictureUrl: p.pictureUrl || undefined, type: p.visibility === 'PRIVATE' ? 'private' : 'public', category: p.category, live: 0, unread: 0, memberCount: p.memberCount, maxCapacity: p.maxCapacity };
+}
+
+/** Profile picture when set, category emoji otherwise — same slot either way. */
+function ParcheAvatar({ parche, size, rounded = 'full', textSize }: { parche: UiParche; size: number; rounded?: 'full' | '2xl'; textSize: string }) {
+  const radius = rounded === 'full' ? '9999px' : '1rem';
+  if (parche.pictureUrl) {
+    return (
+      <img src={parche.pictureUrl} alt={parche.name} referrerPolicy="no-referrer"
+        style={{ width: size, height: size, borderRadius: radius, objectFit: 'cover', flexShrink: 0 }} />
+    );
+  }
+  return (
+    <div className="flex items-center justify-center flex-shrink-0" style={{ width: size, height: size, borderRadius: radius, fontSize: textSize, background: `${parche.color}20` }}>
+      {parche.emoji}
+    </div>
+  );
 }
 
 type InteriorTab = 'chat' | 'archivos' | 'lienzo' | 'juegos' | 'voz';
@@ -841,11 +857,8 @@ const realLeaveVoice = () => {
                 borderLeft:`3px solid ${selectedParche.id===parche.id ? '#6C63FF' : 'transparent'}`,
               }}>
               {/* Icon */}
-              <div className="relative flex-shrink-0">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
-                  style={{ background:`${parche.color}20`, border:`1.5px solid ${parche.color}40`, opacity: member ? 1 : 0.75 }}>
-                  {parche.emoji}
-                </div>
+              <div className="relative flex-shrink-0" style={{ opacity: member ? 1 : 0.75 }}>
+                <ParcheAvatar parche={parche} size={40} textSize="1.1rem" />
                 {!member && (
                   <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center border-2"
                     style={{ background:'var(--p-card)', borderColor:'var(--p-card)' }}>
@@ -897,7 +910,7 @@ const realLeaveVoice = () => {
           </div>
         ) : !isMember(selectedParche) && (
           <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 text-center px-10" style={{ background:'rgba(13,11,30,0.86)', backdropFilter:'blur(7px)' }}>
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl" style={{ background:`${selectedParche.color}22` }}>{selectedParche.emoji}</div>
+            <ParcheAvatar parche={selectedParche} size={64} textSize="1.9rem" rounded="2xl" />
             <div>
               <p style={{ fontWeight:800, fontSize:'1.1rem', color:'var(--p-text)' }}>{selectedParche.name}</p>
               <p style={{ fontSize:'0.8rem', color:'var(--p-muted)', marginTop:4 }}>{selectedParche.memberCount}/{selectedParche.maxCapacity} miembros</p>
@@ -927,10 +940,7 @@ const realLeaveVoice = () => {
                 </div>
               </button>
             )}
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
-              style={{ background:`${selectedParche.color}18` }}>
-              {selectedParche.emoji}
-            </div>
+            <ParcheAvatar parche={selectedParche} size={36} textSize="1rem" rounded="2xl" />
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span style={{ fontWeight:700, fontSize:'0.95rem', color:'var(--p-text)' }}>{selectedParche.name}</span>
