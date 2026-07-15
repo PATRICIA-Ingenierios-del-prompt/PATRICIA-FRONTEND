@@ -1,8 +1,24 @@
 import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
+import { tokenManager } from './tokenManager';
 import { Stroke, CursorMessage } from '../types/board';
 
-const WS_URL = '/ws/board';
+/**
+ * Live board STOMP client (Board MS).
+ *
+ * Transport: native WebSocket (the backend registers /ws/board both with and
+ * without SockJS — native is simpler and matches the geo/chat sockets).
+ * Browsers can't set an Authorization header on a WS upgrade, so the JWT
+ * rides `?access_token=<jwt>` — the Gateway validates it, strips it, and
+ * proxies the upgrade to the Board MS.
+ *
+ * Destinations (must match BoardWebSocketController):
+ *   SEND      /app/board/{boardId}/stroke | /cursor
+ *   SUBSCRIBE /exchange/amq.topic/board.{boardId}[.clear|.cursor]
+ */
+function wsOrigin(): string {
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${proto}//${window.location.host}`;
+}
 
 export class BoardWebSocketService {
   private client: Client;
@@ -17,14 +33,17 @@ export class BoardWebSocketService {
     private onCursorReceived: (cursor: CursorMessage) => void
   ) {
     this.client = new Client({
-      // We use webSocketFactory because the server uses SockJS fallback
-      webSocketFactory: () => new SockJS(WS_URL),
-      debug: (str) => {
-        // console.log('[STOMP] ' + str);
+      // Re-read the token on EVERY (re)connect attempt: if the JWT rotated or
+      // expired mid-session, a reconnect with the original URL would 401 forever.
+      beforeConnect: () => {
+        const token = tokenManager.getAccessToken() ?? '';
+        this.client.brokerURL = `${wsOrigin()}/ws/board?access_token=${encodeURIComponent(token)}`;
       },
+      brokerURL: `${wsOrigin()}/ws/board`,
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
+      debug: () => {},
     });
 
     this.client.onConnect = () => {
@@ -49,7 +68,7 @@ export class BoardWebSocketService {
   public disconnect() {
     this.subscriptions.forEach(sub => sub.unsubscribe());
     this.subscriptions.clear();
-    this.client.deactivate();
+    void this.client.deactivate();
   }
 
   private subscribeToBoard() {

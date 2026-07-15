@@ -1,9 +1,18 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { boardApi } from '../services/boardApi';
 import { BoardWebSocketService } from '../services/websocket';
-import { Stroke, CursorMessage, BoardResponse } from '../types/board';
+import { Stroke, CursorMessage } from '../types/board';
 
-export function useBoard(parcheId: number, userId: string) {
+/**
+ * Live board state + socket for a parche's canvas.
+ *
+ * @param canvasId The REAL board id provisioned by the Board MS (from the
+ *                 parche's CollaborationTools.canvasId). Null while the
+ *                 parche detail is loading or provisioning hasn't landed —
+ *                 the hook stays idle until it arrives.
+ * @param userId   The authenticated user's UUID (cursor attribution).
+ */
+export function useBoard(canvasId: string | null, userId: string) {
   const [boardId, setBoardId] = useState<string | null>(null);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [remoteCursors, setRemoteCursors] = useState<Record<string, CursorMessage>>({});
@@ -11,42 +20,40 @@ export function useBoard(parcheId: number, userId: string) {
   const [error, setError] = useState<string | null>(null);
 
   const wsServiceRef = useRef<BoardWebSocketService | null>(null);
-  
+
   // To prevent echoing our own strokes, we keep track of sent stroke IDs
   const pendingStrokesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
 
-    async function initBoard() {
+    async function initBoard(id: string) {
       try {
-        const hexParcheId = parcheId.toString(16).padStart(12, '0');
-        const deterministicId = `00000000-0000-0000-0000-${hexParcheId}`;
-
-        if (!active) return;
-        setBoardId(deterministicId);
-
-        // Fetch initial state
+        // Fetch initial state. The Board MS provisioned this canvas when the
+        // parche was created (parche.created -> board.ready), so it should
+        // exist; createBoard is only a self-heal for canvases lost to a
+        // Board MS restart (its provisioning map is in-memory).
         try {
-          const boardState = await boardApi.getBoard(deterministicId);
+          const boardState = await boardApi.getBoard(id);
           if (active) setStrokes(boardState.strokes || []);
-        } catch (fetchErr) {
-          console.warn('Failed to fetch existing board state. Creating new one with deterministic ID.');
-          try {
-            await boardApi.createBoard(deterministicId);
-            if (active) setStrokes([]);
-          } catch (createErr) {
-            console.error('Failed to create board on backend:', createErr);
-          }
+        } catch {
+          console.warn('Board not found; re-creating canvas', id);
+          await boardApi.createBoard(id);
+          if (active) setStrokes([]);
         }
+        if (active) setBoardId(id);
       } catch (err: any) {
         if (active) setError(err.message || 'Failed to initialize board');
       }
     }
 
-    initBoard();
+    setBoardId(null);
+    setStrokes([]);
+    setRemoteCursors({});
+    setError(null);
+    if (canvasId) void initBoard(canvasId);
     return () => { active = false; };
-  }, [parcheId]);
+  }, [canvasId]);
 
   useEffect(() => {
     if (!boardId) return;
