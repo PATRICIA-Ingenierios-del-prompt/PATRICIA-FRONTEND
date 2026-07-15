@@ -54,6 +54,9 @@ export function RegisterView({ onGoLogin, darkMode = true, setDarkMode }: Regist
       redirect_uri:  MS_REDIRECT,
       response_mode: 'query',
       scope:         'openid profile email offline_access',
+      // Evita que Microsoft intente reusar en silencio la cookie ESTSAUTH
+      // (sesión vieja/atascada). Fuerza siempre el selector de cuenta.
+      prompt:        'select_account',
     });
     window.location.href =
       `https://login.microsoftonline.com/${MS_TENANT}/oauth2/v2.0/authorize?${params}`;

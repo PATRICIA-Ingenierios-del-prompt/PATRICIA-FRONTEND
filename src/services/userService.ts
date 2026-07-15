@@ -33,6 +33,30 @@ export interface ActualizarPerfilPayload {
   foto?: string;
 }
 
+/** Franja horaria individual tal como la espera el backend */
+export interface FranjaHoraria {
+  diaSemana: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+  horaInicio: string; // "HH:mm"
+  horaFin: string;    // "HH:mm"
+}
+
+export interface DisponibilidadHorariaPayload {
+  franjas: FranjaHoraria[];
+}
+
+/** Respuesta de los endpoints de foto de perfil y foto de álbum */
+export interface FotoUploadResponse extends PerfilResponse {
+  tienePersonaEnFoto?: boolean;
+}
+
+/** Respuesta de los endpoints de foto de álbum */
+export interface AlbumFotoResponse {
+  id?: string;
+  url?: string;
+  tienePersonaEnFoto?: boolean;
+  [key: string]: unknown;
+}
+
 /** Payload completo del onboarding — enviado una sola vez al completar el registro */
 export interface OnboardingPayload {
   nombre: string;
@@ -113,5 +137,64 @@ export const userService = {
       // Otro error de red → asumimos que no necesita (evitar bloquear el login)
       return false;
     }
+  },
+
+  // ── Foto de perfil ────────────────────────────────────────────────────────
+
+  /**
+   * Sube una foto de perfil como base64 data-URL.
+   * POST /api/v1/usuarios/{id}/foto/base64
+   * La respuesta incluye `tienePersonaEnFoto` para validar que haya una persona
+   * visible. Si es false hay que notificar al usuario y bloquear el avance.
+   */
+  async subirFotoPerfil(userId: string, dataUrl: string): Promise<FotoUploadResponse> {
+    const { data } = await apiClient.post<FotoUploadResponse>(
+      `${BASE}/${userId}/foto/base64`,
+      { foto: dataUrl },
+    );
+    return { ...data, foto: data.foto ?? data.urlFotoPerfil };
+  },
+
+  // ── Fotos de álbum ────────────────────────────────────────────────────────
+
+  /**
+   * Sube una foto al álbum del usuario como base64 data-URL.
+   * POST /api/v1/usuarios/{id}/fotos/base64
+   * La respuesta incluye `tienePersonaEnFoto`.
+   */
+  async subirFotoAlbum(userId: string, dataUrl: string): Promise<AlbumFotoResponse> {
+    const { data } = await apiClient.post<AlbumFotoResponse>(
+      `${BASE}/${userId}/fotos/base64`,
+      { foto: dataUrl },
+    );
+    return data;
+  },
+
+  // ── Disponibilidad horaria ────────────────────────────────────────────────
+
+  /**
+   * Guarda (reemplaza) las franjas horarias del usuario.
+   * PUT /api/v1/usuarios/{id}/disponibilidad/horaria
+   * Una lista vacía significa "sin disponibilidad". Máximo 20 franjas.
+   */
+  async guardarDisponibilidad(userId: string, franjas: FranjaHoraria[]): Promise<PerfilResponse> {
+    const { data } = await apiClient.put<PerfilResponse>(
+      `${BASE}/${userId}/disponibilidad/horaria`,
+      { franjas },
+    );
+    return { ...data, foto: data.foto ?? data.urlFotoPerfil };
+  },
+
+  /**
+   * Obtiene las franjas horarias configuradas del usuario.
+   * GET /api/v1/usuarios/{id}/disponibilidad/horaria
+   */
+  async getDisponibilidad(userId: string): Promise<FranjaHoraria[]> {
+    const { data } = await apiClient.get<PerfilResponse & { franjas?: FranjaHoraria[] }>(
+      `${BASE}/${userId}/disponibilidad/horaria`,
+    );
+    // El backend devuelve un PerfilResponse completo; las franjas pueden venir
+    // en un campo propio o dentro de disponibilidadHoraria
+    return (data as any).franjas ?? (data as any).disponibilidadHoraria ?? [];
   },
 };

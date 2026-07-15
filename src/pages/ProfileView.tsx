@@ -1,25 +1,30 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Edit2, Camera, X, Loader2, GraduationCap, BookOpen, MapPin, Mail, User } from 'lucide-react';
+import { Edit2, Camera, X, Loader2, GraduationCap, BookOpen, MapPin, Mail, User, Save } from 'lucide-react';
 import { InteresesPicker, CATEGORIAS } from '../components/InteresesPicker';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
 import { useAuth } from '../store/AuthContext';
-import { userService, type PerfilResponse } from '../services/userService';
+import { userService, type PerfilResponse, type FranjaHoraria } from '../services/userService';
 import { addToast } from '../components/ToastSystem';
 import { friendlyError } from '../lib/errorMessages';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DAYS  = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
 const SLOTS = [
-  { start: '7:00 AM',  end: '8:30 AM'  },
-  { start: '9:00 AM',  end: '10:30 AM' },
-  { start: '10:30 AM', end: '12:00 PM' },
-  { start: '12:00 PM', end: '1:30 PM'  },
-  { start: '1:30 PM',  end: '3:00 PM'  },
-  { start: '3:00 PM',  end: '4:30 PM'  },
-  { start: '4:30 PM',  end: '6:00 PM'  },
-  { start: '6:00 PM',  end: '7:30 PM'  },
+  { start: '7:00 AM',  end: '8:30 AM',  horaInicio: '07:00', horaFin: '08:30' },
+  { start: '9:00 AM',  end: '10:30 AM', horaInicio: '09:00', horaFin: '10:30' },
+  { start: '10:30 AM', end: '12:00 PM', horaInicio: '10:30', horaFin: '12:00' },
+  { start: '12:00 PM', end: '1:30 PM',  horaInicio: '12:00', horaFin: '13:30' },
+  { start: '1:30 PM',  end: '3:00 PM',  horaInicio: '13:30', horaFin: '15:00' },
+  { start: '3:00 PM',  end: '4:30 PM',  horaInicio: '15:00', horaFin: '16:30' },
+  { start: '4:30 PM',  end: '6:00 PM',  horaInicio: '16:30', horaFin: '18:00' },
+  { start: '6:00 PM',  end: '7:30 PM',  horaInicio: '18:00', horaFin: '19:30' },
+];
+
+// Mapeo día-índice → enum DayOfWeek de Java
+const DAY_ENUM: FranjaHoraria['diaSemana'][] = [
+  'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY',
 ];
 const CARRERAS = [
   'Ingeniería Civil', 'Ingeniería Eléctrica', 'Ingeniería de Sistemas',
@@ -210,6 +215,8 @@ export function ProfileView() {
   const [loadingPerfil, setLoadingPerfil] = useState(true);
   const [showEdit, setShowEdit] = useState(false);
   const [schedule, setSchedule] = useState<Set<string>>(new Set());
+  const [savingSchedule, setSavingSchedule] = useState(false);
+  const [scheduleChanged, setScheduleChanged] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
@@ -221,8 +228,52 @@ export function ProfileView() {
       .finally(() => setLoadingPerfil(false));
   }, [userId]);
 
-  const toggleSlot = (key: string) =>
-    setSchedule(prev => { const s = new Set(prev); s.has(key) ? s.delete(key) : s.add(key); return s; });
+  // Cargar disponibilidad guardada al montar
+  useEffect(() => {
+    if (!userId) return;
+    userService.getDisponibilidad(userId)
+      .then(franjas => {
+        const keys = new Set<string>();
+        franjas.forEach(f => {
+          const di = DAY_ENUM.indexOf(f.diaSemana);
+          const si = SLOTS.findIndex(s => s.horaInicio === f.horaInicio && s.horaFin === f.horaFin);
+          if (di !== -1 && si !== -1) keys.add(`${di}-${si}`);
+        });
+        setSchedule(keys);
+      })
+      .catch(() => {}); // silencioso — la grilla empieza vacía si falla
+  }, [userId]);
+
+  const toggleSlot = (key: string) => {
+    setSchedule(prev => {
+      const s = new Set(prev);
+      s.has(key) ? s.delete(key) : s.add(key);
+      return s;
+    });
+    setScheduleChanged(true);
+  };
+
+  const handleSaveSchedule = async () => {
+    if (!userId) return;
+    setSavingSchedule(true);
+    try {
+      const franjas: FranjaHoraria[] = Array.from(schedule).map(key => {
+        const [di, si] = key.split('-').map(Number);
+        return {
+          diaSemana: DAY_ENUM[di],
+          horaInicio: SLOTS[si].horaInicio,
+          horaFin: SLOTS[si].horaFin,
+        };
+      });
+      await userService.guardarDisponibilidad(userId, franjas);
+      setScheduleChanged(false);
+      addToast({ type: 'info', title: 'Disponibilidad guardada', message: `${franjas.length} franja${franjas.length !== 1 ? 's' : ''} guardada${franjas.length !== 1 ? 's' : ''}.` });
+    } catch (err) {
+      addToast({ type: 'reporte', title: 'Error al guardar', message: friendlyError(err, 'No se pudo guardar la disponibilidad.') });
+    } finally {
+      setSavingSchedule(false);
+    }
+  };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -241,7 +292,19 @@ export function ProfileView() {
       const dataUrl = reader.result as string;
       setUploadingPhoto(true);
       try {
-        const updated = await userService.updatePerfil(userId, { foto: dataUrl });
+        // Usamos el endpoint dedicado de foto de perfil que incluye detección de persona
+        const updated = await userService.subirFotoPerfil(userId, dataUrl);
+
+        // La red neuronal puede tardar 2-5 seg; la respuesta ya viene con el resultado
+        if (updated.tienePersonaEnFoto === false) {
+          addToast({
+            type: 'reporte',
+            title: 'Foto no válida',
+            message: 'La foto no parece contener una persona visible. Por favor sube una foto donde aparezcas claramente.',
+          });
+          return; // No actualizar la foto en el estado
+        }
+
         setPerfil(prev => ({ ...prev, ...updated, foto: updated.foto ?? dataUrl }));
         addToast({ type: 'info', title: 'Foto actualizada', message: 'Tu foto de perfil fue guardada.' });
       } catch (err) {
@@ -302,18 +365,38 @@ export function ProfileView() {
               {perfil?.foto ? (
                 <img src={perfil.foto} alt={fullName}
                   className="w-28 h-28 rounded-full object-cover border-4"
-                  style={{ borderColor: t.darkMode ? '#1A1829' : '#fff' }} />
+                  style={{ borderColor: t.darkMode ? '#1A1829' : '#fff', opacity: uploadingPhoto ? 0.5 : 1, transition: 'opacity 0.2s' }} />
               ) : (
                 <div className="w-28 h-28 rounded-full flex items-center justify-center border-4"
-                  style={{ background: 'linear-gradient(135deg,#6C63FF,#7FE7C4)', borderColor: t.darkMode ? '#1A1829' : '#fff', fontSize: '2.2rem', fontWeight: 900, color: 'white' }}>
+                  style={{ background: 'linear-gradient(135deg,#6C63FF,#7FE7C4)', borderColor: t.darkMode ? '#1A1829' : '#fff', fontSize: '2.2rem', fontWeight: 900, color: 'white', opacity: uploadingPhoto ? 0.5 : 1 }}>
                   {initials}
                 </div>
               )}
+              {/* Overlay "Verificando…" mientras la IA procesa */}
+              {uploadingPhoto && (
+                <div className="absolute inset-0 rounded-full flex flex-col items-center justify-center gap-1"
+                  style={{ background: 'rgba(0,0,0,0.55)' }}>
+                  <Loader2 size={22} color="white" className="animate-spin" />
+                  <span style={{ fontSize: '0.55rem', color: 'white', fontWeight: 700, textAlign: 'center', lineHeight: 1.2, maxWidth: '60px' }}>
+                    Verificando…
+                  </span>
+                </div>
+              )}
               <input type="file" accept="image/*" id="profile-photo-input" className="hidden" onChange={handlePhotoChange} disabled={uploadingPhoto} />
-              <label htmlFor="profile-photo-input" title="Cambiar foto de perfil"
-                className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center cursor-pointer"
-                style={{ background: '#6C63FF', boxShadow: '0 2px 8px rgba(108,99,255,0.5)' }}>
-                {uploadingPhoto ? <Loader2 size={13} color="white" className="animate-spin" /> : <Camera size={13} color="white" />}
+              <label
+                htmlFor={uploadingPhoto ? undefined : 'profile-photo-input'}
+                title={uploadingPhoto ? 'Verificando foto…' : 'Cambiar foto de perfil'}
+                className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center"
+                style={{
+                  background: '#6C63FF',
+                  boxShadow: '0 2px 8px rgba(108,99,255,0.5)',
+                  cursor: uploadingPhoto ? 'default' : 'pointer',
+                  pointerEvents: uploadingPhoto ? 'none' : 'auto',
+                }}>
+                {uploadingPhoto
+                  ? <Loader2 size={13} color="white" className="animate-spin" />
+                  : <Camera size={13} color="white" />
+                }
               </label>
               <div className="absolute top-2 right-2 w-4 h-4 rounded-full border-2"
                 style={{ background: '#7FE7C4', borderColor: t.darkMode ? '#1A1829' : '#fff' }} />
@@ -430,10 +513,24 @@ export function ProfileView() {
                 <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text }}>Disponibilidad semanal</h3>
                 <p style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '2px' }}>Toca una franja para marcarla como disponible</p>
               </div>
-              <span className="px-3 py-1 rounded-full text-xs font-semibold"
-                style={{ background: 'rgba(127,231,196,0.12)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.25)' }}>
-                {schedule.size} franjas
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 rounded-full text-xs font-semibold"
+                  style={{ background: 'rgba(127,231,196,0.12)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.25)' }}>
+                  {schedule.size} franjas
+                </span>
+                {scheduleChanged && (
+                  <button
+                    onClick={handleSaveSchedule}
+                    disabled={savingSchedule}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-90 disabled:opacity-50"
+                    style={{ background: 'linear-gradient(135deg,#6C63FF,#5250d0)', color: 'white' }}>
+                    {savingSchedule
+                      ? <><Loader2 size={12} className="animate-spin" /> Guardando…</>
+                      : <><Save size={12} /> Guardar</>
+                    }
+                  </button>
+                )}
+              </div>
             </div>
             <div className="p-4">
               <div className="grid mb-1" style={{ gridTemplateColumns: '64px repeat(6, 1fr)', gap: '4px' }}>

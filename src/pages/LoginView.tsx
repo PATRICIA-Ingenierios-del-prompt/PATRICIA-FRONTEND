@@ -82,6 +82,9 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
       redirect_uri:  MICROSOFT_REDIRECT,
       response_mode: 'query',
       scope:         'openid profile email offline_access',
+      // Evita que Microsoft intente reusar en silencio la cookie ESTSAUTH
+      // (sesión vieja/atascada). Fuerza siempre el selector de cuenta.
+      prompt:        'select_account',
     });
     window.location.href =
       'https://login.microsoftonline.com/' + MICROSOFT_TENANT + '/oauth2/v2.0/authorize?' + params;

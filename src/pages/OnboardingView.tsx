@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Check, ChevronRight, Upload } from 'lucide-react';
+import { Check, ChevronRight, Upload, Loader2 } from 'lucide-react';
 import { ImageWithFallback } from '../components/ImageWithFallback';
 import { AnimatedBackground } from '../components/AnimatedBackground';
 import { InteresesPicker } from '../components/InteresesPicker';
@@ -156,20 +156,47 @@ function StepDatosBasicos({ data, setData, onNext, dark }: {
 }
 
 // ── Step 2: Perfil Académico + Género + Foto ───────────────────────────────
-function StepPerfil({ data, setData, onNext, onBack, dark }: {
+function StepPerfil({ data, setData, onNext, onBack, dark, userId }: {
   data: FormData; setData: (fn: (d: FormData) => FormData) => void;
-  onNext: () => void; onBack: () => void; dark: boolean;
+  onNext: () => void; onBack: () => void; dark: boolean; userId: string | null;
 }) {
   const [focused, setFocused] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [verifyingPhoto, setVerifyingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const set = (k: keyof FormData, v: string) => setData(d => ({ ...d, [k]: v }));
 
-  const handleFile = useCallback((file: File) => {
+  const handleFile = useCallback(async (file: File) => {
+    setPhotoError(null);
     const reader = new FileReader();
-    reader.onload = e => set('foto', e.target?.result as string);
+    reader.onload = async (e) => {
+      const dataUrl = e.target?.result as string;
+
+      // Si tenemos userId validamos con el backend (detecta persona)
+      if (userId) {
+        setVerifyingPhoto(true);
+        try {
+          const result = await userService.subirFotoPerfil(userId, dataUrl);
+          if (result.tienePersonaEnFoto === false) {
+            setPhotoError('La foto no parece contener una persona visible. Por favor sube una foto donde aparezcas claramente.');
+            return;
+          }
+          // Guardamos la URL ya subida al backend (o el dataUrl como fallback)
+          set('foto', result.foto ?? dataUrl);
+        } catch {
+          // Si falla la validación, guardamos el dataUrl igualmente para no bloquear
+          set('foto', dataUrl);
+        } finally {
+          setVerifyingPhoto(false);
+        }
+      } else {
+        // Sin userId (raro) guardamos directamente
+        set('foto', dataUrl);
+      }
+    };
     reader.readAsDataURL(file);
-  }, []);
+  }, [userId]);
 
   const muted   = dark ? '#999' : '#6B6490';
   const text    = dark ? '#E0E0FF' : '#1A1829';
@@ -265,13 +292,23 @@ function StepPerfil({ data, setData, onNext, onBack, dark }: {
       {/* ── Foto de perfil ── */}
       <div>
         <label style={labelStyle(dark)}>Foto de perfil <span style={{ color: muted, fontWeight: 400 }}>(opcional)</span></label>
-        <div onClick={() => fileRef.current?.click()}
+        <div onClick={() => !verifyingPhoto && fileRef.current?.click()}
           onDragOver={e => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
-          onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
-          className="relative rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden"
-          style={{ borderColor: dragOver ? '#00D9FF' : 'rgba(108,99,255,0.25)', background: dragOver ? 'rgba(0,217,255,0.05)' : idleBg, height: data.foto ? 120 : 90 }}>
-          {data.foto ? (
+          onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f && !verifyingPhoto) handleFile(f); }}
+          className="relative rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-all overflow-hidden"
+          style={{
+            borderColor: photoError ? '#FF4757' : dragOver ? '#00D9FF' : 'rgba(108,99,255,0.25)',
+            background: dragOver ? 'rgba(0,217,255,0.05)' : idleBg,
+            height: data.foto ? 120 : 90,
+            cursor: verifyingPhoto ? 'default' : 'pointer',
+          }}>
+          {verifyingPhoto ? (
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 size={20} style={{ color: '#6C63FF' }} className="animate-spin" />
+              <p style={{ fontSize: '0.8rem', color: dark ? '#C0BAE0' : '#6B6490', fontWeight: 500 }}>Verificando foto…</p>
+            </div>
+          ) : data.foto ? (
             <>
               <img src={data.foto} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -286,15 +323,21 @@ function StepPerfil({ data, setData, onNext, onBack, dark }: {
             </>
           )}
         </div>
+        {photoError && (
+          <p style={{ fontSize: '0.75rem', color: '#FF4757', marginTop: '6px', lineHeight: 1.4 }}>{photoError}</p>
+        )}
         <input ref={fileRef} type="file" accept="image/*" className="hidden"
-          onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+          onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
       </div>
 
-      <motion.button onClick={onNext} disabled={!canContinue}
-        whileHover={canContinue ? { scale: 1.02 } : {}} whileTap={canContinue ? { scale: 0.98 } : {}}
+      <motion.button onClick={onNext} disabled={!canContinue || verifyingPhoto}
+        whileHover={canContinue && !verifyingPhoto ? { scale: 1.02 } : {}} whileTap={canContinue && !verifyingPhoto ? { scale: 0.98 } : {}}
         className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-semibold transition-all disabled:opacity-40"
         style={{ background: canContinue ? 'linear-gradient(135deg,#6C63FF,#5250d0)' : 'rgba(108,99,255,0.3)', color: 'white' }}>
-        Continuar <ChevronRight size={18} />
+        {verifyingPhoto
+          ? <><Loader2 size={16} className="animate-spin" /> Verificando foto…</>
+          : <>Continuar <ChevronRight size={18} /></>
+        }
       </motion.button>
       <button onClick={onBack} style={{ width: '100%', textAlign: 'center', fontSize: '0.8rem', color: muted, background: 'none', border: 'none', cursor: 'pointer' }}>
         ← Volver al paso anterior
@@ -370,7 +413,9 @@ export function OnboardingView({ onComplete, darkMode }: OnboardingViewProps) {
         semestre:         parseInt(formData.semestre, 10),
         ...(formData.fechaNacimiento ? { fechaNacimiento: formData.fechaNacimiento } : {}),
         ...(formData.genero ? { genero: formData.genero } : {}),
-        ...(formData.foto  ? { foto: formData.foto }  : {}),
+        // La foto ya fue subida y validada en StepPerfil vía subirFotoPerfil.
+        // Solo la reenviamos si es un dataUrl crudo (sin userId durante la subida).
+        ...(formData.foto && formData.foto.startsWith('data:') ? { foto: formData.foto } : {}),
         intereses:        formData.intereses,
       };
       await userService.completarOnboarding(userId, payload);
@@ -420,7 +465,7 @@ export function OnboardingView({ onComplete, darkMode }: OnboardingViewProps) {
             )}
             {step === 2 && (
               <StepPerfil key="step2" data={formData} setData={setFormData}
-                onNext={() => setStep(3)} onBack={() => setStep(1)} dark={dark} />
+                onNext={() => setStep(3)} onBack={() => setStep(1)} dark={dark} userId={userId} />
             )}
             {step === 3 && (
               <StepIntereses key="step3" data={formData} setData={setFormData}
