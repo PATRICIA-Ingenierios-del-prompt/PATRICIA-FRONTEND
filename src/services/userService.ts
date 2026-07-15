@@ -96,18 +96,17 @@ export const userService = {
 
   /**
    * Verifica si el usuario ya completó el onboarding.
-   * Devuelve true si el perfil existe y tiene nombre Y carrera E intereses.
-   * Devuelve false si el perfil no existe (404) o está incompleto.
+   * Se basa en el flag `onboardingCompleto` que el backend guarda al recibir
+   * completarOnboarding() — no en heurísticas locales, porque `intereses` no
+   * viene incluido en la respuesta de GET /perfil (vive en su propio endpoint)
+   * y evaluarlo aquí forzaba a cualquier usuario ya registrado de vuelta al
+   * onboarding, cuyo reenvío chocaba con un 409 porque el perfil ya existía.
+   * Devuelve true si el perfil no existe (404) o si el flag es false.
    */
   async necesitaOnboarding(userId: string): Promise<boolean> {
     try {
       const perfil = await userService.getPerfil(userId);
-      const completo =
-        !!perfil.nombre?.trim() &&
-        !!perfil.carrera?.trim() &&
-        Array.isArray(perfil.intereses) &&
-        perfil.intereses.length >= 3;
-      return !completo;
+      return !perfil.onboardingCompleto;
     } catch (err: any) {
       // 404 → usuario nuevo, necesita onboarding
       if (err?.response?.status === 404) return true;
