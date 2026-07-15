@@ -14,7 +14,7 @@ import monoImg            from '../assets/monoULink.png';
 import { motion } from 'motion/react';
 import { LegalModals, type LegalModalType } from '../components/LegalContent';
 
-const MS_CLIENT_ID = '2f99fb73-56a7-49d2-a199-8e47c687251b';
+const MS_CLIENT_ID = 'd378f378-5c84-4dc8-8ce6-85bf56b42a45';
 const MS_TENANT    = 'common';
 const MS_REDIRECT  = window.location.origin + '/auth/callback';
 
