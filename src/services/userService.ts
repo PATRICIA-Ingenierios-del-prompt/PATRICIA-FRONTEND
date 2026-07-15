@@ -114,4 +114,18 @@ export const userService = {
       return false;
     }
   },
+
+  /** Solicita el cierre permanente de la cuenta (el backend aplica 24h de gracia antes de borrar). */
+  async solicitarEliminacionCuenta(userId: string): Promise<void> {
+    await apiClient.delete(BASE + '/' + userId + '/cuenta');
+  },
+  /** Cancela una solicitud de cierre de cuenta pendiente (dentro de las 24h de gracia). */
+  async cancelarEliminacionCuenta(userId: string): Promise<void> {
+    await apiClient.delete(BASE + '/' + userId + '/cuenta/cancelar');
+  },
+  /** Consulta si la cuenta tiene una eliminación pendiente, y desde cuándo. */
+  async getEstadoCuenta(userId: string): Promise<{ pendienteEliminacion: boolean; fechaSolicitudEliminacion: string | null }> {
+    const { data } = await apiClient.get(BASE + '/' + userId + '/cuenta/estado');
+    return data;
+  },
 };
