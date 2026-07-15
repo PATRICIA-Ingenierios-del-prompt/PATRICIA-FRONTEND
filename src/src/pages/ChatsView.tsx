@@ -1,0 +1,352 @@
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Search, Send, Smile, Paperclip, MoreHorizontal, ArrowLeft, Heart } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { useTheme } from '../store/ThemeContext';
+import { motion } from 'motion/react';
+import { addToast } from '../components/ToastSystem';
+import { friendlyError } from '../lib/errorMessages';
+import { matchingService } from '../services/matchingService';
+import { userService, type PerfilResponse } from '../services/userService';
+import type { MatchResponse } from '../types/patricia';
+
+// ── Visual-only helpers (el backend no manda color de avatar) ───────────────
+const GRADIENTS = [
+  'linear-gradient(135deg,#6C63FF,#FF6B9D)',
+  'linear-gradient(135deg,#7FE7C4,#6C63FF)',
+  'linear-gradient(135deg,#FFB347,#FF6B9D)',
+  'linear-gradient(135deg,#A78BFA,#5BC8FF)',
+  'linear-gradient(135deg,#FF6B9D,#FFB347)',
+];
+function gradientFor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return GRADIENTS[hash % GRADIENTS.length];
+}
+function getInitials(nombre?: string, apellidos?: string): string {
+  const full = [nombre, apellidos].filter(Boolean).join(' ');
+  const parts = full.split(' ').filter(Boolean).slice(0, 2);
+  return parts.length ? parts.map(w => w[0]!.toUpperCase()).join('') : '?';
+}
+
+const DISPONIBILIDAD_LABEL: Record<string, string> = {
+  DISPONIBLE: 'Disponible',
+  OCUPADO: 'Ocupado',
+  NO_MOLESTAR: 'No molestar',
+};
+
+interface Contact {
+  matchId: string;
+  userId: string;
+  name: string;
+  program: string;
+  avatar: string;
+  gradient: string;
+  foto?: string;
+  matchPct?: number;
+  disponibilidad?: string;
+}
+
+interface Message {
+  id: number;
+  text: string;
+  time: string;
+  isMe: boolean;
+}
+
+type ViewId = 'home' | 'matching' | 'parches' | 'campus' | 'eventos' | 'bienestar' | 'album' | 'notificaciones' | 'ranking' | 'ajustes' | 'perfil';
+
+export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId) => void }) {
+  const t = useTheme();
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(true);
+  const [selected, setSelected] = useState<Contact | null>(null);
+  const [messagesByMatch, setMessagesByMatch] = useState<Record<string, Message[]>>({});
+  const [input, setInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [showContactProfile, setShowContactProfile] = useState(false);
+  const endRef = useRef<HTMLDivElement>(null);
+
+  const loadContacts = useCallback(async () => {
+    setLoadingContacts(true);
+    try {
+      const raw: MatchResponse[] = await matchingService.listarMatches();
+      const perfiles = await userService.getPerfiles(raw.map(m => m.otroUsuarioId));
+      const built: Contact[] = raw.map(m => {
+        const p: PerfilResponse | undefined = perfiles[m.otroUsuarioId];
+        return {
+          matchId: m.matchId,
+          userId: m.otroUsuarioId,
+          name: [p?.nombre, p?.apellidos].filter(Boolean).join(' ') || 'Usuario',
+          program: p?.carrera || 'Programa no especificado',
+          avatar: getInitials(p?.nombre, p?.apellidos),
+          gradient: gradientFor(m.otroUsuarioId),
+          foto: p?.foto,
+          matchPct: m.scoreTotal != null ? Math.round(m.scoreTotal * 100) : undefined,
+          disponibilidad: (p as any)?.disponibilidad,
+        };
+      });
+      setContacts(built);
+    } catch (e) {
+      addToast({ type: 'info', title: 'No se pudieron cargar tus chats', message: friendlyError(e, 'Intenta de nuevo más tarde.') });
+    } finally {
+      setLoadingContacts(false);
+    }
+  }, []);
+
+  useEffect(() => { void loadContacts(); }, [loadContacts]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [selected, messagesByMatch]);
+
+  const send = () => {
+    if (!input.trim() || !selected) return;
+    if (!navigator.onLine) {
+      addToast({ type: 'reporte', title: 'Sin conexión', message: 'Verifica tu conexión a internet para enviar mensajes.' });
+      return;
+    }
+    const now = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+    setMessagesByMatch(prev => {
+      const list = prev[selected.matchId] ?? [];
+      return { ...prev, [selected.matchId]: [...list, { id: list.length + 1, text: input, time: now, isMe: true }] };
+    });
+    setInput('');
+  };
+
+  const filtered = contacts.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    c.program.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const messages = selected ? (messagesByMatch[selected.matchId] ?? []) : [];
+  const cardStyle = { background: t.cardBg, borderColor: t.cardBorder };
+
+  return (
+    <>
+    <div className="h-full overflow-hidden flex rounded-2xl border" style={cardStyle}>
+
+      {/* ── Contact list ── */}
+      <div className="w-72 flex-shrink-0 flex flex-col border-r" style={{ background: t.darkMode ? '#13111F' : '#FAFAFF', borderColor: t.divider }}>
+        <div className="p-4 border-b" style={{ borderColor: t.divider }}>
+          <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text, marginBottom: '12px' }}>Chats Privados</h3>
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: t.textMuted }} />
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar chat..."
+              className="w-full rounded-xl pl-8 pr-3 py-2 text-xs outline-none"
+              style={{ background: t.inputBg, color: t.text, border: `1px solid ${t.cardBorder}` }} />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto py-1">
+          {loadingContacts ? (
+            <p style={{ fontSize: '0.78rem', color: t.textMuted, textAlign: 'center', padding: '32px 16px' }}>Cargando chats...</p>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32 gap-2 px-4 text-center">
+              {contacts.length === 0 ? (
+                <>
+                  <Heart size={22} style={{ color: t.textMuted }} />
+                  <p style={{ fontSize: '0.78rem', color: t.textMuted }}>Aún no tienes matches. Ve a Matching para conectar con alguien.</p>
+                </>
+              ) : (
+                <>
+                  <Search size={22} style={{ color: t.textMuted }} />
+                  <p style={{ fontSize: '0.78rem', color: t.textMuted }}>No se encontraron chats con "{search}"</p>
+                </>
+              )}
+            </div>
+          ) : filtered.map(contact => {
+            const isActive = selected?.matchId === contact.matchId;
+            return (
+              <button key={contact.matchId} onClick={() => setSelected(contact)}
+                className="w-full text-left px-3 py-2.5 mx-2 flex items-start gap-3 transition-all rounded-xl"
+                style={{
+                  width: 'calc(100% - 16px)',
+                  background: isActive
+                    ? 'linear-gradient(135deg, rgba(108,99,255,0.22), rgba(108,99,255,0.10))'
+                    : 'transparent',
+                  borderLeft: `3px solid ${isActive ? '#6C63FF' : 'transparent'}`,
+                  boxShadow: isActive ? '0 2px 12px rgba(108,99,255,0.15)' : 'none',
+                }}>
+                {/* Avatar */}
+                <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
+                  style={{
+                    background: contact.gradient,
+                    fontSize: '0.72rem', fontWeight: 800, color: 'white',
+                    outline: isActive ? '2px solid rgba(108,99,255,0.45)' : 'none',
+                    outlineOffset: '2px',
+                  }}>
+                  {contact.foto ? <img src={contact.foto} alt={contact.name} className="w-full h-full object-cover" /> : contact.avatar}
+                </div>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <span style={{
+                    fontSize: '0.85rem', fontWeight: isActive ? 700 : 600,
+                    color: isActive ? '#6C63FF' : t.text,
+                  }}>{contact.name.split(' ')[0]}</span>
+                  <p className="truncate" style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '2px' }}>{contact.program}</p>
+                  {contact.matchPct != null && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span style={{ fontSize: '0.6rem', color: '#7FE7C4', fontWeight: 600 }}>
+                        {contact.matchPct}% match
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Chat area ── */}
+      {!selected ? (
+        <div className="flex-1 flex items-center justify-center" style={{ background: t.darkMode ? '#0D0B1E' : t.bg }}>
+          <p style={{ fontSize: '0.85rem', color: t.textMuted }}>Selecciona un chat para empezar a conversar</p>
+        </div>
+      ) : (
+      <div className="flex-1 flex flex-col" style={{ background: t.darkMode ? '#0D0B1E' : t.bg }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b flex-shrink-0"
+          style={{ background: t.darkMode ? '#13111F' : t.cardBg, borderColor: t.divider }}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden"
+              style={{ background: selected.gradient, fontSize: '0.7rem', fontWeight: 800, color: 'white' }}>
+              {selected.foto ? <img src={selected.foto} alt={selected.name} className="w-full h-full object-cover" /> : selected.avatar}
+            </div>
+            <div>
+              <button onClick={() => setShowContactProfile(true)}
+                style={{ fontWeight: 700, fontSize: '0.95rem', color: t.text, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'transparent' }}
+                onMouseEnter={e => { (e.target as HTMLElement).style.textDecorationColor = t.textMuted; }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.textDecorationColor = 'transparent'; }}>
+                {selected.name}
+              </button>
+              <p style={{ fontSize: '0.7rem', color: t.textMuted }}>{selected.program}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-70 transition-all"
+              style={{ background: t.inputBg }}>
+              <MoreHorizontal size={16} style={{ color: t.textMuted }} />
+            </button>
+          </div>
+        </div>
+
+        {/* Match badge */}
+        {selected.matchPct != null && (
+          <div className="flex justify-center pt-4 pb-2">
+            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full"
+              style={{ background: 'rgba(108,99,255,0.1)', border: '1px solid rgba(108,99,255,0.2)' }}>
+              <span style={{ fontSize: '0.75rem', color: '#6C63FF' }}>{selected.matchPct}% de compatibilidad con {selected.name.split(' ')[0]}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2"
+          style={{ background: t.darkMode ? '#0D0B1E' : t.bg }}>
+          {messages.length === 0 && (
+            <div className="h-full flex items-center justify-center text-center px-6">
+              <p style={{ fontSize: '0.82rem', color: t.textMuted }}>
+                Aún no hay mensajes con {selected.name.split(' ')[0]}. ¡Escribe el primero!
+              </p>
+            </div>
+          )}
+          {messages.map(msg => (
+            <motion.div key={msg.id}
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+              className={`flex ${msg.isMe ? 'justify-end' : 'justify-start'}`}>
+              <div className="max-w-[65%]">
+                <div className="px-4 py-2.5 rounded-2xl"
+                  style={{
+                    background: msg.isMe
+                      ? 'linear-gradient(135deg, #6C63FF, #8B7FFF)'
+                      : t.darkMode ? '#1E1C30' : '#F0EEFF',
+                    color: msg.isMe ? '#FFFFFF' : t.darkMode ? '#E0DAFF' : '#1A1829',
+                    borderRadius: msg.isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                    border: msg.isMe ? 'none' : `1px solid ${t.darkMode ? 'rgba(108,99,255,0.25)' : 'rgba(108,99,255,0.2)'}`,
+                    fontSize: '0.87rem', lineHeight: 1.5,
+                  }}>
+                  {msg.text}
+                </div>
+                <div className={`flex items-center gap-1 mt-1 ${msg.isMe ? 'justify-end' : ''}`}>
+                  <span style={{ fontSize: '0.6rem', color: t.textMuted }}>{msg.time}</span>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+          <div ref={endRef} />
+        </div>
+
+        {/* Input */}
+        <div className="p-4 border-t flex-shrink-0" style={{ background: t.darkMode ? '#13111F' : t.cardBg, borderColor: t.divider }}>
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border"
+            style={{ background: t.inputBg, borderColor: t.cardBorder }}>
+            <button className="hover:opacity-70"><Smile size={18} style={{ color: t.textMuted }} /></button>
+            <button className="hover:opacity-70"><Paperclip size={18} style={{ color: t.textMuted }} /></button>
+            <input value={input} onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && send()}
+              placeholder={`Mensaje a ${selected.name.split(' ')[0]}...`}
+              className="flex-1 bg-transparent outline-none"
+              style={{ fontSize: '0.87rem', color: t.text }} />
+            <button onClick={send}
+              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-105"
+              style={{ background: '#6C63FF' }}>
+              <Send size={14} color="white" />
+            </button>
+          </div>
+        </div>
+      </div>
+      )}
+    </div>
+
+    {/* Contact profile modal */}
+    {showContactProfile && selected && createPortal(
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)' }}
+        onClick={() => setShowContactProfile(false)}>
+        <div className="rounded-3xl border w-full max-w-sm overflow-hidden"
+          style={{ background: t.cardBg, borderColor: t.cardBorder }}
+          onClick={e => e.stopPropagation()}>
+          {/* Hero */}
+          <div className="relative h-36 flex items-center justify-center overflow-hidden" style={{ background: selected.foto ? undefined : selected.gradient }}>
+            {selected.foto && <img src={selected.foto} alt={selected.name} className="absolute inset-0 w-full h-full object-cover" />}
+            <button onClick={() => setShowContactProfile(false)}
+              className="absolute top-4 left-4 w-8 h-8 rounded-full flex items-center justify-center z-10"
+              style={{ background: 'rgba(0,0,0,0.3)' }}>
+              <ArrowLeft size={16} color="white" />
+            </button>
+            {!selected.foto && (
+              <div className="w-20 h-20 rounded-full flex items-center justify-center border-4 border-white/30 font-black text-white text-2xl"
+                style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)' }}>
+                {selected.avatar}
+              </div>
+            )}
+          </div>
+          <div className="p-5">
+            <h3 style={{ fontWeight: 800, fontSize: '1.15rem', color: t.text }}>{selected.name}</h3>
+            <p style={{ fontSize: '0.8rem', color: t.textMuted, marginBottom: '12px' }}>{selected.program}</p>
+            {selected.matchPct != null && (
+              <div className="flex items-center gap-2 mb-3">
+                <span className="px-2.5 py-1 rounded-full text-xs font-semibold"
+                  style={{ background: 'rgba(108,99,255,0.12)', color: '#6C63FF' }}>
+                  {selected.matchPct}% compatibilidad
+                </span>
+              </div>
+            )}
+            {selected.disponibilidad && (
+              <div className="flex items-center gap-2">
+                <span style={{ fontWeight: 700, fontSize: '0.82rem', color: t.text }}>Disponibilidad:</span>
+                <span className="px-2.5 py-1 rounded-full text-xs font-semibold"
+                  style={{ background: 'var(--p-divider)', color: '#6C63FF' }}>
+                  {DISPONIBILIDAD_LABEL[selected.disponibilidad] ?? selected.disponibilidad}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
+  );
+}

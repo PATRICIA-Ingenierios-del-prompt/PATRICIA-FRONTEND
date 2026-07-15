@@ -914,60 +914,10 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
   setDyslexiaMode: (v: boolean) => void;
 }) {
   const t = useTheme();
-  const { userId } = useAuth();
   const [notifToggles, setNotifToggles] = useState({ matches: true, parches: true, eventos: false });
   const [privacy, setPrivacy] = useState('publico');
   const [incognito, setIncognito] = useState(false);
   const [legalModal, setLegalModal] = useState<LegalModalType>(null);
-  const [activeSection, setActiveSection] = useState<'privacidad' | 'notificaciones' | 'mas'>('privacidad');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [recovering, setRecovering] = useState(false);
-  const [pendingDeletionSince, setPendingDeletionSince] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!userId) return;
-    let cancelled = false;
-    userService.getEstadoCuenta(userId)
-      .then(estado => { if (!cancelled) setPendingDeletionSince(estado.pendienteEliminacion ? estado.fechaSolicitudEliminacion : null); })
-      .catch(() => { /* si falla la consulta, simplemente no mostramos el banner */ });
-    return () => { cancelled = true; };
-  }, [userId]);
-
-  const handleDeleteAccount = async () => {
-    if (!userId) return;
-    setDeleting(true);
-    setDeleteError(null);
-    try {
-      await userService.solicitarEliminacionCuenta(userId);
-      addToast({ type: 'info', title: 'Cuenta programada para eliminación', message: 'Tienes 24 horas para recuperarla — inicia sesión de nuevo antes de que pase ese tiempo.', duration: 8000 });
-      setShowDeleteConfirm(false);
-      onLogout();
-    } catch (e) {
-      setDeleteError(friendlyError(e, 'No se pudo procesar la solicitud. Intenta de nuevo.'));
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const handleRecoverAccount = async () => {
-    if (!userId) return;
-    setRecovering(true);
-    try {
-      await userService.cancelarEliminacionCuenta(userId);
-      setPendingDeletionSince(null);
-      addToast({ type: 'info', title: 'Cuenta recuperada', message: 'Se canceló la eliminación. Tu cuenta sigue activa.' });
-    } catch (e) {
-      addToast({ type: 'reporte', title: 'No se pudo recuperar la cuenta', message: friendlyError(e, 'Intenta de nuevo o contacta soporte.') });
-    } finally {
-      setRecovering(false);
-    }
-  };
-  // En xl+ las pestañas se ocultan y todo se ve junto; por debajo de xl, solo se
-  // muestra la sección activa (evita un scroll larguísimo en móvil).
-  const sectionVisibility = (id: 'privacidad' | 'notificaciones' | 'mas') =>
-    activeSection === id ? '' : 'hidden xl:block';
 
   const Toggle = ({ on, onToggle }: { on: boolean; onToggle: () => void }) => (
     <button onClick={onToggle}
@@ -980,33 +930,17 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
 
   return (
     <div className="h-full overflow-y-auto pb-6">
-      {/* Banner de recuperación — solo si en este navegador se pidió eliminar la cuenta hace menos de 24h */}
-      {pendingDeletionSince != null && (
-        <div className="flex flex-wrap items-center gap-3 mb-5 p-4 rounded-2xl border"
-          style={{ background: 'rgba(255,77,106,0.08)', borderColor: 'rgba(255,77,106,0.3)' }}>
-          <span style={{ fontSize: '1.3rem' }}>⚠️</span>
-          <div className="flex-1 min-w-[200px]">
-            <p style={{ fontWeight: 700, fontSize: '0.88rem', color: '#FF4D6A' }}>Tu cuenta se eliminará pronto</p>
-            <p style={{ fontSize: '0.78rem', color: t.textMuted }}>Pediste eliminarla — todavía estás dentro de las 24 horas de gracia. Puedes recuperarla ahora.</p>
-          </div>
-          <button onClick={handleRecoverAccount} disabled={recovering}
-            className="px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60 flex-shrink-0"
-            style={{ background: '#7FE7C4', color: '#0F0E1A' }}>
-            {recovering ? 'Recuperando…' : 'Recuperar cuenta'}
-          </button>
-        </div>
-      )}
       {/* Section nav */}
       <div className="flex gap-1 mb-5 p-1 rounded-2xl border xl:hidden overflow-x-auto"
         style={{ background: t.cardBg, borderColor: t.cardBorder }}>
-        {([
+        {[
           { id: 'privacidad', label: 'Privacidad' },
           { id: 'notificaciones', label: 'Notifs' },
           { id: 'mas', label: 'Más' },
-        ] as const).map(s => (
-          <button key={s.id} onClick={() => setActiveSection(s.id)}
+        ].map(s => (
+          <button key={s.id}
             className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
-            style={{ background: activeSection === s.id ? '#6C63FF' : 'transparent', color: activeSection === s.id ? 'white' : t.textMuted }}>
+            style={{ background: 'transparent', color: t.textMuted }}>
             {s.label}
           </button>
         ))}
@@ -1027,7 +961,7 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
         <div className="space-y-4">
 
           {/* Cerrar sesión / Eliminar cuenta */}
-          <div className={`rounded-2xl p-5 border ${sectionVisibility('mas')}`} style={{ background: 'rgba(255,77,106,0.04)', borderColor: 'rgba(255,77,106,0.2)' }}>
+          <div className="rounded-2xl p-5 border" style={{ background: 'rgba(255,77,106,0.04)', borderColor: 'rgba(255,77,106,0.2)' }}>
             <p style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '12px', color: '#FF4D6A' }}>Sesión y cuenta</p>
             <div className="space-y-2">
               <button onClick={onLogout}
@@ -1035,8 +969,7 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
                 style={{ background: '#FF4D6A', color: 'white' }}>
                 Cerrar sesión
               </button>
-              <button onClick={() => { setDeleteError(null); setShowDeleteConfirm(true); }}
-                className="w-full py-2.5 rounded-xl text-sm font-medium border transition-all hover:bg-red-500/10"
+              <button className="w-full py-2.5 rounded-xl text-sm font-medium border transition-all hover:bg-red-500/10"
                 style={{ color: '#FF4D6A', borderColor: 'rgba(255,77,106,0.25)' }}>
                 Eliminar cuenta
               </button>
@@ -1044,7 +977,7 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
           </div>
 
           {/* Notificaciones */}
-          <div className={`rounded-2xl border overflow-hidden ${sectionVisibility('notificaciones')}`} style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
+          <div className="rounded-2xl border overflow-hidden" style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
             <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: 'rgba(108,99,255,0.1)', background: 'rgba(108,99,255,0.05)' }}>
               <span style={{ fontWeight: 700, color: '#6C63FF', fontSize: '0.9rem' }}>Notificaciones</span>
             </div>
@@ -1065,7 +998,7 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
           </div>
 
           {/* Privacidad */}
-          <div className={`rounded-2xl border overflow-hidden ${sectionVisibility('privacidad')}`} style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
+          <div className="rounded-2xl border overflow-hidden" style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
             <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: 'rgba(108,99,255,0.1)', background: 'rgba(108,99,255,0.05)' }}>
               <span style={{ fontWeight: 700, color: '#6C63FF', fontSize: '0.9rem' }}>Privacidad</span>
             </div>
@@ -1091,7 +1024,7 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
           </div>
 
           {/* Sobre U•link — al final */}
-          <div className={`rounded-2xl p-5 border ${sectionVisibility('mas')}`} style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
+          <div className="rounded-2xl p-5 border" style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
             <p style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '16px', color: '#6C63FF' }}>Sobre U•link</p>
             <div className="space-y-3">
               {[{ label: 'Versión', value: '1.0.0' }, { label: 'Institución', value: 'ECI' }, { label: 'Soporte', value: '24/7' }].map(item => (
@@ -1114,49 +1047,6 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
         </div>
       </div>
       <LegalModals open={legalModal} darkMode={t.darkMode} onClose={() => setLegalModal(null)} />
-
-      {/* Confirmación de eliminar cuenta */}
-      <AnimatePresence>
-        {showDeleteConfirm && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ background: 'rgba(0,0,0,0.75)' }}
-            onClick={() => !deleting && setShowDeleteConfirm(false)}>
-            <motion.div initial={{ scale: 0.92, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92 }}
-              className="rounded-3xl border w-full max-w-sm overflow-hidden"
-              style={{ background: t.cardBg, borderColor: 'rgba(255,77,106,0.35)' }}
-              onClick={e => e.stopPropagation()}>
-              <div className="h-1.5" style={{ background: 'linear-gradient(90deg,#FF4D6A,#FF6B9D)' }} />
-              <div className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,77,106,0.14)' }}>
-                    <span style={{ fontSize: '1.2rem' }}>⚠️</span>
-                  </div>
-                  <p style={{ fontWeight: 800, fontSize: '1.05rem', color: t.text }}>¿Eliminar tu cuenta?</p>
-                </div>
-                <p style={{ fontSize: '0.85rem', color: t.textMuted, lineHeight: 1.6, marginBottom: '20px' }}>
-                  Tienes <strong>24 horas</strong> para recuperar tu cuenta antes de que se borre. Pasado ese tiempo, el borrado es permanente y no se puede deshacer.
-                </p>
-                {deleteError && (
-                  <p style={{ fontSize: '0.8rem', color: '#FF4D6A', marginBottom: '16px' }}>{deleteError}</p>
-                )}
-                <div className="flex gap-3">
-                  <button onClick={() => setShowDeleteConfirm(false)} disabled={deleting}
-                    className="flex-1 py-2.5 rounded-xl text-sm disabled:opacity-50"
-                    style={{ background: 'rgba(108,99,255,0.1)', color: t.textMuted }}>
-                    Cancelar
-                  </button>
-                  <button onClick={handleDeleteAccount} disabled={deleting}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60"
-                    style={{ background: '#FF4D6A', color: 'white' }}>
-                    {deleting ? 'Procesando…' : 'Sí, eliminar'}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
