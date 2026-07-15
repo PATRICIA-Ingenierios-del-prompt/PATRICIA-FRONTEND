@@ -120,14 +120,33 @@ export class ComunicacionSocket {
   }
 
   joinVoice(chatId: string): void {
+    if (!this.client.connected) {
+      // Antes esto llamaba a this.client.publish(...) sin validar nada: si el
+      // usuario le daba clic al botón de voz antes de que el WebSocket
+      // terminara de conectar (muy fácil justo al entrar a la página), el
+      // mensaje se perdía en silencio -- ni excepción, ni log (debug está
+      // deshabilitado arriba), ni request de red. La UI igual mostraba
+      // "conectado" porque ParchesView marca voiceConnected=true ANTES de
+      // llamar a este método, así que el usuario veía su propio círculo y
+      // "esperando participantes" para siempre, sin ningún error visible.
+      throw new Error('No se pudo unir a la llamada: conexión STOMP no está activa todavía');
+    }
     this.client.publish({ destination: `/app/voice.join/${chatId}`, body: '{}' });
   }
 
   leaveVoice(chatId: string): void {
+    if (!this.client.connected) {
+      console.warn('[comms] leaveVoice ignorado: STOMP no conectado');
+      return;
+    }
     this.client.publish({ destination: `/app/voice.leave/${chatId}`, body: '{}' });
   }
 
   sendVoiceSignal(chatId: string, signal: VoiceSignalPayload): void {
+    if (!this.client.connected) {
+      console.warn('[comms] sendVoiceSignal ignorado: STOMP no conectado', signal.signalType);
+      return;
+    }
     this.client.publish({ destination: `/app/voice.signal/${chatId}`, body: JSON.stringify(signal) });
   }
 

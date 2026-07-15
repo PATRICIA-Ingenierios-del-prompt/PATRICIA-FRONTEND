@@ -659,12 +659,29 @@ function closePeer(uid: string) {
 
 const realJoinVoice = async () => {
   if (!chatId) return;
+  let stream: MediaStream;
   try {
-    localStream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (err) {
+    console.error('[voice] getUserMedia falló:', err);
+    addToast({ type: 'info', title: 'Micrófono', message: 'Permite el acceso al micrófono' });
+    return;
+  }
+
+  try {
+    // El join real se manda ANTES de reflejar "conectado" en la UI --
+    // si el STOMP todavía no está listo, joinVoice() lanza y caemos al
+    // catch de abajo en vez de dejar al usuario viendo su propio círculo
+    // para siempre sin que nadie más se entere que se unió.
+    socketRef.current?.joinVoice(chatId);
+    localStream.current = stream;
     setVoiceConnected(true);
     voiceConnectedRef.current = true;
-    socketRef.current?.joinVoice(chatId);
-  } catch { addToast({ type: 'info', title: 'Micrófono', message: 'Permite el acceso al micrófono' }); }
+  } catch (err) {
+    console.error('[voice] No se pudo unir a la llamada:', err);
+    stream.getTracks().forEach(t => t.stop());
+    addToast({ type: 'info', title: 'Llamada no disponible', message: 'No se pudo conectar con el servidor de voz. Intenta de nuevo en unos segundos.' });
+  }
 };
 
 const realLeaveVoice = () => {
@@ -733,7 +750,7 @@ const realLeaveVoice = () => {
           position: 'absolute',
           top: 0,
           left: 0,
-          zIndex: 50,
+          zIndex: 40,
           transform: showSidebar ? 'translateX(0)' : 'translateX(-100%)',
           transition: 'transform 0.3s ease',
         } : {
@@ -924,9 +941,9 @@ const realLeaveVoice = () => {
           </div>
         )}
 
-        {/* Header — position+zIndex above the "no parche selected" overlay so the mobile hamburger stays clickable */}
+        {/* Header */}
         <div className="flex items-center justify-between px-3 sm:px-5 py-3 border-b flex-shrink-0"
-          style={{ borderColor:'var(--p-divider)', background:'var(--p-card)', backdropFilter:'blur(12px)', position:'relative', zIndex:45 }}>
+          style={{ borderColor:'var(--p-divider)', background:'var(--p-card)', backdropFilter:'blur(12px)' }}>
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             {/* Hamburger — mobile only */}
             {isMobile && (

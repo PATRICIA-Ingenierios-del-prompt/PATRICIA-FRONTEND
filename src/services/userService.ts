@@ -96,36 +96,23 @@ export const userService = {
 
   /**
    * Verifica si el usuario ya completó el onboarding.
-   * Se basa en el flag `onboardingCompleto` que el backend guarda al recibir
-   * completarOnboarding() — no en heurísticas locales, porque `intereses` no
-   * viene incluido en la respuesta de GET /perfil (vive en su propio endpoint)
-   * y evaluarlo aquí forzaba a cualquier usuario ya registrado de vuelta al
-   * onboarding, cuyo reenvío chocaba con un 409 porque el perfil ya existía.
-   * Devuelve true si el perfil no existe (404) o si el flag es false.
+   * Devuelve true si el perfil existe y tiene nombre Y carrera E intereses.
+   * Devuelve false si el perfil no existe (404) o está incompleto.
    */
   async necesitaOnboarding(userId: string): Promise<boolean> {
     try {
       const perfil = await userService.getPerfil(userId);
-      return !perfil.onboardingCompleto;
+      const completo =
+        !!perfil.nombre?.trim() &&
+        !!perfil.carrera?.trim() &&
+        Array.isArray(perfil.intereses) &&
+        perfil.intereses.length >= 3;
+      return !completo;
     } catch (err: any) {
       // 404 → usuario nuevo, necesita onboarding
       if (err?.response?.status === 404) return true;
       // Otro error de red → asumimos que no necesita (evitar bloquear el login)
       return false;
     }
-  },
-
-  /** Solicita el cierre permanente de la cuenta (el backend aplica 24h de gracia antes de borrar). */
-  async solicitarEliminacionCuenta(userId: string): Promise<void> {
-    await apiClient.delete(BASE + '/' + userId + '/cuenta');
-  },
-  /** Cancela una solicitud de cierre de cuenta pendiente (dentro de las 24h de gracia). */
-  async cancelarEliminacionCuenta(userId: string): Promise<void> {
-    await apiClient.delete(BASE + '/' + userId + '/cuenta/cancelar');
-  },
-  /** Consulta si la cuenta tiene una eliminación pendiente, y desde cuándo. */
-  async getEstadoCuenta(userId: string): Promise<{ pendienteEliminacion: boolean; fechaSolicitudEliminacion: string | null }> {
-    const { data } = await apiClient.get(BASE + '/' + userId + '/cuenta/estado');
-    return data;
   },
 };

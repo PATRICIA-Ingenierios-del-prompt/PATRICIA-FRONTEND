@@ -207,22 +207,22 @@ function Tracker({ eventId, presetCenter, name, onBack }: { eventId: UUID; prese
 
   return (
     <div className="h-full overflow-y-auto pb-6">
-      <div className="flex flex-wrap items-center gap-3 mb-3">
-        <button onClick={onBack} className="p-2 rounded-xl hover:opacity-80 flex-shrink-0" style={{ background: 'var(--p-hover)', color: 'var(--p-text)' }}><ChevronLeft size={18} /></button>
-        <div className="flex-1 min-w-[160px]">
-          <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-3 mb-3">
+        <button onClick={onBack} className="p-2 rounded-xl hover:opacity-80" style={{ background: 'var(--p-hover)', color: 'var(--p-text)' }}><ChevronLeft size={18} /></button>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
             <h2 style={{ fontWeight: 700, fontSize: '1.15rem', color: 'var(--p-text)' }}>{detail?.name ?? name}</h2>
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs flex-shrink-0" style={{ background: `${stateColor}20`, color: stateColor }}><Radio size={10} /> {socketState === 'up' ? 'En vivo' : socketState === 'connecting' ? 'Conectando…' : 'Sin conexión'}</span>
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: `${stateColor}20`, color: stateColor }}><Radio size={10} /> {socketState === 'up' ? 'En vivo' : socketState === 'connecting' ? 'Conectando…' : 'Sin conexión'}</span>
           </div>
           <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)' }}>{people.length} participante{people.length !== 1 ? 's' : ''} en el mapa</p>
         </div>
-        <button onClick={() => setShowReport(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 flex-shrink-0" style={{ background: 'linear-gradient(135deg,#FF4D6A,#FF6B9D)', color: 'white' }}><AlertTriangle size={15} /> Reportar incidente</button>
+        <button onClick={() => setShowReport(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90" style={{ background: 'linear-gradient(135deg,#FF4D6A,#FF6B9D)', color: 'white' }}><AlertTriangle size={15} /> Reportar incidente</button>
       </div>
       <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl" style={{ background: 'rgba(127,231,196,0.08)', border: '1px solid rgba(127,231,196,0.2)' }}>
         <ShieldCheck size={14} style={{ color: '#7FE7C4', flexShrink: 0 }} />
         <span style={{ fontSize: '0.74rem', color: 'var(--p-sub)' }}>Las ubicaciones son efímeras y cifradas. Solo se muestran como puntos en el mapa durante el evento; nadie ve coordenadas exactas.</span>
       </div>
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px]">
+      <div className="grid gap-4" style={{ gridTemplateColumns: 'minmax(0,1fr) 260px' }}>
         <div className="rounded-2xl overflow-hidden border" style={{ borderColor: 'rgba(108,99,255,0.2)', boxShadow: '0 4px 24px rgba(108,99,255,0.08)' }}><LiveMap center={center} positions={positions} /></div>
         <div className="rounded-2xl border p-4" style={{ background: 'var(--p-card)', borderColor: 'rgba(108,99,255,0.2)' }}>
           <div className="flex items-center gap-2 mb-3"><Users size={15} style={{ color: '#6C63FF' }} /><span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--p-text)' }}>Participantes</span></div>
