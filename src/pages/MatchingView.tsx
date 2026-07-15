@@ -254,12 +254,13 @@ export function MatchingView() {
   const { userId } = useAuth();
 
   // ── Photo gate ──────────────────────────────────────────────────────────
-  // Chequeo real: ¿el usuario ya tiene urlFotoPerfil en Users? Sin servicio
-  // de verificación de rostro real en el backend, "verificar" aquí solo
-  // sube la foto (PUT /api/v1/usuarios/{id}/perfil) — no valida que sea
-  // una persona real.
+  // Verifica si el usuario ya tiene foto de perfil. Al subir una nueva se usa
+  // POST /api/v1/usuarios/{id}/foto/base64 que incluye detección de persona
+  // con red neuronal — si tienePersonaEnFoto===false se bloquea el acceso.
   const [checkingPhoto, setCheckingPhoto] = useState(true);
   const [hasPhoto, setHasPhoto] = useState(false);
+  // URL de la foto de perfil ya guardada (se usa para mostrar en el gate y en el feed)
+  const [myPhotoUrl, setMyPhotoUrl] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
@@ -270,7 +271,11 @@ export function MatchingView() {
     (async () => {
       try {
         const perfil = await userService.getPerfil(userId);
-        if (!cancelled && perfil.foto) setHasPhoto(true);
+        if (!cancelled && perfil.foto) {
+          setHasPhoto(true);
+          setMyPhotoUrl(perfil.foto);
+          setPhotoPreview(perfil.foto); // pre-carga la foto existente en la preview
+        }
       } catch {
         // 404 u otro error de red → tratamos como "sin foto todavía"
       } finally {
@@ -299,6 +304,13 @@ export function MatchingView() {
 
   const handleVerify = async () => {
     if (!photoPreview || !userId) return;
+
+    // Si la foto ya es la guardada en el backend, acceso directo sin resubir
+    if (myPhotoUrl && photoPreview === myPhotoUrl) {
+      setHasPhoto(true);
+      return;
+    }
+
     if (!navigator.onLine) {
       setVerifyError('Sin conexión a internet. Verifica tu red e inténtalo de nuevo.');
       return;
@@ -306,10 +318,18 @@ export function MatchingView() {
     setVerifying(true);
     setVerifyError(null);
     try {
-      await Promise.all([
-        userService.updatePerfil(userId, { foto: photoPreview }),
+      // Usamos el endpoint dedicado que incluye detección de persona con IA
+      const [updated] = await Promise.all([
+        userService.subirFotoPerfil(userId, photoPreview),
         new Promise(r => setTimeout(r, 1200)), // deja ver el spinner un momento
       ]);
+      if (updated.tienePersonaEnFoto === false) {
+        setVerifyError('La foto no parece contener una persona visible. Por favor sube una foto donde aparezcas claramente.');
+        return;
+      }
+      const url = updated.foto ?? photoPreview;
+      setMyPhotoUrl(url);
+      setPhotoPreview(url);
       setHasPhoto(true);
     } catch (e) {
       setVerifyError(friendlyError(e, 'No pudimos guardar tu foto. Intenta de nuevo.'));
@@ -516,15 +536,33 @@ export function MatchingView() {
                   <img src={photoPreview} alt="Preview"
                     className="w-32 h-32 rounded-full object-cover border-4"
                     style={{ borderColor: '#6C63FF', boxShadow: '0 8px 32px rgba(108,99,255,0.4)' }} />
-                  <button onClick={() => { setPhotoPreview(null); setVerifyError(null); }}
-                    className="absolute -top-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center text-xs"
-                    style={{ background: '#FF4D6A', color: 'white', border: '2px solid white' }}>
-                    ✕
-                  </button>
+                  {/* Solo mostrar ✕ si es una foto nueva (no la guardada) */}
+                  {photoPreview !== myPhotoUrl && (
+                    <button onClick={() => { setPhotoPreview(myPhotoUrl); setVerifyError(null); }}
+                      className="absolute -top-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center text-xs"
+                      style={{ background: '#FF4D6A', color: 'white', border: '2px solid white' }}>
+                      ✕
+                    </button>
+                  )}
                 </div>
-                <p style={{ fontSize: '0.8rem', color: t.textMuted, textAlign: 'center' }}>
-                  Foto seleccionada. Al verificar, la guardamos como tu foto de perfil.
-                </p>
+                <div className="text-center">
+                  {myPhotoUrl && photoPreview === myPhotoUrl ? (
+                    <>
+                      <p style={{ fontSize: '0.85rem', color: t.text, fontWeight: 600, marginBottom: 4 }}>
+                        Esta es tu foto de perfil actual
+                      </p>
+                      <label htmlFor="matching-photo-input"
+                        className="text-xs cursor-pointer hover:underline"
+                        style={{ color: '#6C63FF' }}>
+                        Cambiar foto
+                      </label>
+                    </>
+                  ) : (
+                    <p style={{ fontSize: '0.8rem', color: t.textMuted }}>
+                      Foto seleccionada. Al verificar, la guardamos como tu foto de perfil.
+                    </p>
+                  )}
+                </div>
               </div>
             ) : (
               <motion.label htmlFor="matching-photo-input" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
@@ -564,7 +602,10 @@ export function MatchingView() {
                     style={{ display: 'inline-block' }}>⟳</motion.span>
                   Verificando que eres una persona real...
                 </span>
-              ) : 'Verificar y acceder al Matching'}
+              ) : myPhotoUrl && photoPreview === myPhotoUrl
+                ? 'Acceder al Matching →'
+                : 'Verificar y acceder al Matching'
+              }
             </motion.button>
 
             <p className="text-center mt-4" style={{ fontSize: '0.72rem', color: t.textMuted, lineHeight: 1.5 }}>
