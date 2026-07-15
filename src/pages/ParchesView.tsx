@@ -733,7 +733,7 @@ const realLeaveVoice = () => {
           position: 'absolute',
           top: 0,
           left: 0,
-          zIndex: 40,
+          zIndex: 50,
           transform: showSidebar ? 'translateX(0)' : 'translateX(-100%)',
           transition: 'transform 0.3s ease',
         } : {
@@ -924,9 +924,9 @@ const realLeaveVoice = () => {
           </div>
         )}
 
-        {/* Header */}
+        {/* Header — position+zIndex above the "no parche selected" overlay so the mobile hamburger stays clickable */}
         <div className="flex items-center justify-between px-3 sm:px-5 py-3 border-b flex-shrink-0"
-          style={{ borderColor:'var(--p-divider)', background:'var(--p-card)', backdropFilter:'blur(12px)' }}>
+          style={{ borderColor:'var(--p-divider)', background:'var(--p-card)', backdropFilter:'blur(12px)', position:'relative', zIndex:45 }}>
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             {/* Hamburger — mobile only */}
             {isMobile && (
