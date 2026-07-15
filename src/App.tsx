@@ -918,6 +918,11 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
   const [privacy, setPrivacy] = useState('publico');
   const [incognito, setIncognito] = useState(false);
   const [legalModal, setLegalModal] = useState<LegalModalType>(null);
+  const [activeSection, setActiveSection] = useState<'privacidad' | 'notificaciones' | 'mas'>('privacidad');
+  // En xl+ las pestañas se ocultan y todo se ve junto; por debajo de xl, solo se
+  // muestra la sección activa (evita un scroll larguísimo en móvil).
+  const sectionVisibility = (id: 'privacidad' | 'notificaciones' | 'mas') =>
+    activeSection === id ? '' : 'hidden xl:block';
 
   const Toggle = ({ on, onToggle }: { on: boolean; onToggle: () => void }) => (
     <button onClick={onToggle}
@@ -933,14 +938,14 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
       {/* Section nav */}
       <div className="flex gap-1 mb-5 p-1 rounded-2xl border xl:hidden overflow-x-auto"
         style={{ background: t.cardBg, borderColor: t.cardBorder }}>
-        {[
+        {([
           { id: 'privacidad', label: 'Privacidad' },
           { id: 'notificaciones', label: 'Notifs' },
           { id: 'mas', label: 'Más' },
-        ].map(s => (
-          <button key={s.id}
+        ] as const).map(s => (
+          <button key={s.id} onClick={() => setActiveSection(s.id)}
             className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
-            style={{ background: 'transparent', color: t.textMuted }}>
+            style={{ background: activeSection === s.id ? '#6C63FF' : 'transparent', color: activeSection === s.id ? 'white' : t.textMuted }}>
             {s.label}
           </button>
         ))}
@@ -961,7 +966,7 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
         <div className="space-y-4">
 
           {/* Cerrar sesión / Eliminar cuenta */}
-          <div className="rounded-2xl p-5 border" style={{ background: 'rgba(255,77,106,0.04)', borderColor: 'rgba(255,77,106,0.2)' }}>
+          <div className={`rounded-2xl p-5 border ${sectionVisibility('mas')}`} style={{ background: 'rgba(255,77,106,0.04)', borderColor: 'rgba(255,77,106,0.2)' }}>
             <p style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '12px', color: '#FF4D6A' }}>Sesión y cuenta</p>
             <div className="space-y-2">
               <button onClick={onLogout}
@@ -977,7 +982,7 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
           </div>
 
           {/* Notificaciones */}
-          <div className="rounded-2xl border overflow-hidden" style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
+          <div className={`rounded-2xl border overflow-hidden ${sectionVisibility('notificaciones')}`} style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
             <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: 'rgba(108,99,255,0.1)', background: 'rgba(108,99,255,0.05)' }}>
               <span style={{ fontWeight: 700, color: '#6C63FF', fontSize: '0.9rem' }}>Notificaciones</span>
             </div>
@@ -998,7 +1003,7 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
           </div>
 
           {/* Privacidad */}
-          <div className="rounded-2xl border overflow-hidden" style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
+          <div className={`rounded-2xl border overflow-hidden ${sectionVisibility('privacidad')}`} style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
             <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: 'rgba(108,99,255,0.1)', background: 'rgba(108,99,255,0.05)' }}>
               <span style={{ fontWeight: 700, color: '#6C63FF', fontSize: '0.9rem' }}>Privacidad</span>
             </div>
@@ -1024,7 +1029,7 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
           </div>
 
           {/* Sobre U•link — al final */}
-          <div className="rounded-2xl p-5 border" style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
+          <div className={`rounded-2xl p-5 border ${sectionVisibility('mas')}`} style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
             <p style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '16px', color: '#6C63FF' }}>Sobre U•link</p>
             <div className="space-y-3">
               {[{ label: 'Versión', value: '1.0.0' }, { label: 'Institución', value: 'ECI' }, { label: 'Soporte', value: '24/7' }].map(item => (
