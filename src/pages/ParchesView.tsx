@@ -439,6 +439,11 @@ export function ParchesView({ linkedEvents = [] }: {
   const peers      = useRef<Map<string, RTCPeerConnection>>(new Map());
   const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
   const voiceConnectedRef = useRef(false);
+  // Mantiene siempre la ultima version de handleVoiceSignal -- el socket se
+  // crea una sola vez (useEffect con deps=[]) y sin este ref quedaria atado
+  // para siempre al closure de chatId=null de la primera renderizacion,
+  // descartando en silencio OFFER/ANSWER/ICE_CANDIDATE entrantes.
+  const handleVoiceSignalRef = useRef<(signal: VoiceSignalPayload) => void>(() => {});
   const [voiceCamOn, setVoiceCamOn] = useState(true);
   const [voiceScreenShare, setVoiceScreenShare] = useState(false);
   const [memberMenuOpen, setMemberMenuOpen] = useState<string|null>(null);
@@ -634,7 +639,7 @@ export function ParchesView({ linkedEvents = [] }: {
 useEffect(() => {
   const socket = new ComunicacionSocket({
     onConnect: () => console.log('[comms] conectado'),
-    onVoiceSignal: handleVoiceSignal,
+    onVoiceSignal: signal => handleVoiceSignalRef.current(signal),
   });
   socket.activate();
   socketRef.current = socket;
@@ -739,6 +744,13 @@ function closePeer(uid: string) {
   document.getElementById(`va-${uid}`)?.remove();
 }
 
+// Se ejecuta en cada render (sin deps) para que el callback del socket,
+// registrado una unica vez al montar, siempre invoque la version de
+// handleVoiceSignal con el chatId/meId actuales.
+useEffect(() => {
+  handleVoiceSignalRef.current = handleVoiceSignal;
+});
+
 const realJoinVoice = async () => {
   if (!chatId) return;
   let stream: MediaStream;
@@ -759,6 +771,27 @@ const realJoinVoice = async () => {
     localStream.current = stream;
     setVoiceConnected(true);
     voiceConnectedRef.current = true;
+
+    // Traer quién ya estaba en el canal ANTES de que nosotros llegáramos.
+    // Sin esto, solo nos enteramos de gente que se une DESPUÉS de nosotros
+    // (via el evento JOIN por /topic/voice/{chatId}) -- si alguien ya estaba
+    // conectado, nunca nos llega su JOIN (pasó antes de que nos suscribiéramos)
+    // y nadie inicia la oferta hacia nosotros: cada quien se queda en su
+    // propia llamada aislada aunque ambos figuren como "conectados".
+    try {
+      const { data } = await apiClient.get(`/api/voice/${chatId}/participants`);
+      const others = (data ?? []).filter((p: any) => p.userId !== meId);
+      others.forEach((p: any) => {
+        setVoiceParticipants(prev =>
+          prev.find(v => v.senderUserId === p.userId)
+            ? prev
+            : [...prev, { signalType: 'JOIN', senderUserId: p.userId, senderUsername: p.username }],
+        );
+        initiateOffer(p.userId, chatId);
+      });
+    } catch (err) {
+      console.error('[voice] No se pudo obtener participantes activos:', err);
+    }
   } catch (err) {
     console.error('[voice] No se pudo unir a la llamada:', err);
     stream.getTracks().forEach(t => t.stop());
