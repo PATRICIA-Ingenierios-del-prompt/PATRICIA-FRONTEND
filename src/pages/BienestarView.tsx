@@ -244,12 +244,12 @@ export function BienestarView() {
   return (
     <div className="h-full overflow-y-auto pb-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+        <div className="min-w-0">
           <h2 style={{ fontWeight: 700, fontSize: '1.3rem' }}>Bienestar 24/7</h2>
           <p style={{ fontSize: '0.85rem', color: t.textMuted }}>Tu espacio seguro en la ECI — siempre aquí para ti</p>
         </div>
-        <div className="flex gap-2 flex-wrap justify-end">
+        <div className="flex gap-2 flex-wrap sm:justify-end">
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className="px-3 py-1.5 rounded-xl text-sm transition-all"
@@ -351,9 +351,9 @@ export function BienestarView() {
       )}
 
       {tab === 'diario' && (
-        <div className="flex gap-6 h-full overflow-hidden">
+        <div className="flex flex-col lg:flex-row gap-6 h-full overflow-y-auto lg:overflow-hidden">
 
-          <div className="flex-1 flex flex-col gap-5 overflow-y-auto pr-1 pb-4">
+          <div className="w-full lg:flex-1 flex flex-col gap-5 lg:overflow-y-auto lg:pr-1 pb-4">
 
             <div className="rounded-3xl overflow-hidden border relative"
               style={{
@@ -517,7 +517,7 @@ export function BienestarView() {
           </div>
 
           {/* Right column — weekly chart + past entries */}
-          <div className="w-72 flex-shrink-0 flex flex-col gap-4 overflow-y-auto pb-4">
+          <div className="w-full lg:w-72 lg:flex-shrink-0 flex flex-col gap-4 lg:overflow-y-auto pb-4">
 
             {/* Weekly mood chart */}
             <div className="rounded-2xl border p-4" style={{ background: t.cardBg, borderColor: t.cardBorder }}>

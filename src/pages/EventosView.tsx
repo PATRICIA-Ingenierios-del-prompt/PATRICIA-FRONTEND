@@ -222,8 +222,14 @@ function CreateEventModal({ onClose, onCreated }: { onClose: () => void; onCreat
       <div className="rounded-2xl p-5 sm:p-6 w-full max-w-[480px] border max-h-[88vh] overflow-y-auto" style={{ background: t.cardBg, borderColor: 'rgba(108,99,255,0.3)' }} onClick={e => e.stopPropagation()}>
         <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 20, color: t.text }}>Crear Evento</h3>
         <div className="space-y-4">
-          <input value={form.name} onChange={set('name')} placeholder="Título del evento..." className="w-full rounded-xl px-4 py-3 text-sm outline-none" style={inputStyle} />
-          <textarea value={form.description} onChange={set('description')} placeholder="Descripción..." rows={3} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none" style={inputStyle} />
+          <div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>Nombre del evento</p>
+            <input value={form.name} onChange={set('name')} placeholder="Título del evento..." className="w-full rounded-xl px-4 py-3 text-sm outline-none" style={inputStyle} />
+          </div>
+          <div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>Descripción</p>
+            <textarea value={form.description} onChange={set('description')} placeholder="Descripción..." rows={3} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none" style={inputStyle} />
+          </div>
           <div>
             <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 8, fontWeight: 600 }}>Categoría</p>
             <div className="flex flex-wrap gap-2">
@@ -233,11 +239,23 @@ function CreateEventModal({ onClose, onCreated }: { onClose: () => void; onCreat
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <input type="date" value={form.date} onChange={set('date')} className="w-full min-w-0 rounded-xl px-3 py-3 text-sm outline-none" style={inputStyle} />
-            <input type="time" value={form.start} onChange={set('start')} className="w-full min-w-0 rounded-xl px-3 py-3 text-sm outline-none" style={inputStyle} />
-            <input type="time" value={form.end} onChange={set('end')} className="w-full min-w-0 rounded-xl px-3 py-3 text-sm outline-none" style={inputStyle} />
+            <div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>Fecha</p>
+              <input type="date" value={form.date} onChange={set('date')} className="w-full min-w-0 rounded-xl px-3 py-3 text-sm outline-none" style={inputStyle} />
+            </div>
+            <div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>Hora inicio</p>
+              <input type="time" value={form.start} onChange={set('start')} className="w-full min-w-0 rounded-xl px-3 py-3 text-sm outline-none" style={inputStyle} />
+            </div>
+            <div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>Hora fin</p>
+              <input type="time" value={form.end} onChange={set('end')} className="w-full min-w-0 rounded-xl px-3 py-3 text-sm outline-none" style={inputStyle} />
+            </div>
           </div>
-          <input value={form.place} onChange={set('place')} placeholder="Nombre del lugar..." className="w-full rounded-xl px-4 py-3 text-sm outline-none" style={inputStyle} />
+          <div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>Lugar</p>
+            <input value={form.place} onChange={set('place')} placeholder="Nombre del lugar..." className="w-full rounded-xl px-4 py-3 text-sm outline-none" style={inputStyle} />
+          </div>
           <div>
             <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>Destino <span style={{ color: '#FF4D6A' }}>*</span> — toca el mapa para marcar dónde será el evento</p>
             <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'rgba(108,99,255,0.2)' }}>
@@ -254,6 +272,7 @@ function CreateEventModal({ onClose, onCreated }: { onClose: () => void; onCreat
           </label>
           {withMeeting && (
             <div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>Nombre del punto de encuentro</p>
               <input value={meetingPlace} onChange={e => setMeetingPlace(e.target.value)} placeholder="Nombre del punto de encuentro..." className="w-full rounded-xl px-4 py-3 text-sm outline-none mb-2" style={inputStyle} />
               <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>Toca el mapa para marcar dónde se encuentran antes del evento</p>
               <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'rgba(127,231,196,0.35)' }}>
@@ -262,7 +281,10 @@ function CreateEventModal({ onClose, onCreated }: { onClose: () => void; onCreat
               {pickedMeeting && <p style={{ fontSize: '0.7rem', color: '#7FE7C4', marginTop: 4 }}>✓ Encuentro: {pickedMeeting.lat.toFixed(5)}, {pickedMeeting.lng.toFixed(5)}</p>}
             </div>
           )}
-          <input type="number" value={capacity} onChange={e => setCapacity(e.target.value)} placeholder="Cupos máximos..." className="w-full rounded-xl px-4 py-3 text-sm outline-none" style={inputStyle} />
+          <div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>Cupos máximos</p>
+            <input type="number" value={capacity} onChange={e => setCapacity(e.target.value)} placeholder="Cupos máximos..." className="w-full rounded-xl px-4 py-3 text-sm outline-none" style={inputStyle} />
+          </div>
           {/* Optional parche link */}
           <div>
             <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 6, fontWeight: 600 }}>Vincular a un parche (opcional)</p>

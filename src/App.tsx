@@ -928,21 +928,6 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
 
   return (
     <div className="h-full overflow-y-auto pb-6">
-      {/* Section nav */}
-      <div className="flex gap-1 mb-5 p-1 rounded-2xl border xl:hidden overflow-x-auto"
-        style={{ background: t.cardBg, borderColor: t.cardBorder }}>
-        {[
-          { id: 'notificaciones', label: 'Notifs' },
-          { id: 'mas', label: 'Más' },
-        ].map(s => (
-          <button key={s.id}
-            className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
-            style={{ background: 'transparent', color: t.textMuted }}>
-            {s.label}
-          </button>
-        ))}
-      </div>
-
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
         {/* Left — main settings */}
         <div className="col-span-1 xl:col-span-2 space-y-4">
