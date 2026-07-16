@@ -561,12 +561,33 @@ export function ParchesView({ linkedEvents = [] }: {
   };
   const leaveParche = async (p: UiParche) => {
     if (!meId) return;
-    try { await parcheService.removeMember(p.id, meId); addToast({ type: 'info', title: 'Saliste del parche', message: p.name }); setSelectedParche(EMPTY_PARCHE); await Promise.all([loadMine(), loadPublicos()]); }
-    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo salir', message: friendlyError(e, 'No te pudimos sacar del parche. Intenta de nuevo.') }); }
+    try {
+      await parcheService.removeMember(p.id, meId);
+      // Keep the parche selected: losing membership re-activates the locked
+      // overlay (censored chat) with the join CTA, instead of dumping the
+      // user back to the empty "Explora los parches" state.
+      addToast({ type: 'logro', title: '¡Saliste del parche!', message: `Ya no eres miembro de ${p.name}. Puedes volver a unirte cuando quieras.` });
+      setActiveTab('chat'); setGame(null); setShowMembers(false);
+      await Promise.all([loadMine(), loadPublicos()]);
+    }
+    catch (e: any) {
+      const status = e?.response?.status;
+      const message = status === 409
+        ? 'Eres el dueño del parche: no puedes salirte sin transferirlo o eliminarlo.'
+        : friendlyError(e, 'No te pudimos sacar del parche. Intenta de nuevo.');
+      addToast({ type: 'reporte', title: 'No se pudo salir', message });
+    }
   };
   const generateInvite = async (p: UiParche) => {
     setInviteLoading(true);
-    try { const r = await parcheService.createInvite({ parcheId: p.id }); setInviteCopied(false); setInviteModal({ token: r.token, expiresInSeconds: r.expiresInSeconds }); }
+    try {
+      const r = await parcheService.createInvite({ parcheId: p.id });
+      // Never open the modal without a real token — an unexpected 2xx with an
+      // empty body would otherwise show an empty "code" popup.
+      if (!r?.token) throw Object.assign(new Error('empty invite token'), { response: { status: 403 } });
+      setInviteCopied(false);
+      setInviteModal({ token: r.token, expiresInSeconds: r.expiresInSeconds });
+    }
     catch (e: any) {
       // The backend is precise about WHY (403 owner-only; 409 full/public) —
       // surface that instead of a generic "try again" that would never work.
@@ -598,8 +619,24 @@ export function ParchesView({ linkedEvents = [] }: {
     }
   };
   const deleteParcheHandler = async (p: UiParche) => {
-    try { await parcheService.remove(p.id); addToast({ type: 'info', title: 'Parche eliminado', message: p.name }); setSelectedParche(EMPTY_PARCHE); await Promise.all([loadMine(), loadPublicos()]); }
-    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo eliminar', message: friendlyError(e, 'No se pudo eliminar el parche. Intenta de nuevo.') }); }
+    try {
+      await parcheService.remove(p.id);
+      addToast({ type: 'logro', title: 'Parche eliminado', message: `${p.name} se eliminó para siempre.` });
+      setSelectedParche(EMPTY_PARCHE);
+      await Promise.all([loadMine(), loadPublicos()]);
+    }
+    catch (e: any) {
+      // The Parches MS is explicit: only the owner can delete (403).
+      const status = e?.response?.status;
+      const isOwnerError = status === 403;
+      addToast({
+        type: 'reporte',
+        title: isOwnerError ? 'Solo el dueño puede eliminarlo' : 'No se pudo eliminar',
+        message: isOwnerError
+          ? 'Este parche solo lo puede eliminar quien lo creó. Si ya no quieres estar, usa "Salirse del parche".'
+          : friendlyError(e, 'No se pudo eliminar el parche. Intenta de nuevo.'),
+      });
+    }
   };
   const createParcheHandler = async () => {
     if (!createName.trim()) { setCreateError('Ponle un nombre al parche.'); return; }

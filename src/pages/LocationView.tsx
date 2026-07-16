@@ -7,6 +7,7 @@ import { useAuth } from '../store/AuthContext';
 import { addToast } from '../components/ToastSystem';
 import { eventService } from '../services/eventService';
 import { locationService } from '../services/locationService';
+import { userService } from '../services/userService';
 import { LocationSocket } from '../services/locationSocket';
 import type { EventCategory, EventResponse, GeoBroadcastMessage, ReportType, UUID } from '../types/patricia';
 import { CATEGORY_META, DARK_MAP_STYLES, ECI_CENTER, GMAPS_LOADER_ID, GOOGLE_MAPS_KEY, colorForUser, userDotSvg } from '../lib/maps';
@@ -80,15 +81,19 @@ function EnrolledList({ enrolled, onPick }: { enrolled: EnrolledEvent[]; onPick:
 }
 
 /* ─────────── live map ─────────── */
-function LiveMap({ center, positions }: { center: { lat: number; lng: number }; positions: PositionMap }) {
+function LiveMap({ center, positions, nameFor }: { center: { lat: number; lng: number }; positions: PositionMap; nameFor: (id: UUID) => string }) {
   const { darkMode } = useTheme();
   const { isLoaded } = useJsApiLoader({ id: GMAPS_LOADER_ID, googleMapsApiKey: GOOGLE_MAPS_KEY });
   if (!GOOGLE_MAPS_KEY) return <div className="flex items-center justify-center" style={{ height: 300, color: 'var(--p-muted)', fontSize: '0.8rem' }}>Configura VITE_GOOGLE_MAPS_API_KEY</div>;
   if (!isLoaded) return <div className="flex items-center justify-center gap-2" style={{ height: 300 }}><div className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: '#6C63FF', borderTopColor: 'transparent' }} /><span style={{ fontSize: '0.8rem', color: 'var(--p-muted)' }}>Cargando mapa…</span></div>;
   return (
-    <GoogleMap mapContainerStyle={{ width: '100%', height: 'clamp(260px, 45vw, 460px)' }} center={center} zoom={18}
+    <GoogleMap mapContainerStyle={{ width: '100%', height: '100%', minHeight: 260 }} center={center} zoom={18}
       options={{ disableDefaultUI: true, zoomControl: true, styles: darkMode ? DARK_MAP_STYLES : [], clickableIcons: false } as any}>
-      {[...positions.values()].map(p => <Marker key={p.userId} position={{ lat: p.latitude, lng: p.longitude }} icon={userDotSvg(colorForUser(p.userId))} zIndex={5} />)}
+      {[...positions.values()].map(p => (
+        <Marker key={p.userId} position={{ lat: p.latitude, lng: p.longitude }} zIndex={5}
+          icon={{ url: userDotSvg(colorForUser(p.userId)), labelOrigin: new google.maps.Point(13, 36) }}
+          label={{ text: nameFor(p.userId), color: darkMode ? '#F0EEFF' : '#2A2440', fontSize: '11px', fontWeight: '700', className: 'plv-marker-label' }} />
+      ))}
     </GoogleMap>
   );
 }
@@ -147,8 +152,32 @@ function Tracker({ eventId, presetCenter, name, onBack }: { eventId: UUID; prese
   const [showReport, setShowReport] = useState(false);
   const socketRef = useRef<LocationSocket | null>(null);
   const { userId: meId } = useAuth();
+  // uuid -> display name, resolved against the Users MS (same trick as parche members).
+  const [names, setNames] = useState<Map<UUID, string>>(new Map());
+  const nameCache = useRef<Map<UUID, string>>(new Map());
+  const pendingNames = useRef<Set<UUID>>(new Set());
 
   const upsert = useCallback((p: GeoBroadcastMessage) => setPositions(prev => { const n = new Map(prev); n.set(p.userId, p); return n; }), []);
+
+  // Resolve any userIds on the map that we don't have a name for yet.
+  useEffect(() => {
+    const missing = [...positions.keys()].filter(id => !nameCache.current.has(id) && !pendingNames.current.has(id));
+    if (missing.length === 0) return;
+    missing.forEach(id => pendingNames.current.add(id));
+    userService.getPerfiles(missing)
+      .then(perfiles => {
+        missing.forEach(id => {
+          const p = perfiles[id];
+          const fullName = p ? `${p.nombre ?? ''} ${p.apellidos ?? ''}`.trim() : '';
+          nameCache.current.set(id, fullName || `Participante ${id.slice(0, 4)}`);
+        });
+        setNames(new Map(nameCache.current));
+      })
+      .catch(() => { /* keep fallback labels; retry next time new ids appear */ })
+      .finally(() => missing.forEach(id => pendingNames.current.delete(id)));
+  }, [positions]);
+
+  const nameFor = useCallback((id: UUID) => (id === meId ? 'Tú' : names.get(id) ?? `Participante ${id.slice(0, 4)}`), [names, meId]);
 
   useEffect(() => {
     let alive = true;
@@ -178,6 +207,10 @@ function Tracker({ eventId, presetCenter, name, onBack }: { eventId: UUID; prese
     if ('geolocation' in navigator) {
       watchId = navigator.geolocation.watchPosition(
         pos => {
+          // Paint our own dot locally on every fix, even before the socket is
+          // up or anyone else joins — the broadcast only echoes back once the
+          // server relays it, which used to leave the map empty for the first user.
+          if (meId) upsert({ userId: meId, latitude: pos.coords.latitude, longitude: pos.coords.longitude, recordedAt: new Date().toISOString() });
           const now = Date.now();
           if (now - lastSentAt < MIN_INTERVAL_MS) return;
           lastSentAt = now;
@@ -200,7 +233,7 @@ function Tracker({ eventId, presetCenter, name, onBack }: { eventId: UUID; prese
       socketRef.current = null;
       if (watchId != null) navigator.geolocation.clearWatch(watchId);
     };
-  }, [eventId, upsert]);
+  }, [eventId, upsert, meId]);
 
   const people = useMemo(() => [...positions.values()].sort((a, b) => b.recordedAt.localeCompare(a.recordedAt)), [positions]);
   const stateColor = socketState === 'up' ? '#7FE7C4' : socketState === 'connecting' ? '#FFB347' : '#FF6B9D';
@@ -226,17 +259,20 @@ function Tracker({ eventId, presetCenter, name, onBack }: { eventId: UUID; prese
         <ShieldCheck size={14} style={{ color: '#7FE7C4', flexShrink: 0 }} />
         <span style={{ fontSize: '0.74rem', color: 'var(--p-sub)' }}>Las ubicaciones son efímeras y cifradas. Solo se muestran como puntos en el mapa durante el evento; nadie ve coordenadas exactas.</span>
       </div>
-      <div className="grid gap-4" style={{ gridTemplateColumns: 'minmax(0,1fr)' }}>
-        <div className="rounded-2xl overflow-hidden border" style={{ borderColor: 'rgba(108,99,255,0.2)', boxShadow: '0 4px 24px rgba(108,99,255,0.08)' }}><LiveMap center={center} positions={positions} /></div>
-        <div className="rounded-2xl border p-4" style={{ background: 'var(--p-card)', borderColor: 'rgba(108,99,255,0.2)' }}>
+      {/* Mobile: map stacked above the list. Desktop (lg+): map wide, list as a side panel. */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-stretch">
+        <div className="rounded-2xl overflow-hidden border" style={{ borderColor: 'rgba(108,99,255,0.2)', boxShadow: '0 4px 24px rgba(108,99,255,0.08)', height: 'clamp(280px, 55vh, 560px)' }}>
+          <LiveMap center={center} positions={positions} nameFor={nameFor} />
+        </div>
+        <div className="rounded-2xl border p-4 overflow-y-auto" style={{ background: 'var(--p-card)', borderColor: 'rgba(108,99,255,0.2)', maxHeight: 'clamp(280px, 55vh, 560px)' }}>
           <div className="flex items-center gap-2 mb-3"><Users size={15} style={{ color: '#6C63FF' }} /><span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--p-text)' }}>Participantes</span></div>
           {people.length === 0 && <p style={{ fontSize: '0.78rem', color: 'var(--p-muted)', lineHeight: 1.6 }}>Nadie está transmitiendo ubicación todavía. Aparecerán aquí en cuanto empiecen a moverse.</p>}
-          <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
+          <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(160px,1fr))] lg:grid-cols-1">
             {people.map(p => (
               <div key={p.userId} className="flex items-center gap-2.5 p-2 rounded-xl" style={{ background: 'var(--p-input)' }}>
                 <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: colorForUser(p.userId), boxShadow: `0 0 0 3px ${colorForUser(p.userId)}33` }} />
                 <div className="min-w-0 flex-1">
-                  <p style={{ fontSize: '0.78rem', color: 'var(--p-text)', fontWeight: 600 }}>{p.userId === meId ? 'Tú' : `Participante ${p.userId.slice(0, 4)}`}</p>
+                  <p className="truncate" style={{ fontSize: '0.78rem', color: 'var(--p-text)', fontWeight: 600 }}>{nameFor(p.userId)}</p>
                   <p style={{ fontSize: '0.68rem', color: 'var(--p-muted)' }}>Activo · {timeAgo(p.recordedAt)}</p>
                 </div>
               </div>
