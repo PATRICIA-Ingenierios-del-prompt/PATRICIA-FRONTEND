@@ -1368,13 +1368,6 @@ const realLeaveVoice = () => {
                           <p style={{ fontWeight:700, fontSize:'1.05rem' }}>Parqués</p>
                           <p style={{ fontSize:'0.75rem', color:'var(--p-muted)' }}>2-4 jugadores · Dados</p>
                         </div>
-                        <div className="flex gap-1">
-                          {(['#6C63FF','#00D9FF','#7FE7C4'] as const).map((c,i)=>(
-                            <div key={c} className="w-5 h-5 rounded-full border"
-                              style={{ background:c, borderColor:'rgba(108,99,255,0.3)', marginLeft:i>0?-4:0 }} />
-                          ))}
-                          <span style={{ fontSize:'0.68rem', color:'var(--p-muted)', marginLeft:'6px' }}>3 en sala</span>
-                        </div>
                         <div className="w-full py-2 rounded-xl text-sm font-semibold text-center"
                           style={{ background:'#6C63FF', color:'white' }}>
                           Jugar Parqués
@@ -1382,23 +1375,10 @@ const realLeaveVoice = () => {
                       </motion.div>
 
                     </div>
-
-                    {/* Historial */}
-                    <div className="w-full max-w-xs rounded-2xl p-4 border"
-                      style={{ background:'rgba(108,99,255,0.05)', borderColor:'var(--p-divider)' }}>
-                      <p style={{ fontSize:'0.8rem', fontWeight:600, marginBottom:'8px', color:'var(--p-muted)' }}>Partidas recientes</p>
-                      {[{g:'Parqués',result:'Victoria',with:'vs. Felipe A.',color:'#7FE7C4'},{g:'Parqués',result:'Derrota',with:'vs. Sofía M.',color:'#FF4D6A'}].map((h,i)=>(
-                        <div key={i} className="flex items-center justify-between py-2 border-b last:border-0"
-                          style={{ borderColor:'var(--p-input)' }}>
-                          <span style={{ fontSize:'0.78rem' }}>{h.g} {h.with}</span>
-                          <span style={{ fontSize:'0.78rem', fontWeight:600, color:h.color }}>{h.result}</span>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 )}
                 {game==='parques' && (
-                  <div className="flex-1 flex flex-col overflow-hidden" style={{ background: t.bg }}>
+                  <div className="h-full flex flex-col overflow-hidden" style={{ background: t.bg }}>
                     <div className="flex items-center gap-2 px-4 py-2 border-b flex-shrink-0"
                       style={{ borderColor:'var(--p-divider)', background:'var(--p-card)' }}>
                       <button onClick={()=>setGame(null)} className="hover:opacity-70" style={{ color:'var(--p-muted)', fontSize:'0.82rem' }}>← Volver</button>
