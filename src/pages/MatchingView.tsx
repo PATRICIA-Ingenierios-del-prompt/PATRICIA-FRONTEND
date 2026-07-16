@@ -6,7 +6,7 @@ import { useAuth } from '../store/AuthContext';
 import { addToast } from '../components/ToastSystem';
 import { friendlyError } from '../lib/errorMessages';
 import { matchingService } from '../services/matchingService';
-import { userService, type PerfilResponse } from '../services/userService';
+import { userService, type PerfilResponse, type FranjaHoraria } from '../services/userService';
 import type { MatchResponse } from '../types/patricia';
 
 /**
@@ -98,15 +98,57 @@ const DISPONIBILIDAD_LABEL: Record<string, string> = {
   NO_MOLESTAR: 'No molestar',
 };
 
+// ── Horario semanal (solo lectura) — mismo formato que ProfileView.tsx ──────
+const SCHED_DAYS  = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+const SCHED_SLOTS = [
+  { start: '7:00 AM',  end: '8:30 AM',  horaInicio: '07:00', horaFin: '08:30' },
+  { start: '9:00 AM',  end: '10:30 AM', horaInicio: '09:00', horaFin: '10:30' },
+  { start: '10:30 AM', end: '12:00 PM', horaInicio: '10:30', horaFin: '12:00' },
+  { start: '12:00 PM', end: '1:30 PM',  horaInicio: '12:00', horaFin: '13:30' },
+  { start: '1:30 PM',  end: '3:00 PM',  horaInicio: '13:30', horaFin: '15:00' },
+  { start: '3:00 PM',  end: '4:30 PM',  horaInicio: '15:00', horaFin: '16:30' },
+  { start: '4:30 PM',  end: '6:00 PM',  horaInicio: '16:30', horaFin: '18:00' },
+  { start: '6:00 PM',  end: '7:30 PM',  horaInicio: '18:00', horaFin: '19:30' },
+];
+const SCHED_DAY_ENUM: FranjaHoraria['diaSemana'][] = [
+  'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY',
+];
+
 // Profile modal for viewing a user's profile before accepting/rejecting
-function ProfileModal({ person, onClose, onAccept, onReject, showActions }: {
+function ProfileModal({ person, onClose, onAccept, onReject, showActions, isMatch }: {
   person: DisplayCandidate;
   onClose: () => void;
   onAccept?: () => void;
   onReject?: () => void;
   showActions: boolean;
+  isMatch: boolean;
 }) {
   const t = useTheme();
+
+  // Horario semanal real — solo se pide y se muestra para matches confirmados (amigos).
+  const [friendSchedule, setFriendSchedule] = useState<Set<string> | null>(null);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+
+  useEffect(() => {
+    if (!isMatch) { setFriendSchedule(null); return; }
+    let cancelled = false;
+    setLoadingSchedule(true);
+    userService.getDisponibilidad(person.id)
+      .then(franjas => {
+        if (cancelled) return;
+        const keys = new Set<string>();
+        franjas.forEach(f => {
+          const di = SCHED_DAY_ENUM.indexOf(f.diaSemana);
+          const si = SCHED_SLOTS.findIndex(s => s.horaInicio === f.horaInicio && s.horaFin === f.horaFin);
+          if (di !== -1 && si !== -1) keys.add(`${di}-${si}`);
+        });
+        setFriendSchedule(keys);
+      })
+      .catch(() => { if (!cancelled) setFriendSchedule(new Set()); })
+      .finally(() => { if (!cancelled) setLoadingSchedule(false); });
+    return () => { cancelled = true; };
+  }, [isMatch, person.id]);
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -148,8 +190,41 @@ function ProfileModal({ person, onClose, onAccept, onReject, showActions }: {
             ))}
           </div>
 
-          {/* Disponibilidad — dato real del perfil (no hay horario semanal en el backend) */}
-          {person.disponibilidad && (
+          {/* Horario semanal — solo visible una vez hay match confirmado (amigos) */}
+          {isMatch ? (
+            <div className="mb-5">
+              <p style={{ fontWeight: 700, fontSize: '0.82rem', color: t.text, marginBottom: 8 }}>Disponibilidad semanal</p>
+              {loadingSchedule ? (
+                <p style={{ fontSize: '0.78rem', color: t.textMuted }}>Cargando horario…</p>
+              ) : friendSchedule && friendSchedule.size > 0 ? (
+                <div style={{ overflowX: 'auto' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '40px repeat(6,1fr)', gap: 2, minWidth: 260 }}>
+                    <div />
+                    {SCHED_DAYS.map(d => (
+                      <div key={d} style={{ textAlign: 'center', fontSize: '0.58rem', fontWeight: 700, color: t.textMuted, paddingBottom: 2 }}>{d}</div>
+                    ))}
+                    {SCHED_SLOTS.map((slot, si) => (
+                      <>
+                        <div key={`l${si}`} style={{ fontSize: '0.53rem', color: t.textMuted, display: 'flex', alignItems: 'center' }}>{slot.start}</div>
+                        {SCHED_DAYS.map((_, di) => {
+                          const active = friendSchedule.has(`${di}-${si}`);
+                          return (
+                            <div key={`${di}-${si}`} style={{
+                              height: 17, borderRadius: 4,
+                              background: active ? 'linear-gradient(135deg,#6C63FF,#A78BFA)' : 'var(--p-divider)',
+                              border: active ? 'none' : `1px solid ${t.cardBorder}`,
+                            }} />
+                          );
+                        })}
+                      </>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p style={{ fontSize: '0.78rem', color: t.textMuted }}>Aún no configuró su disponibilidad.</p>
+              )}
+            </div>
+          ) : person.disponibilidad && (
             <div className="flex items-center gap-2 mb-5">
               <span style={{ fontWeight: 700, fontSize: '0.82rem', color: t.text }}>Disponibilidad:</span>
               <span className="px-2.5 py-1 rounded-full text-xs font-semibold"
@@ -623,6 +698,7 @@ export function MatchingView() {
             onAccept={() => decideOnRequest(viewProfile, 'LIKE')}
             onReject={() => decideOnRequest(viewProfile, 'DESCARTE')}
             showActions={!viewProfileIsMatch}
+            isMatch={viewProfileIsMatch}
           />
         )}
         {chatWith && <ChatModal person={chatWith} onClose={() => setChatWith(null)} />}
