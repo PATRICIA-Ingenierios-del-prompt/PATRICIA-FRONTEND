@@ -672,7 +672,7 @@ useEffect(() => {
       onMessage: msg => setRtMessages(prev => [...prev, msg]),
       onVoiceEvent: evt => {
         console.log('[voice] evento STOMP recibido:', evt.signalType, 'de:', evt.senderUserId);
-        if (evt.signalType === 'JOIN') {
+        if (evt.signalType === 'JOIN' && evt.senderUserId !== meId) {
           setVoiceParticipants(prev =>
             prev.find(p => p.senderUserId === evt.senderUserId) ? prev : [...prev, evt]
           );
