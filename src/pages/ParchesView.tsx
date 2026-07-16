@@ -802,7 +802,8 @@ const realJoinVoice = async () => {
     try {
       const { data } = await apiClient.get(`/api/voice/${chatId}/participants`);
       console.log('[voice] participantes activos (REST):', JSON.stringify(data));
-      const others = (data ?? []).filter((p: any) => p.userId !== meId);
+      const seen = new Set();
+      const others = (data ?? []).filter((p: any) => p.userId !== meId && !seen.has(p.userId) && seen.add(p.userId));
       console.log('[voice] otros participantes (excluido yo):', others.length, 'meId:', meId);
       others.forEach((p: any) => {
         console.log('[voice] → initiateOffer hacia:', p.userId);
