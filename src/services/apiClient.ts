@@ -33,7 +33,24 @@ function flushQueue(token: string) {
 }
 
 apiClient.interceptors.response.use(
-  res => res,
+  res => {
+    // CloudFront's SPA fallback (custom_error_response in Ulink_Infra
+    // modules/frontend/main.tf) rewrites origin 403/404 into "200 index.html",
+    // so a denied API call (e.g. deleting a parche you don't own) looks like a
+    // success with an HTML body. Unmask it: an API route answering HTML is
+    // always that rewrite — surface it as the 403 it originally was.
+    const url = res.config?.url ?? '';
+    const contentType = String(res.headers?.['content-type'] ?? '');
+    const looksHtml = contentType.includes('text/html')
+      || (typeof res.data === 'string' && /^\s*<!doctype html|^\s*<html/i.test(res.data));
+    if (looksHtml && (url.startsWith('/api/') || url.startsWith('/matching') || url.startsWith('/auth/'))) {
+      const err: any = new Error('CloudFront SPA fallback masked an origin error');
+      err.config = res.config;
+      err.response = { ...res, status: 403, data: { error: 'Request was rejected by the origin (masked by SPA fallback)' } };
+      return Promise.reject(err);
+    }
+    return res;
+  },
   async error => {
     const original = error.config;
     const url: string = original?.url ?? '';
