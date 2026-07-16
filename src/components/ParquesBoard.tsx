@@ -90,7 +90,14 @@ function DiceFace({ v, rolling, color, isDark }: { v: number; rolling: boolean; 
   );
 }
 
-export function ParquesBoard() {
+export interface ParquesBoardProps {
+  /** Shared game id (parche's parquesId) → multiplayer lobby. Omit for solo vs IA. */
+  gameId?: string | null;
+  userId: string;
+  userName: string;
+}
+
+export function ParquesBoard({ gameId, userId, userName }: ParquesBoardProps) {
   const themeColors = useTheme();
   const isDark = themeColors.darkMode;
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
@@ -114,13 +121,20 @@ export function ParquesBoard() {
     log,
     error,
     isMyTurn,
+    canExitJail,
+    wsConnected,
     playerNames,
+    playerCount,
     gameStatus,
+    isShared,
     rollDice,
     movePiece,
     skipTurn,
+    exitJail,
+    addBot,
+    startGame,
     resetGame,
-  } = useParquesGame();
+  } = useParquesGame({ gameId, userId, userName });
 
   const [showRules, setShowRules] = useState(false);
 
@@ -434,7 +448,7 @@ export function ParquesBoard() {
 
   // Status bar text
   const statusText = (() => {
-    if (gameStatus === 'WAITING_FOR_PLAYERS') return '⏳ Preparando la partida…';
+    if (gameStatus === 'WAITING_FOR_PLAYERS') return isShared ? '👥 Sala abierta — esperando jugadores' : '⏳ Preparando la partida…';
     if (winner !== null) return `${playerNames[winner]} ganó`;
     if (!isMyTurn) return `Turno de ${playerNames[currentPlayer] ?? '?'}…`;
     if (hasDiced) return `Click en ficha para mover ${diceSum}`;
@@ -466,6 +480,12 @@ export function ParquesBoard() {
           }}>
           {rolling ? '🎲 Tirando…' : hasDiced && isMyTurn ? '✓ Tirado' : '🎲 Tirar dados'}
         </motion.button>
+        {canExitJail && winner === null && (
+          <button onClick={exitJail} className="w-full py-1.5 rounded-xl text-xs font-semibold mb-1.5 transition-all hover:opacity-95"
+            style={{ background: 'rgba(127,231,196,0.15)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.35)' }}>
+            🔓 Sacar fichas de la cárcel
+          </button>
+        )}
         {isMyTurn && hasDiced && winner === null && (
           <button onClick={skipTurn} className="w-full py-1.5 rounded-xl text-xs transition-all hover:opacity-95"
             style={{ background: 'rgba(255,179,71,0.12)', color: '#FFB347', border: '1px solid rgba(255,179,71,0.25)' }}>
@@ -605,6 +625,61 @@ export function ParquesBoard() {
           {renderSidePanel(true)}
         </div>
       </div>
+
+      {/* Lobby overlay — shared (parche) games waiting for players */}
+      <AnimatePresence>
+        {isShared && gameStatus === 'WAITING_FOR_PLAYERS' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="absolute inset-0 flex items-center justify-center p-4"
+            style={{ background: 'rgba(13,11,30,0.82)', backdropFilter: 'blur(6px)', zIndex: 100 }}>
+            <div className="rounded-3xl border p-6 w-full" style={{ background: 'var(--p-card)', borderColor: 'rgba(108,99,255,0.35)', maxWidth: 380 }}>
+              <div className="text-center mb-4">
+                <div className="text-3xl mb-1">🎲</div>
+                <h3 style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--p-text)' }}>Sala de Parqués</h3>
+                <p style={{ fontSize: '0.76rem', color: 'var(--p-muted)', marginTop: 4 }}>
+                  {wsConnected
+                    ? 'Los miembros del parche que abran Juegos → Parqués entran solos a esta sala.'
+                    : 'Conectando con el servidor de juego…'}
+                </p>
+              </div>
+              <div className="space-y-1.5 mb-4">
+                {playerNames.map((name, i) => (
+                  <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-xl" style={{ background: 'var(--p-input)' }}>
+                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: P_COLORS[i] }} />
+                    <span style={{ fontSize: '0.82rem', color: 'var(--p-text)', fontWeight: 600 }}>
+                      {name}{i === myPlayerIndex ? ' (Tú)' : ''}
+                    </span>
+                  </div>
+                ))}
+                {Array.from({ length: Math.max(0, 4 - playerCount) }).map((_, i) => (
+                  <div key={`empty-${i}`} className="flex items-center gap-2.5 px-3 py-2 rounded-xl border border-dashed"
+                    style={{ borderColor: 'var(--p-divider)' }}>
+                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: 'var(--p-divider)' }} />
+                    <span style={{ fontSize: '0.78rem', color: 'var(--p-muted)' }}>Puesto libre</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => addBot('MEDIUM')} disabled={playerCount >= 4 || !wsConnected}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40 transition-all hover:opacity-90"
+                  style={{ background: 'rgba(108,99,255,0.15)', color: '#8B7FFF', border: '1px solid rgba(108,99,255,0.3)' }}>
+                  🤖 Agregar IA
+                </button>
+                <button onClick={startGame} disabled={playerCount < 2 || !wsConnected}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40 transition-all hover:opacity-90"
+                  style={{ background: 'linear-gradient(135deg,#6C63FF,#8B7FFF)', color: 'white' }}>
+                  ▶ Iniciar ({playerCount}/4)
+                </button>
+              </div>
+              {playerCount < 2 && (
+                <p className="text-center mt-3" style={{ fontSize: '0.68rem', color: 'var(--p-muted)' }}>
+                  Se necesitan al menos 2 jugadores — invita a alguien del parche o agrega una IA.
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Rules overlay */}
       <AnimatePresence>

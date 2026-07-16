@@ -58,7 +58,7 @@ function ParcheAvatar({ parche, size, rounded = 'full', textSize }: { parche: Ui
 }
 
 type InteriorTab = 'chat' | 'archivos' | 'lienzo' | 'juegos' | 'voz';
-type GameId = null | 'parques';
+type GameId = null | 'parques' | 'parques-solo';
 
 const PARCHE_CATEGORIES = [
   { id:'estudio',    label:'Estudio',    emoji:'📚', color:'#6C63FF',
@@ -419,6 +419,8 @@ export function ParchesView({ linkedEvents = [] }: {
   const [voiceConnected, setVoiceConnected] = useState(false);
   const [voiceMuted, setVoiceMuted] = useState(false);
   const [chatId, setChatId]                     = useState<string | null>(null);
+  // Shared Parqués game id reserved for this parche (collabs.parquesId).
+  const [parquesId, setParquesId]               = useState<string | null>(null);
   const [rtMessages, setRtMessages]             = useState<ChatMessage[]>([]);
   const [voiceParticipants, setVoiceParticipants] = useState<VoiceEvent[]>([]);
   const socketRef  = useRef<ComunicacionSocket | null>(null);
@@ -677,10 +679,12 @@ useEffect(() => {
   setRtMessages([]);
   setVoiceParticipants([]);
   setChatId(null);
+  setParquesId(null);
 
   let alive = true;
   parcheService.get(selectedParche.id).then(detail => {
     if (!alive) return;
+    setParquesId((detail as any).collabs?.parquesId ?? null);
     const cid = (detail as any).communication?.chatId;
     if (!cid) return;
     setChatId(cid);
@@ -1396,41 +1400,62 @@ const realLeaveVoice = () => {
             {activeTab==='juegos' && (
               <>
                 {game===null && (
-                  <div className="h-full flex flex-col items-center justify-center gap-6 p-8" style={{ background: t.bg }}>
+                  <div className="h-full flex flex-col items-center justify-center gap-6 p-8 overflow-y-auto" style={{ background: t.bg }}>
                     <h3 style={{ fontWeight:700, fontSize:'1.1rem' }}>Elige un juego</h3>
-                    <div className="flex gap-5">
-                      {/* Parqués */}
-                      <motion.div whileHover={{ scale:1.05, y:-4 }} whileTap={{ scale:0.97 }}
-                        onClick={()=>setGame('parques')}
-                        className="flex flex-col items-center gap-4 p-6 rounded-3xl border w-56 cursor-pointer"
-                        style={{ background:'var(--p-input)', borderColor:'rgba(108,99,255,0.25)' }}>
+                    <div className="flex gap-5 flex-wrap justify-center">
+                      {/* Parqués del parche — shared multiplayer game (collabs.parquesId) */}
+                      <motion.div whileHover={parquesId ? { scale:1.05, y:-4 } : {}} whileTap={parquesId ? { scale:0.97 } : {}}
+                        onClick={()=>parquesId && setGame('parques')}
+                        className="flex flex-col items-center gap-4 p-6 rounded-3xl border w-56"
+                        style={{ background:'var(--p-input)', borderColor:'rgba(108,99,255,0.25)', cursor: parquesId ? 'pointer' : 'not-allowed', opacity: parquesId ? 1 : 0.6 }}>
                         <div className="grid grid-cols-2 gap-1.5">
                           {['#6C63FF','#00D9FF','#7FE7C4','#FF6B9D'].map(c=>(
                             <div key={c} className="w-7 h-7 rounded-full" style={{ background:c }} />
                           ))}
                         </div>
-                        <div>
-                          <p style={{ fontWeight:700, fontSize:'1.05rem' }}>Parqués</p>
-                          <p style={{ fontSize:'0.75rem', color:'var(--p-muted)' }}>2-4 jugadores · Dados</p>
+                        <div className="text-center">
+                          <p style={{ fontWeight:700, fontSize:'1.05rem' }}>Parqués del parche</p>
+                          <p style={{ fontSize:'0.75rem', color:'var(--p-muted)' }}>
+                            {parquesId ? 'Juega con los miembros (2-4) · puedes sumar IA' : 'La sala aún se está preparando…'}
+                          </p>
                         </div>
                         <div className="w-full py-2 rounded-xl text-sm font-semibold text-center"
-                          style={{ background:'#6C63FF', color:'white' }}>
-                          Jugar Parqués
+                          style={{ background: parquesId ? '#6C63FF' : 'var(--p-divider)', color: parquesId ? 'white' : 'var(--p-muted)' }}>
+                          {parquesId ? '👥 Jugar con el parche' : '⏳ Preparando sala'}
                         </div>
                       </motion.div>
 
+                      {/* Parqués vs IA — private solo game with 3 bots */}
+                      <motion.div whileHover={{ scale:1.05, y:-4 }} whileTap={{ scale:0.97 }}
+                        onClick={()=>setGame('parques-solo')}
+                        className="flex flex-col items-center gap-4 p-6 rounded-3xl border w-56 cursor-pointer"
+                        style={{ background:'var(--p-input)', borderColor:'rgba(127,231,196,0.3)' }}>
+                        <div className="text-4xl leading-none">🤖</div>
+                        <div className="text-center">
+                          <p style={{ fontWeight:700, fontSize:'1.05rem' }}>Parqués vs IA</p>
+                          <p style={{ fontSize:'0.75rem', color:'var(--p-muted)' }}>Tú contra 3 bots · empieza ya</p>
+                        </div>
+                        <div className="w-full py-2 rounded-xl text-sm font-semibold text-center"
+                          style={{ background:'#7FE7C4', color:'#0F0E1A' }}>
+                          🎲 Jugar vs IA
+                        </div>
+                      </motion.div>
                     </div>
                   </div>
                 )}
-                {game==='parques' && (
+                {(game==='parques' || game==='parques-solo') && (
                   <div className="h-full flex flex-col overflow-hidden" style={{ background: t.bg }}>
                     <div className="flex items-center gap-2 px-4 py-2 border-b flex-shrink-0"
                       style={{ borderColor:'var(--p-divider)', background:'var(--p-card)' }}>
                       <button onClick={()=>setGame(null)} className="hover:opacity-70" style={{ color:'var(--p-muted)', fontSize:'0.82rem' }}>← Volver</button>
-                      <span style={{ fontSize:'0.85rem', fontWeight:600 }}>🎲 Parqués</span>
+                      <span style={{ fontSize:'0.85rem', fontWeight:600 }}>🎲 Parqués {game==='parques' ? '· partida del parche' : '· vs IA'}</span>
                     </div>
                     <div className="flex-1 overflow-hidden">
-                      <ParquesBoard />
+                      <ParquesBoard
+                        gameId={game==='parques' ? parquesId : null}
+                        userId={meId ?? 'player-you'}
+                        userName={userName || 'Tú'}
+                      />
                     </div>
                   </div>
                 )}
