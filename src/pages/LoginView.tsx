@@ -11,7 +11,7 @@ import { useAuth } from '../store/AuthContext';
 import { LegalModals, type LegalModalType } from '../components/LegalContent';
 import { friendlyError } from '../lib/errorMessages';
 
-type LoginStep = 'main' | 'email' | 'otp';
+type LoginStep = 'main' | 'email' | 'otp' | 'jurado';
 
 interface LoginViewProps {
   onLogin: () => void;
@@ -48,6 +48,8 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
   const [error, setError]     = useState('');
   const [otpCooldown, setOtpCooldown] = useState(0); // seconds remaining
   const [legalModal, setLegalModal] = useState<LegalModalType>(null);
+  const [juradoEmail, setJuradoEmail] = useState('');
+  const [juradoPassword, setJuradoPassword] = useState('');
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -149,6 +151,25 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
     }
   };
 
+  // ── Jurado: login con correo + contraseña, sin dominio institucional ──────
+  const handleJuradoLogin = async () => {
+    const trimmedEmail = juradoEmail.trim();
+    if (!trimmedEmail || !juradoPassword) { setError('Ingresa tu correo y contraseña.'); return; }
+    setLoading(true);
+    setError('');
+    try {
+      const tokens = await authService.loginJurado(trimmedEmail, juradoPassword);
+      login(tokens.accessToken, tokens.refreshToken);
+      onLogin();
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 401) setError('Correo o contraseña incorrectos');
+      else setError(friendlyError(e, 'No se pudo iniciar sesión. Intenta de nuevo.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ── OTP digit helpers ─────────────────────────────────────────────────────
   const handleOtpChange = (i: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
@@ -172,6 +193,7 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
     setError('');
     setStep(prev => (prev === 'otp' ? 'email' : 'main'));
     if (step === 'otp') setOtp(['', '', '', '', '', '']);
+    if (step === 'jurado') { setJuradoEmail(''); setJuradoPassword(''); }
   };
 
   const maskedEmail = email.replace(/(.{2}).+(@.+)/, '$1***$2');
@@ -269,6 +291,16 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
                   <Mail size={18} />
                   Ingresar con código por correo
                 </motion.button>
+
+                {/* Acceso discreto para jurados externos — no institucional */}
+                <p className="text-center mt-4" style={{ fontSize: '0.75rem', color: mutedCol }}>
+                  ¿Eres jurado?{' '}
+                  <button onClick={() => { setError(''); setStep('jurado'); }}
+                    style={{ color: darkMode ? '#7FE7C4' : '#6C63FF', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+                    className="hover:underline">
+                    Inicia sesión aquí
+                  </button>
+                </p>
               </motion.div>
             )}
 
@@ -348,19 +380,59 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
                 </p>
               </motion.div>
             )}
+
+            {/* ── JURADO — correo + contraseña, sin dominio institucional ── */}
+            {step === 'jurado' && (
+              <motion.div key="jurado" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.22 }}>
+                <div className="text-center mb-6">
+                  <h1 style={{ fontWeight: 800, fontSize: '1.4rem', color: textCol, marginBottom: '6px' }}>Acceso de jurado</h1>
+                  <p style={{ fontSize: '0.83rem', color: mutedCol, lineHeight: 1.6 }}>Ingresa con el correo y la contraseña que te asignó el equipo de U•link.</p>
+                </div>
+                <div className="mb-3">
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: darkMode ? '#C0BAE0' : '#3D3660', display: 'block', marginBottom: '6px' }}>
+                    Correo
+                  </label>
+                  <input type="email" value={juradoEmail}
+                    onChange={e => { setJuradoEmail(e.target.value); setError(''); }}
+                    onKeyDown={e => e.key === 'Enter' && handleJuradoLogin()}
+                    placeholder="jurado@ejemplo.com"
+                    autoFocus
+                    style={{ width: '100%', padding: '13px 15px', borderRadius: '12px', border: `1.5px solid ${error ? '#FF4757' : 'rgba(108,99,255,0.3)'}`, background: inputBg, color: textCol, fontSize: '0.88rem', outline: 'none', transition: 'border-color 0.2s' }} />
+                </div>
+                <div className="mb-4">
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600, color: darkMode ? '#C0BAE0' : '#3D3660', display: 'block', marginBottom: '6px' }}>
+                    Contraseña
+                  </label>
+                  <input type="password" value={juradoPassword}
+                    onChange={e => { setJuradoPassword(e.target.value); setError(''); }}
+                    onKeyDown={e => e.key === 'Enter' && handleJuradoLogin()}
+                    placeholder="••••••••"
+                    style={{ width: '100%', padding: '13px 15px', borderRadius: '12px', border: `1.5px solid ${error ? '#FF4757' : 'rgba(108,99,255,0.3)'}`, background: inputBg, color: textCol, fontSize: '0.88rem', outline: 'none', transition: 'border-color 0.2s' }} />
+                </div>
+                {error && <p style={{ fontSize: '0.78rem', color: '#FF4757', marginBottom: '12px', textAlign: 'center' }}>{error}</p>}
+                <motion.button onClick={handleJuradoLogin} disabled={loading}
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} style={primaryBtn}>
+                  {loading
+                    ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    : 'Iniciar sesión'}
+                </motion.button>
+              </motion.div>
+            )}
           </AnimatePresence>
 
           {/* Footer */}
-          <div className="mt-6 pt-5 border-t" style={{ borderColor: 'rgba(108,99,255,0.12)' }}>
-            <p className="text-center" style={{ fontSize: '0.85rem', color: mutedCol }}>
-              ¿No tienes cuenta?{' '}
-              <button onClick={onGoRegister}
-                style={{ color: darkMode ? '#7FE7C4' : '#6C63FF', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}
-                className="hover:underline">
-                Registrarse
-              </button>
-            </p>
-          </div>
+          {step !== 'jurado' && (
+            <div className="mt-6 pt-5 border-t" style={{ borderColor: 'rgba(108,99,255,0.12)' }}>
+              <p className="text-center" style={{ fontSize: '0.85rem', color: mutedCol }}>
+                ¿No tienes cuenta?{' '}
+                <button onClick={onGoRegister}
+                  style={{ color: darkMode ? '#7FE7C4' : '#6C63FF', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}
+                  className="hover:underline">
+                  Registrarse
+                </button>
+              </p>
+            </div>
+          )}
         </div>
       </motion.div>
       <LegalModals open={legalModal} darkMode={darkMode} onClose={() => setLegalModal(null)} />
