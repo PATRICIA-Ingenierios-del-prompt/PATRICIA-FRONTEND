@@ -188,13 +188,14 @@ export const userService = {
   /**
    * Obtiene las franjas horarias configuradas del usuario.
    * GET /api/v1/usuarios/{id}/disponibilidad/horaria
+   * El backend devuelve el array bajo `franjasDisponibilidad` (confirmado
+   * contra el servidor real) — antes leíamos `franjas`/`disponibilidadHoraria`,
+   * que no existen en la respuesta, así que la grilla siempre abría vacía.
    */
   async getDisponibilidad(userId: string): Promise<FranjaHoraria[]> {
-    const { data } = await apiClient.get<PerfilResponse & { franjas?: FranjaHoraria[] }>(
+    const { data } = await apiClient.get<PerfilResponse & { franjasDisponibilidad?: FranjaHoraria[] }>(
       `${BASE}/${userId}/disponibilidad/horaria`,
     );
-    // El backend devuelve un PerfilResponse completo; las franjas pueden venir
-    // en un campo propio o dentro de disponibilidadHoraria
-    return (data as any).franjas ?? (data as any).disponibilidadHoraria ?? [];
+    return (data as any).franjasDisponibilidad ?? (data as any).franjas ?? (data as any).disponibilidadHoraria ?? [];
   },
 };
