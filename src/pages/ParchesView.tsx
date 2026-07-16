@@ -91,15 +91,6 @@ const INIT_MESSAGES = [
   { id:8, userId:'SM', user:'Santiago M.',   text:'¡Yo llego a las 4! Nos vemos ahí 🎯',                           time:'10:35', reactions:[], type:'text' },
 ];
 
-const LINKS_DATA = [
-  { name:'Apuntes Tema 5 — Integrales Dobles', url:'https://drive.google.com/file/apuntes-t5', sharedBy:'Santiago M.', date:'Hoy 10:28',    icon:'📄', color:'#FF4D6A' },
-  { name:'Ejercicios Parcial 1',               url:'https://docs.google.com/ejercicios-p1',   sharedBy:'Valentina T.', date:'Ayer',          icon:'📋', color:'#FFB347' },
-  { name:'Tabla de Integrales (imagen)',        url:'https://drive.google.com/file/tabla-int', sharedBy:'Isabel R.',    date:'Hace 3 días',   icon:'🖼️', color:'#6C63FF' },
-  { name:'Temario Cálculo III',                url:'https://docs.google.com/temario-calc3',   sharedBy:'Tú',           date:'Hace 1 semana', icon:'📝', color:'#7FE7C4' },
-  { name:'Ejercicios Extra Cap. 4',            url:'https://drive.google.com/file/ej-extra',  sharedBy:'Andrés C.',    date:'Hace 1 semana', icon:'📄', color:'#A78BFA' },
-  { name:'Video clase — Transformada Laplace', url:'https://youtube.com/watch?v=laplace-eci', sharedBy:'Prof. García', date:'Hace 2 semanas',icon:'🎬', color:'#FF6B9D' },
-];
-
 /** Real parche member, hydrated from Parches (IDs) + Users (names/fotos). */
 interface UiMember {
   userId: string;
@@ -425,6 +416,9 @@ export function ParchesView({ linkedEvents = [] }: {
   const [membersLoading, setMembersLoading] = useState(false);
   const [messages, setMessages] = useState(INIT_MESSAGES);
   const [msgInput, setMsgInput] = useState('');
+  const [showShareLink, setShowShareLink] = useState(false);
+  const [shareLinkUrl, setShareLinkUrl] = useState('');
+  const [shareLinkName, setShareLinkName] = useState('');
   const [hoveredMsg, setHoveredMsg] = useState<number|null>(null);
   const [showReactionPicker, setShowReactionPicker] = useState<number|null>(null);
   const [game, setGame] = useState<GameId>(null);
@@ -576,17 +570,7 @@ export function ParchesView({ linkedEvents = [] }: {
   const leaveParche = async (p: UiParche) => {
     if (!meId) return;
     try { await parcheService.removeMember(p.id, meId); addToast({ type: 'info', title: 'Saliste del parche', message: p.name }); setSelectedParche(EMPTY_PARCHE); await Promise.all([loadMine(), loadPublicos()]); }
-    catch (e: any) {
-      // 409 = CannotRemoveOwner: el dueño no puede abandonar su propio parche.
-      const status = e?.response?.status;
-      addToast({
-        type: 'reporte',
-        title: status === 409 ? 'El dueño no puede salirse' : 'No se pudo salir',
-        message: status === 409
-          ? 'Eres quien creó este parche; no puede quedar sin dueño. Si ya no lo quieres, elimínalo.'
-          : friendlyError(e, 'No te pudimos sacar del parche. Intenta de nuevo.'),
-      });
-    }
+    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo salir', message: friendlyError(e, 'No te pudimos sacar del parche. Intenta de nuevo.') }); }
   };
   const generateInvite = async (p: UiParche) => {
     setInviteLoading(true);
@@ -623,16 +607,7 @@ export function ParchesView({ linkedEvents = [] }: {
   };
   const deleteParcheHandler = async (p: UiParche) => {
     try { await parcheService.remove(p.id); addToast({ type: 'info', title: 'Parche eliminado', message: p.name }); setSelectedParche(EMPTY_PARCHE); await Promise.all([loadMine(), loadPublicos()]); }
-    catch (e: any) {
-      const status = e?.response?.status;
-      addToast({
-        type: 'reporte',
-        title: status === 403 ? 'Solo el dueño puede eliminar' : 'No se pudo eliminar',
-        message: status === 403
-          ? 'Este parche solo lo puede eliminar quien lo creó. Si quieres irte, usa "Salirse del parche".'
-          : friendlyError(e, 'No se pudo eliminar el parche. Intenta de nuevo.'),
-      });
-    }
+    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo eliminar', message: friendlyError(e, 'No se pudo eliminar el parche. Intenta de nuevo.') }); }
   };
   const createParcheHandler = async () => {
     if (!createName.trim()) { setCreateError('Ponle un nombre al parche.'); return; }
@@ -690,7 +665,6 @@ useEffect(() => {
     const unsub = socketRef.current?.subscribeToParche(cid, {
       onMessage: msg => setRtMessages(prev => [...prev, msg]),
       onVoiceEvent: evt => {
-        console.log('[voice] evento STOMP recibido:', evt.signalType, 'de:', evt.senderUserId);
         if (evt.signalType === 'JOIN' && evt.senderUserId !== meId) {
           setVoiceParticipants(prev =>
             prev.find(p => p.senderUserId === evt.senderUserId) ? prev : [...prev, evt]
@@ -761,7 +735,6 @@ async function initiateOffer(remoteId: string, cid: string) {
 }
 
 async function handleVoiceSignal(signal: VoiceSignalPayload) {
-  console.log('[voice] señal recibida:', signal.signalType, 'de:', signal.senderUserId, 'chatId actual:', chatId);
   if (!signal.senderUserId || signal.senderUserId === meId || !chatId) return;
   if (signal.signalType === 'OFFER') {
     const pc = createPeer(signal.senderUserId, chatId);
@@ -806,7 +779,6 @@ const realJoinVoice = async () => {
     // si el STOMP todavía no está listo, joinVoice() lanza y caemos al
     // catch de abajo en vez de dejar al usuario viendo su propio círculo
     // para siempre sin que nadie más se entere que se unió.
-    console.log('[voice] joinVoice enviado con chatId:', chatId);
     socketRef.current?.joinVoice(chatId);
     localStream.current = stream;
     setVoiceConnected(true);
@@ -820,12 +792,9 @@ const realJoinVoice = async () => {
     // propia llamada aislada aunque ambos figuren como "conectados".
     try {
       const { data } = await apiClient.get(`/api/voice/${chatId}/participants`);
-      console.log('[voice] participantes activos (REST):', JSON.stringify(data));
       const seen = new Set();
       const others = (data ?? []).filter((p: any) => p.userId !== meId && !seen.has(p.userId) && seen.add(p.userId));
-      console.log('[voice] otros participantes (excluido yo):', others.length, 'meId:', meId);
       others.forEach((p: any) => {
-        console.log('[voice] → initiateOffer hacia:', p.userId);
         setVoiceParticipants(prev =>
           prev.find(v => v.senderUserId === p.userId)
             ? prev
@@ -1232,7 +1201,19 @@ const realLeaveVoice = () => {
                         <div className={`flex flex-col gap-0.5 max-w-[70%] ${isMe ? 'items-end' : 'items-start'}`}>
                           {!isMe && <span style={{ fontSize:'0.78rem', fontWeight:600, color:'#6C63FF' }}>{msg.senderUsername}</span>}
                           <div className="px-3.5 py-2 rounded-2xl" style={{ background: isMe ? 'linear-gradient(135deg,#6C63FF,#8B7FFF)' : 'rgba(37,31,61,0.95)', color:'#F0EEFF', borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px' }}>
-                            <p style={{ fontSize:'0.85rem', lineHeight:1.55 }}>{msg.content}</p>
+                            {msg.fileUrl ? (
+                              <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-2 no-underline"
+                                style={{ color: isMe ? '#E0DDFF' : '#A78BFA' }}
+                                onClick={e => e.stopPropagation()}>
+                                <span style={{ fontSize:'1.1rem' }}>{msg.type === 'IMAGE' ? '🖼️' : '📄'}</span>
+                                <span className="underline" style={{ fontSize:'0.85rem', lineHeight:1.55, wordBreak:'break-all' }}>
+                                  {msg.content || msg.fileUrl}
+                                </span>
+                              </a>
+                            ) : (
+                              <p style={{ fontSize:'0.85rem', lineHeight:1.55 }}>{msg.content}</p>
+                            )}
                           </div>
                           <span style={{ fontSize:'0.6rem', color:'var(--p-muted)' }}>{new Date(msg.sentAt).toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' })}</span>
                         </div>
@@ -1263,51 +1244,113 @@ const realLeaveVoice = () => {
             )}
 
             {/* ── DOCUMENTOS (links) ── */}
-            {activeTab==='archivos' && (
+            {activeTab==='archivos' && (() => {
+              const sharedLinks = rtMessages.filter((m: any) => m.fileUrl || m.type === 'FILE' || m.type === 'IMAGE');
+              const iconForUrl = (url: string) => {
+                if (/youtube|youtu\.be/i.test(url)) return '🎬';
+                if (/drive\.google|docs\.google/i.test(url)) return '📄';
+                if (/\.(png|jpg|jpeg|gif|webp|svg)/i.test(url)) return '🖼️';
+                if (/\.(pdf)/i.test(url)) return '📕';
+                if (/\.(doc|docx|ppt|pptx|xls|xlsx)/i.test(url)) return '📋';
+                return '🔗';
+              };
+              const colorForUrl = (url: string) => {
+                if (/youtube|youtu\.be/i.test(url)) return '#FF6B9D';
+                if (/drive\.google|docs\.google/i.test(url)) return '#FFB347';
+                if (/\.(png|jpg|jpeg|gif|webp|svg)/i.test(url)) return '#6C63FF';
+                if (/\.(pdf)/i.test(url)) return '#FF4D6A';
+                return '#7FE7C4';
+              };
+              return (
               <div className="h-full overflow-y-auto p-5" style={{ background: t.bg }}>
                 <div className="flex items-center justify-between mb-5">
                   <div>
                     <p style={{ fontWeight:700, fontSize:'0.95rem' }}>Links de documentos</p>
                     <p style={{ fontSize:'0.72rem', color:'var(--p-muted)', marginTop:2 }}>
-                      {LINKS_DATA.length} documentos compartidos
+                      {sharedLinks.length} documentos compartidos
                     </p>
                   </div>
-                  <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm"
+                  <button onClick={() => setShowShareLink(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm"
                     style={{ background:'rgba(108,99,255,0.1)', color:'#6C63FF', border:'1px solid rgba(108,99,255,0.2)' }}>
                     <Plus size={14} /> Compartir link
                   </button>
                 </div>
+
+                {showShareLink && (
+                  <motion.div initial={{ opacity:0, y:-8 }} animate={{ opacity:1, y:0 }}
+                    className="mb-5 p-4 rounded-2xl border" style={{ background:'var(--p-card)', borderColor:'rgba(108,99,255,0.2)' }}>
+                    <p style={{ fontWeight:600, fontSize:'0.88rem', marginBottom:8 }}>Compartir un link</p>
+                    <input value={shareLinkName} onChange={e => setShareLinkName(e.target.value)}
+                      placeholder="Nombre del documento (ej: Apuntes Tema 5)"
+                      className="w-full px-3 py-2 rounded-xl mb-2 outline-none text-sm"
+                      style={{ background:'var(--p-input)', border:'1px solid var(--p-divider)', color:'var(--p-text)' }} />
+                    <input value={shareLinkUrl} onChange={e => setShareLinkUrl(e.target.value)}
+                      placeholder="URL (ej: https://drive.google.com/...)"
+                      className="w-full px-3 py-2 rounded-xl mb-3 outline-none text-sm"
+                      style={{ background:'var(--p-input)', border:'1px solid var(--p-divider)', color:'var(--p-text)' }} />
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={() => { setShowShareLink(false); setShareLinkUrl(''); setShareLinkName(''); }}
+                        className="px-3 py-1.5 rounded-xl text-sm" style={{ color:'var(--p-muted)' }}>Cancelar</button>
+                      <button onClick={() => {
+                        if (!shareLinkUrl.trim() || !chatId) return;
+                        const name = shareLinkName.trim() || shareLinkUrl.trim();
+                        socketRef.current?.sendMessage(chatId, name, 'FILE', shareLinkUrl.trim());
+                        setShowShareLink(false); setShareLinkUrl(''); setShareLinkName('');
+                        addToast({ type: 'info', title: 'Link compartido', message: `"${name}" se compartió en el chat` });
+                      }}
+                        disabled={!shareLinkUrl.trim()}
+                        className="px-4 py-1.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40"
+                        style={{ background:'#6C63FF', color:'white' }}>
+                        Compartir
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {sharedLinks.length === 0 ? (
+                  <div className="text-center py-14">
+                    <span style={{ fontSize:'2rem' }}>📁</span>
+                    <p style={{ fontSize:'0.85rem', color:'var(--p-muted)', marginTop:8 }}>
+                      Aún no se han compartido links. Usa el botón de arriba para compartir el primero.
+                    </p>
+                  </div>
+                ) : (
                 <div className="space-y-3">
-                  {LINKS_DATA.map((lnk,i)=>(
-                    <motion.div key={i}
-                      whileHover={{ x:4, boxShadow:`0 6px 24px ${lnk.color}20` }}
+                  {sharedLinks.map((lnk: any, i: number) => {
+                    const url = lnk.fileUrl || lnk.content || '';
+                    const name = lnk.type === 'FILE' ? (lnk.content || url) : url;
+                    const color = colorForUrl(url);
+                    return (
+                    <motion.div key={lnk.id ?? i}
+                      whileHover={{ x:4, boxShadow:`0 6px 24px ${color}20` }}
                       className="flex items-center gap-4 rounded-2xl border p-4 cursor-pointer group transition-all"
-                      style={{ background:'var(--p-card)', borderColor:`${lnk.color}25` }}
-                      onClick={() => window.open(lnk.url, '_blank', 'noopener')}>
-                      {/* Ícono */}
+                      style={{ background:'var(--p-card)', borderColor:`${color}25` }}
+                      onClick={() => window.open(url, '_blank', 'noopener')}>
                       <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
-                        style={{ background:`${lnk.color}15`, border:`1.5px solid ${lnk.color}30` }}>
-                        {lnk.icon}
+                        style={{ background:`${color}15`, border:`1.5px solid ${color}30` }}>
+                        {iconForUrl(url)}
                       </div>
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="truncate" style={{ fontWeight:600, fontSize:'0.88rem', color:'var(--p-text)' }}>{lnk.name}</p>
+                        <p className="truncate" style={{ fontWeight:600, fontSize:'0.88rem', color:'var(--p-text)' }}>{name}</p>
                         <p style={{ fontSize:'0.7rem', color:'var(--p-muted)', marginTop:2 }}>
-                          Compartido por <span style={{ color:lnk.color, fontWeight:600 }}>{lnk.sharedBy}</span> · {lnk.date}
+                          Compartido por <span style={{ color, fontWeight:600 }}>{lnk.senderUsername || 'Alguien'}</span> · {new Date(lnk.sentAt).toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' })}
                         </p>
                       </div>
-                      {/* Abrir */}
                       <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all">
                         <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold"
-                          style={{ background:`${lnk.color}15`, color:lnk.color }}>
+                          style={{ background:`${color}15`, color }}>
                           Abrir →
                         </div>
                       </div>
                     </motion.div>
-                  ))}
+                    );
+                  })}
                 </div>
+                )}
               </div>
-            )}
+              );
+            })()}
 
             {/* ── LIENZO ── */}
             {activeTab==='lienzo' && <CollabCanvas parcheId={selectedParche.id} />}
