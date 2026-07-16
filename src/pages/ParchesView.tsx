@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Plus, Users, Lock, Globe, Mic, MicOff, Send, Smile,
-  Settings, Search, X, MessageCircle, FileText,
+  Settings, Search, X, MessageCircle,
   Layers, Gamepad2, Volume2, VolumeX, MoreHorizontal,
   Phone, PhoneOff, Download, Video, VideoOff, Monitor, MonitorOff, ArrowLeft, ChevronRight, ChevronLeft,
   KeyRound, LogOut, Trash2,
@@ -57,7 +57,7 @@ function ParcheAvatar({ parche, size, rounded = 'full', textSize }: { parche: Ui
   );
 }
 
-type InteriorTab = 'chat' | 'archivos' | 'lienzo' | 'juegos' | 'voz';
+type InteriorTab = 'chat' | 'lienzo' | 'juegos' | 'voz';
 type GameId = null | 'parques';
 
 const PARCHE_CATEGORIES = [
@@ -78,26 +78,6 @@ const PARCHE_CATEGORIES = [
   { id:'arte',       label:'Arte',       emoji:'🎨', color:'#FF9BAE', subcategories:[] },
   { id:'comida',     label:'Comida',     emoji:'🍕', color:'#FFB347', subcategories:[] },
   { id:'deporte',    label:'Deporte',    emoji:'⚽', color:'#4ADE80', subcategories:[] },
-];
-
-const INIT_MESSAGES = [
-  { id:1, userId:'VT', user:'Valentina T.',  text:'¿Alguien tiene los apuntes del tema 5 de integrales dobles?',    time:'10:23', reactions:[{emoji:'👍',count:3},{emoji:'❤️',count:1}], type:'text' },
-  { id:2, userId:'SM', user:'Santiago M.',   text:'¡Yo los tengo! Los subo en un momento 📄',                       time:'10:25', reactions:[], type:'text' },
-  { id:3, userId:'ME', user:'Tú',            text:'También tengo los ejercicios del parcial anterior si los necesitan', time:'10:26', reactions:[{emoji:'🙏',count:4}], type:'text' },
-  { id:4, userId:'SM', user:'Santiago M.',   text:'https://drive.google.com/file/apuntes-t5',                      time:'10:28', reactions:[], type:'link' },
-  { id:5, userId:'IR', user:'Isabela R.',    text:'¡Gracias Santiago! Justo lo que necesitaba 🙏',                  time:'10:30', reactions:[{emoji:'❤️',count:2}], type:'text' },
-  { id:6, userId:'ME', user:'Tú',            text:'¿Hacemos parche de estudio el miércoles en la biblio?',          time:'10:32', reactions:[{emoji:'✅',count:3},{emoji:'🔥',count:2}], type:'text' },
-  { id:7, userId:'VT', user:'Valentina T.',  text:'👍 Yo puedo a las 3pm',                                          time:'10:33', reactions:[], type:'text' },
-  { id:8, userId:'SM', user:'Santiago M.',   text:'¡Yo llego a las 4! Nos vemos ahí 🎯',                           time:'10:35', reactions:[], type:'text' },
-];
-
-const LINKS_DATA = [
-  { name:'Apuntes Tema 5 — Integrales Dobles', url:'https://drive.google.com/file/apuntes-t5', sharedBy:'Santiago M.', date:'Hoy 10:28',    icon:'📄', color:'#FF4D6A' },
-  { name:'Ejercicios Parcial 1',               url:'https://docs.google.com/ejercicios-p1',   sharedBy:'Valentina T.', date:'Ayer',          icon:'📋', color:'#FFB347' },
-  { name:'Tabla de Integrales (imagen)',        url:'https://drive.google.com/file/tabla-int', sharedBy:'Isabel R.',    date:'Hace 3 días',   icon:'🖼️', color:'#6C63FF' },
-  { name:'Temario Cálculo III',                url:'https://docs.google.com/temario-calc3',   sharedBy:'Tú',           date:'Hace 1 semana', icon:'📝', color:'#7FE7C4' },
-  { name:'Ejercicios Extra Cap. 4',            url:'https://drive.google.com/file/ej-extra',  sharedBy:'Andrés C.',    date:'Hace 1 semana', icon:'📄', color:'#A78BFA' },
-  { name:'Video clase — Transformada Laplace', url:'https://youtube.com/watch?v=laplace-eci', sharedBy:'Prof. García', date:'Hace 2 semanas',icon:'🎬', color:'#FF6B9D' },
 ];
 
 /** Real parche member, hydrated from Parches (IDs) + Users (names/fotos). */
@@ -440,10 +420,8 @@ export function ParchesView({ linkedEvents = [] }: {
   const [viewMemberProfile, setViewMemberProfile] = useState<UiMember | null>(null);
   const [members, setMembers] = useState<UiMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
-  const [messages, setMessages] = useState(INIT_MESSAGES);
   const [msgInput, setMsgInput] = useState('');
   const [hoveredMsg, setHoveredMsg] = useState<number|null>(null);
-  const [showReactionPicker, setShowReactionPicker] = useState<number|null>(null);
   const [game, setGame] = useState<GameId>(null);
   const [voiceConnected, setVoiceConnected] = useState(false);
   const [voiceMuted, setVoiceMuted] = useState(false);
@@ -726,7 +704,7 @@ useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedParche.id]);
 
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [rtMessages]);
 
   // ── WebRTC ──
 function createPeer(remoteId: string, cid: string): RTCPeerConnection {
@@ -860,19 +838,8 @@ const realLeaveVoice = () => {
     }
   };
 
-  const addReaction = (msgId:number, emoji:string) => {
-    setMessages(prev=>prev.map(m=>{
-      if (m.id!==msgId) return m;
-      const existing = m.reactions.find(r=>r.emoji===emoji);
-      if (existing) return { ...m, reactions: m.reactions.map(r=>r.emoji===emoji ? {...r,count:r.count+1} : r) };
-      return { ...m, reactions:[...m.reactions,{emoji,count:1}] };
-    }));
-    setShowReactionPicker(null);
-  };
-
   const TABS: { id:InteriorTab; label:string; icon:React.ComponentType<any> }[] = [
     { id:'chat',     label: 'Chat',      icon:MessageCircle },
-    { id:'archivos', label: 'Archivos',  icon:FileText },
     { id:'lienzo',   label: 'Lienzo',    icon:Layers },
     { id:'juegos',   label: 'Juegos',    icon:Gamepad2 },
     ...(selectedParche.type==='private' ? [{ id:'voz' as InteriorTab, label: 'Voz', icon:Volume2 }] : []),
@@ -1255,53 +1222,6 @@ const realLeaveVoice = () => {
               </div>
             )}
 
-            {/* ── DOCUMENTOS (links) ── */}
-            {activeTab==='archivos' && (
-              <div className="h-full overflow-y-auto p-5" style={{ background: t.bg }}>
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <p style={{ fontWeight:700, fontSize:'0.95rem' }}>Links de documentos</p>
-                    <p style={{ fontSize:'0.72rem', color:'var(--p-muted)', marginTop:2 }}>
-                      {LINKS_DATA.length} documentos compartidos
-                    </p>
-                  </div>
-                  <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm"
-                    style={{ background:'rgba(108,99,255,0.1)', color:'#6C63FF', border:'1px solid rgba(108,99,255,0.2)' }}>
-                    <Plus size={14} /> Compartir link
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  {LINKS_DATA.map((lnk,i)=>(
-                    <motion.div key={i}
-                      whileHover={{ x:4, boxShadow:`0 6px 24px ${lnk.color}20` }}
-                      className="flex items-center gap-4 rounded-2xl border p-4 cursor-pointer group transition-all"
-                      style={{ background:'var(--p-card)', borderColor:`${lnk.color}25` }}
-                      onClick={() => window.open(lnk.url, '_blank', 'noopener')}>
-                      {/* Ícono */}
-                      <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
-                        style={{ background:`${lnk.color}15`, border:`1.5px solid ${lnk.color}30` }}>
-                        {lnk.icon}
-                      </div>
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate" style={{ fontWeight:600, fontSize:'0.88rem', color:'var(--p-text)' }}>{lnk.name}</p>
-                        <p style={{ fontSize:'0.7rem', color:'var(--p-muted)', marginTop:2 }}>
-                          Compartido por <span style={{ color:lnk.color, fontWeight:600 }}>{lnk.sharedBy}</span> · {lnk.date}
-                        </p>
-                      </div>
-                      {/* Abrir */}
-                      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all">
-                        <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold"
-                          style={{ background:`${lnk.color}15`, color:lnk.color }}>
-                          Abrir →
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* ── LIENZO ── */}
             {activeTab==='lienzo' && (
               <CollabCanvas canvasId={canvasId} meId={meId ?? ''}
@@ -1329,13 +1249,6 @@ const realLeaveVoice = () => {
                           <p style={{ fontWeight:700, fontSize:'1.05rem' }}>Parqués</p>
                           <p style={{ fontSize:'0.75rem', color:'var(--p-muted)' }}>2-4 jugadores · Dados</p>
                         </div>
-                        <div className="flex gap-1">
-                          {(['#6C63FF','#00D9FF','#7FE7C4'] as const).map((c,i)=>(
-                            <div key={c} className="w-5 h-5 rounded-full border"
-                              style={{ background:c, borderColor:'rgba(108,99,255,0.3)', marginLeft:i>0?-4:0 }} />
-                          ))}
-                          <span style={{ fontSize:'0.68rem', color:'var(--p-muted)', marginLeft:'6px' }}>3 en sala</span>
-                        </div>
                         <div className="w-full py-2 rounded-xl text-sm font-semibold text-center"
                           style={{ background:'#6C63FF', color:'white' }}>
                           Jugar Parqués
@@ -1343,23 +1256,10 @@ const realLeaveVoice = () => {
                       </motion.div>
 
                     </div>
-
-                    {/* Historial */}
-                    <div className="w-full max-w-xs rounded-2xl p-4 border"
-                      style={{ background:'rgba(108,99,255,0.05)', borderColor:'var(--p-divider)' }}>
-                      <p style={{ fontSize:'0.8rem', fontWeight:600, marginBottom:'8px', color:'var(--p-muted)' }}>Partidas recientes</p>
-                      {[{g:'Parqués',result:'Victoria',with:'vs. Felipe A.',color:'#7FE7C4'},{g:'Parqués',result:'Derrota',with:'vs. Sofía M.',color:'#FF4D6A'}].map((h,i)=>(
-                        <div key={i} className="flex items-center justify-between py-2 border-b last:border-0"
-                          style={{ borderColor:'var(--p-input)' }}>
-                          <span style={{ fontSize:'0.78rem' }}>{h.g} {h.with}</span>
-                          <span style={{ fontSize:'0.78rem', fontWeight:600, color:h.color }}>{h.result}</span>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 )}
                 {game==='parques' && (
-                  <div className="flex-1 flex flex-col overflow-hidden" style={{ background: t.bg }}>
+                  <div className="h-full flex flex-col overflow-hidden" style={{ background: t.bg }}>
                     <div className="flex items-center gap-2 px-4 py-2 border-b flex-shrink-0"
                       style={{ borderColor:'var(--p-divider)', background:'var(--p-card)' }}>
                       <button onClick={()=>setGame(null)} className="hover:opacity-70" style={{ color:'var(--p-muted)', fontSize:'0.82rem' }}>← Volver</button>

@@ -177,7 +177,7 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
   const maskedEmail = email.replace(/(.{2}).+(@.+)/, '$1***$2');
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-4 pt-20 relative overflow-x-hidden">
       <AnimatedBackground light={!darkMode} />
 
       {/* Theme toggle */}
