@@ -12,7 +12,7 @@ import logoNuevoOscuroImg from '../assets/logoNuevoOscuro.png';
 import logoNuevoClaroImg  from '../assets/logoNuevoClaro.png';
 import monoImg            from '../assets/monoULink.png';
 import { motion } from 'motion/react';
-import { LegalModals, type LegalModalType } from '../components/LegalContent';
+import { LegalModals, RegisterConsentModal, type LegalModalType } from '../components/LegalContent';
 
 const MS_CLIENT_ID = 'd378f378-5c84-4dc8-8ce6-85bf56b42a45';
 const MS_TENANT    = 'common';
@@ -21,6 +21,7 @@ const MS_REDIRECT  = window.location.origin + '/auth/callback';
 interface RegisterViewProps {
   onRegister: () => void;  // no usado directamente — el OAuth maneja el flujo
   onGoLogin:  () => void;
+  onDecline:  () => void;  // "No acepto" en el consentimiento — vuelve al landing
   darkMode?:  boolean;
   setDarkMode?: (v: boolean) => void;
 }
@@ -36,9 +37,10 @@ function MicrosoftLogo({ size = 20 }: { size?: number }) {
   );
 }
 
-export function RegisterView({ onGoLogin, darkMode = true, setDarkMode }: RegisterViewProps) {
+export function RegisterView({ onGoLogin, onDecline, darkMode = true, setDarkMode }: RegisterViewProps) {
   const [loading, setLoading] = useState(false);
   const [legalModal, setLegalModal] = useState<LegalModalType>(null);
+  const [showConsent, setShowConsent] = useState(false);
 
   const cardBg   = darkMode ? '#1A1A2E' : '#FFFFFF';
   const textCol  = darkMode ? '#E0E0FF' : '#1A1829';
@@ -111,9 +113,9 @@ export function RegisterView({ onGoLogin, darkMode = true, setDarkMode }: Regist
             </p>
           </div>
 
-          {/* Microsoft button */}
+          {/* Microsoft button — al hacer clic se muestran los Términos y Privacidad para aceptar */}
           <motion.button
-            onClick={handleMicrosoft}
+            onClick={() => setShowConsent(true)}
             disabled={loading}
             whileHover={{ scale: 1.02, boxShadow: '0 8px 32px rgba(108,99,255,0.45)' }}
             whileTap={{ scale: 0.97 }}
@@ -142,16 +144,14 @@ export function RegisterView({ onGoLogin, darkMode = true, setDarkMode }: Regist
             Iniciar sesión
           </button>
 
-          {/* Legal footer */}
-          <p className="text-center mt-6" style={{ fontSize: '0.7rem', color: '#555', lineHeight: 1.5 }}>
-            Al continuar aceptas nuestros{' '}
-            <button onClick={() => setLegalModal('terminos')} style={{ color: '#6C63FF', background: 'none', border: 'none', cursor: 'pointer' }} className="hover:underline">Términos de uso</button>
-            {' '}y{' '}
-            <button onClick={() => setLegalModal('privacidad')} style={{ color: '#6C63FF', background: 'none', border: 'none', cursor: 'pointer' }} className="hover:underline">Política de privacidad</button>
-          </p>
         </div>
       </motion.div>
       <LegalModals open={legalModal} darkMode={darkMode} onClose={() => setLegalModal(null)} />
+      {showConsent && (
+        <RegisterConsentModal darkMode={darkMode}
+          onAccept={() => { setShowConsent(false); handleMicrosoft(); }}
+          onDecline={() => { setShowConsent(false); onDecline(); }} />
+      )}
     </div>
   );
 }

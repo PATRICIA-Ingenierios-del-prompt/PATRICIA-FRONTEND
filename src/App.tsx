@@ -1207,7 +1207,7 @@ function AppCore() {
   if (authState === 'loginform')
     return <LoginView onLogin={() => handleLoginSuccess(false)} onGoRegister={() => setAuthState('register')} darkMode={darkMode} setDarkMode={setDarkMode} />;
   if (authState === 'register')
-    return <RegisterView onRegister={() => handleLoginSuccess(true)} onGoLogin={() => setAuthState('loginform')} darkMode={darkMode} setDarkMode={setDarkMode} />;
+    return <RegisterView onRegister={() => handleLoginSuccess(true)} onGoLogin={() => setAuthState('loginform')} onDecline={() => setAuthState('login')} darkMode={darkMode} setDarkMode={setDarkMode} />;
   if (authState === 'onboarding')
     return (
       <OnboardingView

@@ -360,12 +360,6 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
                 Registrarse
               </button>
             </p>
-            <p className="text-center mt-3" style={{ fontSize: '0.7rem', color: '#555', lineHeight: 1.5 }}>
-              Al continuar aceptas nuestros{' '}
-              <button onClick={() => setLegalModal('terminos')} style={{ color: '#6C63FF', background: 'none', border: 'none', cursor: 'pointer' }} className="hover:underline">Términos de uso</button>
-              {' '}y{' '}
-              <button onClick={() => setLegalModal('privacidad')} style={{ color: '#6C63FF', background: 'none', border: 'none', cursor: 'pointer' }} className="hover:underline">Política de privacidad</button>
-            </p>
           </div>
         </div>
       </motion.div>
