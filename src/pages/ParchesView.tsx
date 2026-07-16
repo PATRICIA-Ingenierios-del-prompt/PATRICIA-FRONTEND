@@ -1238,6 +1238,13 @@ const realLeaveVoice = () => {
             {/* ── DOCUMENTOS (links) ── */}
             {activeTab==='archivos' && (() => {
               const sharedLinks = rtMessages.filter((m: any) => m.fileUrl || m.type === 'FILE' || m.type === 'IMAGE');
+              // Si al link le falta el protocolo (http/https), el navegador lo trata como
+              // ruta relativa dentro de la propia app y termina redirigiendo al home.
+              const normalizeUrl = (raw: string) => {
+                const u = (raw || '').trim();
+                if (!u) return u;
+                return /^https?:\/\//i.test(u) ? u : `https://${u}`;
+              };
               const iconForUrl = (url: string) => {
                 if (/youtube|youtu\.be/i.test(url)) return '🎬';
                 if (/drive\.google|docs\.google/i.test(url)) return '📄';
@@ -1287,7 +1294,7 @@ const realLeaveVoice = () => {
                       <button onClick={() => {
                         if (!shareLinkUrl.trim() || !chatId) return;
                         const name = shareLinkName.trim() || shareLinkUrl.trim();
-                        socketRef.current?.sendMessage(chatId, name, 'FILE', shareLinkUrl.trim());
+                        socketRef.current?.sendMessage(chatId, name, 'FILE', normalizeUrl(shareLinkUrl));
                         setShowShareLink(false); setShareLinkUrl(''); setShareLinkName('');
                         addToast({ type: 'info', title: 'Link compartido', message: `"${name}" se compartió en el chat` });
                       }}
@@ -1310,8 +1317,9 @@ const realLeaveVoice = () => {
                 ) : (
                 <div className="space-y-3">
                   {sharedLinks.map((lnk: any, i: number) => {
-                    const url = lnk.fileUrl || lnk.content || '';
-                    const name = lnk.type === 'FILE' ? (lnk.content || url) : url;
+                    const rawUrl = lnk.fileUrl || lnk.content || '';
+                    const url = normalizeUrl(rawUrl);
+                    const name = lnk.type === 'FILE' ? (lnk.content || rawUrl) : rawUrl;
                     const color = colorForUrl(url);
                     return (
                     <motion.div key={lnk.id ?? i}

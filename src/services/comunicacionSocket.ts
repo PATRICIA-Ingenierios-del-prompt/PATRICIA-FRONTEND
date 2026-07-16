@@ -116,8 +116,11 @@ export class ComunicacionSocket {
     };
   }
 
-  sendMessage(chatId: string, content: string, type = 'TEXT'): void {
-    this.client.publish({ destination: `/app/chat.send/${chatId}`, body: JSON.stringify({ content, type }) });
+  sendMessage(chatId: string, content: string, type = 'TEXT', fileUrl?: string): void {
+    this.client.publish({
+      destination: `/app/chat.send/${chatId}`,
+      body: JSON.stringify({ content, type, fileUrl }),
+    });
   }
 
   markRead(chatId: string): void {
