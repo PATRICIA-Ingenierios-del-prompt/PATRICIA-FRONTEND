@@ -915,8 +915,6 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
 }) {
   const t = useTheme();
   const [notifToggles, setNotifToggles] = useState({ matches: true, parches: true, eventos: false });
-  const [privacy, setPrivacy] = useState('publico');
-  const [incognito, setIncognito] = useState(false);
   const [legalModal, setLegalModal] = useState<LegalModalType>(null);
 
   const Toggle = ({ on, onToggle }: { on: boolean; onToggle: () => void }) => (
@@ -934,7 +932,6 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
       <div className="flex gap-1 mb-5 p-1 rounded-2xl border xl:hidden overflow-x-auto"
         style={{ background: t.cardBg, borderColor: t.cardBorder }}>
         {[
-          { id: 'privacidad', label: 'Privacidad' },
           { id: 'notificaciones', label: 'Notifs' },
           { id: 'mas', label: 'Más' },
         ].map(s => (
@@ -995,32 +992,6 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
                 <Toggle on={notifToggles[item.key]} onToggle={() => setNotifToggles(prev => ({ ...prev, [item.key]: !prev[item.key] }))} />
               </div>
             ))}
-          </div>
-
-          {/* Privacidad */}
-          <div className="rounded-2xl border overflow-hidden" style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
-            <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: 'rgba(108,99,255,0.1)', background: 'rgba(108,99,255,0.05)' }}>
-              <span style={{ fontWeight: 700, color: '#6C63FF', fontSize: '0.9rem' }}>Privacidad</span>
-            </div>
-            <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--p-input)' }}>
-              <p style={{ fontSize: '0.9rem', fontWeight: 500, marginBottom: '12px' }}>Visibilidad del perfil</p>
-              <div className="flex gap-3">
-                {[{ val: 'publico', label: 'Público' }, { val: 'privado', label: 'Privado' }].map(opt => (
-                  <button key={opt.val} onClick={() => setPrivacy(opt.val)}
-                    className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
-                    style={{ background: privacy === opt.val ? 'rgba(108,99,255,0.2)' : 'transparent', color: privacy === opt.val ? '#6C63FF' : 'var(--p-muted)', border: `1px solid ${privacy === opt.val ? '#6C63FF' : 'rgba(108,99,255,0.2)'}` }}>
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center justify-between px-5 py-4">
-              <div>
-                <p style={{ fontSize: '0.9rem', fontWeight: 500 }}>Modo incógnito en Matching</p>
-                <p style={{ fontSize: '0.75rem', color: 'var(--p-muted)', marginTop: '2px' }}>Navega sin que nadie te vea</p>
-              </div>
-              <Toggle on={incognito} onToggle={() => setIncognito(v => !v)} />
-            </div>
           </div>
 
           {/* Sobre U•link — al final */}
