@@ -1146,12 +1146,12 @@ const realLeaveVoice = () => {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b flex-shrink-0"
-          style={{ borderColor:'var(--p-divider)', background:'var(--p-card)' }}>
+        {/* Tabs — scrollable on mobile so they never overflow */}
+        <div className="flex border-b flex-shrink-0 overflow-x-auto"
+          style={{ borderColor:'var(--p-divider)', background:'var(--p-card)', scrollbarWidth:'none' }}>
           {TABS.map(tab=>(
             <button key={tab.id} onClick={()=>{ setActiveTab(tab.id); setGame(null); }}
-              className="flex items-center gap-1.5 px-4 py-2.5 text-sm border-b-2 transition-all"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-sm border-b-2 transition-all flex-shrink-0"
               style={{ borderColor: activeTab===tab.id ? '#6C63FF' : 'transparent', color: activeTab===tab.id ? '#6C63FF' : 'var(--p-muted)', background:'transparent' }}>
               <tab.icon size={13} />{tab.label}
             </button>

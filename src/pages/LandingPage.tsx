@@ -85,9 +85,9 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
       {/* ── NAVBAR ── */}
       <nav className="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-8 py-3.5"
         style={{ background: dark ? 'rgba(13,11,30,0.92)' : 'rgba(255,255,255,0.94)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${bord}` }}>
-        <div className="flex items-center gap-2.5">
-          <ImageWithFallback src={dark ? logoNuevoOscuroImg : logoNuevoClaroImg} alt="U•link" className="object-contain" style={{ height: 48 }} />
-          <span style={{ fontWeight: 900, fontSize: '1.6rem', letterSpacing: '-0.03em', background: 'linear-gradient(135deg,#6C63FF,#7FE7C4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>U•link</span>
+        {/* Logo — the image already contains the "U·link" text, so we only show it once */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <ImageWithFallback src={dark ? logoNuevoOscuroImg : logoNuevoClaroImg} alt="U•link" className="object-contain" style={{ height: 44 }} />
         </div>
         <div className="hidden md:flex items-center gap-7">
           {[{ label: 'Funcionalidades', id: 'funcionalidades' }, { label: '¿Cómo funciona?', id: 'como-funciona' }].map(({ label, id }) => (
@@ -97,21 +97,31 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button onClick={() => setDarkMode(!dark)}
             className="w-9 h-9 rounded-xl flex items-center justify-center border transition-all hover:opacity-80"
             style={{ background: 'transparent', borderColor: bord, color: dark ? '#FFB347' : '#6C63FF' }}>
             {dark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
+          {/* "Iniciar sesión" hidden on very small screens — accessible via "Ya tengo cuenta" in hero */}
           <button onClick={onLogin}
-            className="px-4 py-2 rounded-xl text-sm font-medium border transition-all hover:opacity-80"
+            className="hidden sm:flex px-4 py-2 rounded-xl text-sm font-medium border transition-all hover:opacity-80"
             style={{ borderColor: '#6C63FF', color: '#6C63FF', background: 'transparent' }}>
             Iniciar sesión
           </button>
+          {/* Compact login icon for mobile */}
+          <button onClick={onLogin}
+            className="sm:hidden w-9 h-9 rounded-xl flex items-center justify-center border transition-all hover:opacity-80"
+            title="Iniciar sesión"
+            style={{ borderColor: '#6C63FF', color: '#6C63FF', background: 'transparent', fontSize: '1rem' }}>
+            →
+          </button>
           <motion.button onClick={onRegister} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold"
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap"
             style={{ background: 'linear-gradient(135deg,#6C63FF,#8B7FFF)', color: 'white', boxShadow: '0 4px 14px rgba(108,99,255,0.35)' }}>
-            Registrarse <ArrowRight size={14} />
+            <span className="hidden sm:inline">Registrarse</span>
+            <span className="sm:hidden">Registro</span>
+            <ArrowRight size={14} />
           </motion.button>
         </div>
       </nav>
