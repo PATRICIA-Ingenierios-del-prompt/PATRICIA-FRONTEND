@@ -18,7 +18,7 @@ import { CATEGORY_META } from '../lib/maps';
 import type { EventCategory, EventMapResponse, EventResponse } from '../types/patricia';
 
 type ViewId = 'home' | 'matching' | 'parches' | 'campus' | 'eventos' | 'bienestar' | 'album' | 'notificaciones' | 'ranking' | 'ajustes' | 'perfil';
-interface HomeViewProps { onNavigate: (v: ViewId) => void; }
+interface HomeViewProps { onNavigate: (v: ViewId) => void; profileFoto?: string; }
 
 /** Vibra id → categoría real del backend de Eventos, para contar eventos de verdad. */
 const VIBRA_CATEGORY: Record<string, EventCategory> = {
@@ -247,7 +247,7 @@ function FeedSection({ events, loading }: { events: LiveEvent[]; loading: boolea
   );
 }
 
-export function HomeView({ onNavigate }: HomeViewProps) {
+export function HomeView({ onNavigate, profileFoto }: HomeViewProps) {
   const t = useTheme();
   const greeting = getGreeting();
   const { userName, userEmail, userId } = useAuth();
@@ -349,9 +349,11 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             <div className="flex items-center gap-4">
               {/* Avatar */}
               <div className="relative flex-shrink-0">
-                <div className="w-16 h-16 rounded-full flex items-center justify-center border-2"
+                <div className="w-16 h-16 rounded-full flex items-center justify-center border-2 overflow-hidden"
                   style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)', borderColor: 'rgba(108,99,255,0.4)', fontSize: '1.3rem', fontWeight: 800, color: 'white' }}>
-                  {initials}
+                  {profileFoto
+                    ? <img src={profileFoto} alt={firstName} className="w-full h-full object-cover" />
+                    : initials}
                 </div>
                 <div className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full"
                   style={{ background: '#6C63FF', color: 'white', fontSize: '0.58rem', fontWeight: 700 }}>12</div>

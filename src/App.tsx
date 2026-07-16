@@ -1079,6 +1079,7 @@ function AppCore() {
   const initials = displayName
     .split(' ').filter(Boolean).slice(0, 2)
     .map((w: string) => w[0].toUpperCase()).join('');
+  const [profileFoto, setProfileFoto] = useState<string | undefined>(undefined);
   const isAdmin = isAdminEmail(userEmail);
   const navItemsBase = NAV_ITEMS.map(item => item.id === 'matching' && pendingRequests > 0 ? { ...item, badge: pendingRequests } : item);
   const navItems = isAdmin ? [...navItemsBase, { id: 'admin' as ViewId, label: 'Admin', icon: ShieldCheck }] : navItemsBase;
@@ -1205,6 +1206,16 @@ function AppCore() {
     return () => { cancelled = true; };
   }, [authState, userId]);
 
+  // Foto de perfil real — se carga al entrar al app y se actualiza al cambiar.
+  useEffect(() => {
+    if (authState !== 'app' || !userId) return;
+    let cancelled = false;
+    userService.getPerfil(userId)
+      .then(p => { if (!cancelled) setProfileFoto(p.foto || undefined); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [authState, userId]);
+
   if (authState === 'callback')
     return (
       <MicrosoftCallback
@@ -1229,7 +1240,7 @@ function AppCore() {
 
   const renderView = () => {
     switch (activeView) {
-      case 'home':           return <HomeView onNavigate={goToAppView} />;
+      case 'home':           return <HomeView onNavigate={goToAppView} profileFoto={profileFoto} />;
       case 'parches':        return <ParchesView linkedEvents={linkedEvents} />;
       case 'chats':          return <ChatsView onNavigate={goToAppView} />;
       case 'eventos':        return <EventosView
@@ -1332,9 +1343,11 @@ function AppCore() {
                 <button onClick={() => goToAppView('perfil')}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left"
                   style={{ background: activeView === 'perfil' ? 'rgba(108,99,255,0.18)' : 'rgba(108,99,255,0.06)', border: '1px solid rgba(108,99,255,0.12)' }}>
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
                     style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)', fontSize: '0.65rem', fontWeight: 800, color: 'white' }}>
-                    {initials}
+                    {profileFoto
+                      ? <img src={profileFoto} alt={displayName} className="w-full h-full object-cover" />
+                      : initials}
                   </div>
                   <div className="text-left overflow-hidden">
                     <p style={{ fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: theme.text }}>{displayName}</p>
@@ -1429,9 +1442,11 @@ function AppCore() {
                 : <Moon size={17} style={{ color: '#6C63FF' }} />}
             </button>
             <button onClick={() => goToAppView('perfil')}
-              className="w-9 h-9 rounded-full flex items-center justify-center hover:scale-105 transition-all"
+              className="w-9 h-9 rounded-full flex items-center justify-center hover:scale-105 transition-all overflow-hidden"
               style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)', fontSize: '0.65rem', fontWeight: 800, color: 'white' }}>
-              {initials}
+              {profileFoto
+                ? <img src={profileFoto} alt={displayName} className="w-full h-full object-cover" />
+                : initials}
             </button>
           </div>
         </header>

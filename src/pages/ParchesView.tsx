@@ -4,7 +4,7 @@ import {
   Plus, Users, Lock, Globe, Mic, MicOff, Send, Smile,
   Settings, Search, X, MessageCircle, FileText,
   Layers, Gamepad2, Volume2, VolumeX, MoreHorizontal,
-  Phone, PhoneOff, Download, Video, VideoOff, Monitor, MonitorOff, ArrowLeft, ChevronRight, ChevronLeft,
+  Phone, PhoneOff, Download, ArrowLeft, ChevronRight, ChevronLeft,
   KeyRound, LogOut, Trash2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -80,16 +80,10 @@ const PARCHE_CATEGORIES = [
   { id:'deporte',    label:'Deporte',    emoji:'⚽', color:'#4ADE80', subcategories:[] },
 ];
 
-const INIT_MESSAGES = [
-  { id:1, userId:'VT', user:'Valentina T.',  text:'¿Alguien tiene los apuntes del tema 5 de integrales dobles?',    time:'10:23', reactions:[{emoji:'👍',count:3},{emoji:'❤️',count:1}], type:'text' },
-  { id:2, userId:'SM', user:'Santiago M.',   text:'¡Yo los tengo! Los subo en un momento 📄',                       time:'10:25', reactions:[], type:'text' },
-  { id:3, userId:'ME', user:'Tú',            text:'También tengo los ejercicios del parcial anterior si los necesitan', time:'10:26', reactions:[{emoji:'🙏',count:4}], type:'text' },
-  { id:4, userId:'SM', user:'Santiago M.',   text:'https://drive.google.com/file/apuntes-t5',                      time:'10:28', reactions:[], type:'link' },
-  { id:5, userId:'IR', user:'Isabela R.',    text:'¡Gracias Santiago! Justo lo que necesitaba 🙏',                  time:'10:30', reactions:[{emoji:'❤️',count:2}], type:'text' },
-  { id:6, userId:'ME', user:'Tú',            text:'¿Hacemos parche de estudio el miércoles en la biblio?',          time:'10:32', reactions:[{emoji:'✅',count:3},{emoji:'🔥',count:2}], type:'text' },
-  { id:7, userId:'VT', user:'Valentina T.',  text:'👍 Yo puedo a las 3pm',                                          time:'10:33', reactions:[], type:'text' },
-  { id:8, userId:'SM', user:'Santiago M.',   text:'¡Yo llego a las 4! Nos vemos ahí 🎯',                           time:'10:35', reactions:[], type:'text' },
-];
+const INIT_MESSAGES: {
+  id: number; userId: string; user: string; text: string;
+  time: string; reactions: { emoji: string; count: number }[]; type: string;
+}[] = [];
 
 /** Real parche member, hydrated from Parches (IDs) + Users (names/fotos). */
 interface UiMember {
@@ -438,8 +432,6 @@ export function ParchesView({ linkedEvents = [] }: {
   // para siempre al closure de chatId=null de la primera renderizacion,
   // descartando en silencio OFFER/ANSWER/ICE_CANDIDATE entrantes.
   const handleVoiceSignalRef = useRef<(signal: VoiceSignalPayload) => void>(() => {});
-  const [voiceCamOn, setVoiceCamOn] = useState(true);
-  const [voiceScreenShare, setVoiceScreenShare] = useState(false);
   const [memberMenuOpen, setMemberMenuOpen] = useState<string|null>(null);
   const [inviteModal, setInviteModal] = useState<{ token: string; expiresInSeconds: number } | null>(null);
   const [inviteCopied, setInviteCopied] = useState(false);
@@ -1468,11 +1460,6 @@ const realLeaveVoice = () => {
                               <MicOff size={10} color="white" />
                             </div>
                           )}
-                          {!voiceCamOn && (
-                            <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background:'#FF4D6A' }}>
-                              <VideoOff size={10} color="white" />
-                            </div>
-                          )}
                         </div>
                         <span className="absolute bottom-2 right-2 text-xs font-semibold px-2 py-0.5 rounded-full"
                           style={{ background:'rgba(0,0,0,0.5)', color:'white' }}>Tú</span>
@@ -1504,17 +1491,6 @@ const realLeaveVoice = () => {
                           <p style={{ fontSize:'0.75rem', color:'var(--p-muted)' }}>Esperando participantes...</p>
                         </div>
                       )}
-
-                      {/* Screen share tile */}
-                      {voiceScreenShare && (
-                        <div className="rounded-2xl flex items-center justify-center col-span-2 row-span-2"
-                          style={{ background:'var(--p-card)', border:'2px solid #7FE7C4', minHeight:120 }}>
-                          <div className="flex flex-col items-center gap-2">
-                            <Monitor size={32} style={{ color:'#7FE7C4' }} />
-                            <p style={{ fontSize:'0.8rem', color:'#7FE7C4', fontWeight:600 }}>Compartiendo pantalla</p>
-                          </div>
-                        </div>
-                      )}
                     </div>
 
                     {/* Discord-style call controls bar */}
@@ -1527,25 +1503,11 @@ const realLeaveVoice = () => {
                         {voiceMuted ? <MicOff size={20} color="white" /> : <Mic size={20} style={{ color:'#7FE7C4' }} />}
                       </button>
 
-                      {/* Camera */}
-                      <button onClick={()=>setVoiceCamOn(v=>!v)}
-                        className="flex flex-col items-center gap-1 w-14 h-14 rounded-2xl items-center justify-center transition-all hover:scale-105 flex"
-                        style={{ background: !voiceCamOn ? '#FF4D6A' : 'var(--p-divider)', border:`1px solid ${!voiceCamOn ? '#FF4D6A' : 'rgba(108,99,255,0.3)'}` }}>
-                        {voiceCamOn ? <Video size={20} style={{ color:'#7FE7C4' }} /> : <VideoOff size={20} color="white" />}
-                      </button>
-
-                      {/* Screen share */}
-                      <button onClick={()=>setVoiceScreenShare(s=>!s)}
-                        className="flex flex-col items-center gap-1 w-14 h-14 rounded-2xl items-center justify-center transition-all hover:scale-105 flex"
-                        style={{ background: voiceScreenShare ? 'rgba(127,231,196,0.2)' : 'var(--p-divider)', border:`1px solid ${voiceScreenShare ? '#7FE7C4' : 'rgba(108,99,255,0.3)'}` }}>
-                        {voiceScreenShare ? <Monitor size={20} style={{ color:'#7FE7C4' }} /> : <MonitorOff size={20} style={{ color:'var(--p-muted)' }} />}
-                      </button>
-
                       {/* Spacer */}
                       <div className="w-px h-8 mx-1" style={{ background:'rgba(108,99,255,0.2)' }} />
 
                       {/* Hang up */}
-                      <button onClick={() => { realLeaveVoice(); setVoiceScreenShare(false); setVoiceCamOn(true); }}
+                      <button onClick={() => { realLeaveVoice(); }}
                         className="flex items-center gap-2 px-6 h-14 rounded-2xl font-semibold transition-all hover:scale-105"
                         style={{ background:'#FF4D6A', color:'white' }}>
                         <PhoneOff size={20} />
