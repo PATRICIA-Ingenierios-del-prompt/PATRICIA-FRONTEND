@@ -340,9 +340,14 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
             <p style={{ fontSize:'0.72rem', fontWeight:800, color:'#6C63FF', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:8 }}>
               Hecho para la ECI
             </p>
-            <h2 style={{ fontWeight:900, fontSize:'clamp(1.6rem,3.2vw,2.4rem)', color:textH }}>
+            <h2 style={{ fontWeight:900, fontSize:'clamp(1.6rem,3.2vw,2.4rem)', color:textH, marginBottom:16 }}>
               Momentos reales de la comunidad
             </h2>
+            <a href="https://www.instagram.com/u_link_" target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all hover:opacity-85"
+              style={{ background: 'linear-gradient(135deg, rgba(255,107,157,0.15), rgba(108,99,255,0.15))', border: '1px solid rgba(255,107,157,0.35)', color: '#FF6B9D' }}>
+              📸 Síguenos en Instagram — sé el primero en enterarte de las novedades
+            </a>
           </motion.div>
 
           {/* ── Desktop bento ── */}

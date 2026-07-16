@@ -105,6 +105,20 @@ function ProgressBar({ step, total, dark }: { step: number; total: number; dark:
   );
 }
 
+const MIN_AGE = 15;
+const MAX_AGE = 90;
+
+function computeAge(fechaNacimiento: string): number | null {
+  if (!fechaNacimiento) return null;
+  const birth = new Date(fechaNacimiento);
+  if (isNaN(birth.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const m = now.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+  return age;
+}
+
 // ── Step 1: Datos Básicos ──────────────────────────────────────────────────
 function StepDatosBasicos({ data, setData, onNext, dark }: {
   data: FormData; setData: (fn: (d: FormData) => FormData) => void;
@@ -203,7 +217,9 @@ function StepPerfil({ data, setData, onNext, onBack, dark, userId }: {
   const idleBg  = dark ? 'rgba(108,99,255,0.05)' : '#F5F3FF';
   const idleBd  = dark ? 'rgba(108,99,255,0.2)' : 'rgba(108,99,255,0.25)';
   const selBg   = dark ? 'rgba(108,99,255,0.18)' : 'rgba(108,99,255,0.1)';
-  const canContinue = !!data.carrera && !!data.semestre;
+  const age = computeAge(data.fechaNacimiento);
+  const ageInRange = age === null || (age >= MIN_AGE && age <= MAX_AGE);
+  const canContinue = !!data.carrera && !!data.semestre && !!data.fechaNacimiento && ageInRange;
 
   return (
     <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}
@@ -261,11 +277,17 @@ function StepPerfil({ data, setData, onNext, onBack, dark, userId }: {
 
       {/* ── Fecha nacimiento ── */}
       <div>
-        <label style={labelStyle(dark)}>Fecha de nacimiento <span style={{ color: muted, fontWeight: 400, fontSize: '0.75rem' }}>(opcional)</span></label>
+        <label style={labelStyle(dark)}>Fecha de nacimiento *</label>
         <input type="date" value={data.fechaNacimiento} onChange={e => set('fechaNacimiento', e.target.value)}
           onFocus={() => setFocused('fecha')} onBlur={() => setFocused(null)}
-          style={inputStyle(focused === 'fecha', dark)}
+          max={new Date().toISOString().slice(0, 10)}
+          style={inputStyle(focused === 'fecha', dark, !ageInRange)}
           className={dark ? '[color-scheme:dark]' : '[color-scheme:light]'} />
+        {!ageInRange && (
+          <p style={{ fontSize: '0.75rem', color: '#FF4757', marginTop: '6px', lineHeight: 1.4 }}>
+            No cumple con el rango de edad ({MIN_AGE}-{MAX_AGE} años).
+          </p>
+        )}
       </div>
 
       {/* ── Género ── */}
@@ -411,7 +433,7 @@ export function OnboardingView({ onComplete, darkMode }: OnboardingViewProps) {
         carrera:          formData.carrera,
         ...(formData.segundaCarrera ? { segundaCarrera: formData.segundaCarrera } : {}),
         semestre:         parseInt(formData.semestre, 10),
-        ...(formData.fechaNacimiento ? { fechaNacimiento: formData.fechaNacimiento } : {}),
+        fechaNacimiento:  formData.fechaNacimiento,
         ...(formData.genero ? { genero: formData.genero } : {}),
         // La foto ya fue subida y validada en StepPerfil vía subirFotoPerfil.
         // Solo la reenviamos si es un dataUrl crudo (sin userId durante la subida).
