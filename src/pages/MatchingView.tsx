@@ -184,17 +184,12 @@ function ProfileModal({ person, onClose, onAccept, onReject, showActions }: {
 // una simulación local hasta que se conecte ese servicio.
 function ChatModal({ person, onClose }: { person: { name: string; avatar: string; gradient: string; foto?: string }; onClose: () => void }) {
   const t = useTheme();
-  const [msgs, setMsgs] = useState<ChatMsg[]>([
-    { id: 1, from: 'them', text: `¡Hola! Acabo de hacer match contigo 😊`, time: 'ahora' },
-  ]);
+  const [msgs, setMsgs] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
   const send = () => {
     if (!input.trim()) return;
     setMsgs(p => [...p, { id: p.length + 1, from: 'me', text: input, time: 'ahora' }]);
     setInput('');
-    setTimeout(() => {
-      setMsgs(p => [...p, { id: p.length + 1, from: 'them', text: '¡Genial! ¿Hacemos un parche de estudio esta semana? 📚', time: 'ahora' }]);
-    }, 1200);
   };
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
