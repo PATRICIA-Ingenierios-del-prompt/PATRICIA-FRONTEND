@@ -141,7 +141,6 @@ export function BienestarView() {
   const [msgs, setMsgs] = useState(INIT_MSGS);
   const [msg, setMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedEmocion, setSelectedEmocion] = useState<number | null>(null);
   const [playingSound, setPlayingSound] = useState<number | null>(null);
   const [volume, setVolume] = useState(70);
   const [muted, setMuted] = useState(false);
@@ -250,28 +249,6 @@ export function BienestarView() {
                 border: `1px solid ${tab === t.id ? '#6C63FF' : 'var(--p-divider)'}`,
               }}>
               {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Check-in diario */}
-      <div className="rounded-2xl p-4 border mb-5 flex items-center gap-4"
-        style={{ background: 'linear-gradient(135deg, rgba(108,99,255,0.08), rgba(127,231,196,0.04))', borderColor: 'var(--p-border)' }}>
-        <div>
-          <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>¿Cómo te sientes hoy?</p>
-          <p style={{ fontSize: '0.75rem', color: t.textMuted }}>
-            Check-in diario{computeStreak(diaryEntries) > 0 ? ` · Racha: ${computeStreak(diaryEntries)} día${computeStreak(diaryEntries) === 1 ? '' : 's'} 🔥` : ''}
-          </p>
-        </div>
-        <div className="flex gap-4 ml-auto">
-          {EMOCIONES.map(em => (
-            <button key={em.value} onClick={() => setSelectedEmocion(em.value)}
-              className="flex flex-col items-center gap-1 transition-all hover:scale-110"
-              style={{ opacity: selectedEmocion !== null && selectedEmocion !== em.value ? 0.4 : 1 }}>
-              <span style={{ fontSize: '1.6rem' }}>{em.emoji}</span>
-              <span style={{ fontSize: '0.6rem', color: selectedEmocion === em.value ? em.color : 'var(--p-muted)', fontWeight: selectedEmocion === em.value ? 700 : 400 }}>{em.label}</span>
-              {selectedEmocion === em.value && <div className="w-1.5 h-1.5 rounded-full" style={{ background: em.color }} />}
             </button>
           ))}
         </div>

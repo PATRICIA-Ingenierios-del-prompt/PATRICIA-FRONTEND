@@ -330,7 +330,7 @@ export function useParquesGame() {
   }, [gameState]);
 
   const playerNames = useMemo(
-    () => gameState?.players.map(p => p.name) ?? ['Tú', 'Felipe', 'Sofía', 'Andrés'],
+    () => gameState?.players.map(p => p.name) ?? ['Tú', 'Jugador 2', 'Jugador 3', 'Jugador 4'],
     [gameState]
   );
 

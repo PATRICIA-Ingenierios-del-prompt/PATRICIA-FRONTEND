@@ -1066,6 +1066,7 @@ function AppCore() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pendingRequests, setPendingRequests] = useState(0);
+  const [sidebarXp, setSidebarXp] = useState<number | null>(null);
   const [darkMode, setDarkMode] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
@@ -1193,6 +1194,16 @@ function AppCore() {
       .catch(() => { if (!cancelled) setPendingRequests(0); });
     return () => { cancelled = true; };
   }, [authState]);
+
+  // XP real del usuario — alimenta la pastilla de usuario en el sidebar.
+  useEffect(() => {
+    if (authState !== 'app' || !userId) return;
+    let cancelled = false;
+    logrosService.getLogros(userId)
+      .then(data => { if (!cancelled) setSidebarXp(data.xpTotal); })
+      .catch(() => { if (!cancelled) setSidebarXp(null); });
+    return () => { cancelled = true; };
+  }, [authState, userId]);
 
   if (authState === 'callback')
     return (
@@ -1326,10 +1337,12 @@ function AppCore() {
                   </div>
                   <div className="text-left overflow-hidden">
                     <p style={{ fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: theme.text }}>{displayName}</p>
-                    <div className="flex items-center gap-1">
-                      <Zap size={9} style={{ color: '#FFB347' }} />
-                      <span style={{ fontSize: '0.62rem', color: '#FFB347' }}>Nv. 12 · 2,340 XP</span>
-                    </div>
+                    {sidebarXp !== null && (
+                      <div className="flex items-center gap-1">
+                        <Zap size={9} style={{ color: '#FFB347' }} />
+                        <span style={{ fontSize: '0.62rem', color: '#FFB347' }}>{sidebarXp.toLocaleString()} XP</span>
+                      </div>
+                    )}
                   </div>
                 </button>
               </div>
