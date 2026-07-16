@@ -25,6 +25,12 @@ export const authService = {
     return data;
   },
 
+  /** POST /auth/login/jurado — email + password login for external evaluators (no institutional domain, no Microsoft) */
+  async loginJurado(email: string, password: string): Promise<TokenResponse> {
+    const { data } = await apiClient.post<TokenResponse>('/auth/login/jurado', { email, password });
+    return data;
+  },
+
   /** POST /auth/refresh — rotates both tokens */
   async refresh(refreshToken: string): Promise<TokenResponse> {
     const { data } = await apiClient.post<TokenResponse>('/auth/refresh', { refreshToken });
