@@ -83,6 +83,7 @@ export default defineConfig(({ mode }) => {
     },
   },
   '/api/events':    { target: gatewayUrl, changeOrigin: true },
+  '/api/bienestar': { target: gatewayUrl, changeOrigin: true },
   '/api/locations': { target: gatewayUrl, changeOrigin: true },
   '/api/boards':    { target: gatewayUrl, changeOrigin: true },
   // Comunicación MS directo

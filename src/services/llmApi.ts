@@ -1,10 +1,14 @@
 /**
  * llmApi.ts
- * Servicio para comunicarse con el LLM Backend (Spring Boot + Groq).
- * Base URL: http://localhost:8080/api
+ * Servicio para comunicarse con el Wellbeing MS (LLM Backend, Spring Boot + Groq).
+ *
+ * Rutas: /api/bienestar/** — via apiClient (no fetch crudo): el Gateway exige
+ * el Bearer JWT en todo /api/* y apiClient lo inyecta + maneja el refresh.
+ * El Gateway rutea /api/bienestar/** al MS de wellbeing (RouteConfig).
  */
+import { apiClient } from './apiClient';
 
-const BASE_URL = 'api';
+const BASE = '/api/bienestar';
 
 /**
  * Envía un mensaje al chatbot y devuelve la respuesta del LLM.
@@ -12,19 +16,8 @@ const BASE_URL = 'api';
  * @returns        Respuesta de texto del LLM
  */
 export async function sendChatMessage(message: string): Promise<string> {
-  const res = await fetch(`${BASE_URL}/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error ?? `Error ${res.status} al contactar el servidor.`);
-  }
-
-  const data = await res.json();
-  return data.response as string;
+  const { data } = await apiClient.post<{ response: string }>(`${BASE}/chat`, { message });
+  return data.response;
 }
 
 /**
@@ -34,19 +27,8 @@ export async function sendChatMessage(message: string): Promise<string> {
  * @returns        Consejo generado por el LLM
  */
 export async function sendDiaryEntry(mood: string, content: string): Promise<string> {
-  const res = await fetch(`${BASE_URL}/diary`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mood, content }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error ?? `Error ${res.status} al contactar el servidor.`);
-  }
-
-  const data = await res.json();
-  return data.response as string;
+  const { data } = await apiClient.post<{ response: string }>(`${BASE}/diary`, { mood, content });
+  return data.response;
 }
 
 /**
@@ -55,8 +37,8 @@ export async function sendDiaryEntry(mood: string, content: string): Promise<str
  */
 export async function checkBackendHealth(): Promise<boolean> {
   try {
-    const res = await fetch(`${BASE_URL}/health`, { signal: AbortSignal.timeout(3000) });
-    return res.ok;
+    const res = await apiClient.get(`${BASE}/health`, { timeout: 3000 });
+    return res.status >= 200 && res.status < 300;
   } catch {
     return false;
   }
