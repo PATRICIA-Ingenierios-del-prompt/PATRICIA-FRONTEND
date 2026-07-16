@@ -265,7 +265,7 @@ function CollabCanvas({ canvasId, meId, names }: { canvasId: string | null; meId
         <button onClick={() => setTool(t => t === 'eraser' ? 'pen' : 'eraser')}
           className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex-shrink-0"
           style={{ background: tool === 'eraser' ? 'rgba(108,99,255,0.28)' : 'rgba(108,99,255,0.1)', color: tool === 'eraser' ? '#A89BFF' : 'var(--p-muted)' }}>
-          {tool === 'eraser' ? '⬜ Borrador' : '✏️ Pluma'}
+          {tool === 'eraser' ? 'Borrador' : 'Lápiz'}
         </button>
         {/* Size slider */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
