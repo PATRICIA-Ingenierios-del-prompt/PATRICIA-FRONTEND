@@ -150,12 +150,14 @@ export function BienestarView() {
   const [breathActive, setBreathActive] = useState(false);
   const [breathPhase, setBreathPhase] = useState(0);
   const [breathCycles, setBreathCycles] = useState(0);
+  const [breathSecondsLeft, setBreathSecondsLeft] = useState(0);
   const [activePrompt, setActivePrompt] = useState(0);
   const [diaryEntries, setDiaryEntries] = useState<DiaryEntry[]>(() => loadDiaryEntries());
   const todayIso = new Date().toISOString().slice(0, 10);
   const savedToday = diaryEntries.some(e => e.isoDate === todayIso);
   const [diaryError, setDiaryError] = useState<string | null>(null);
   const breathRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const breathTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioRef  = useRef<HTMLAudioElement | null>(null);
 
   const toggleSound = (id: number, src: string) => {
@@ -205,12 +207,16 @@ export function BienestarView() {
     setBreathPhase(0);
     setBreathCycles(0);
     let phase = 0;
-    let cycles = 0;
     const run = () => {
       const d = breathMode.phases[phase].duration;
+      setBreathSecondsLeft(Math.round(d / 1000));
+      if (breathTickRef.current) clearInterval(breathTickRef.current);
+      breathTickRef.current = setInterval(() => {
+        setBreathSecondsLeft(s => (s > 1 ? s - 1 : 0));
+      }, 1000);
       breathRef.current = setTimeout(() => {
         phase = (phase + 1) % breathMode.phases.length;
-        if (phase === 0) { cycles++; setBreathCycles(c => c + 1); }
+        if (phase === 0) setBreathCycles(c => c + 1);
         setBreathPhase(phase);
         run();
       }, d);
@@ -221,9 +227,13 @@ export function BienestarView() {
   const stopBreath = () => {
     setBreathActive(false);
     if (breathRef.current) clearTimeout(breathRef.current);
+    if (breathTickRef.current) clearInterval(breathTickRef.current);
   };
 
-  useEffect(() => () => { if (breathRef.current) clearTimeout(breathRef.current); }, []);
+  useEffect(() => () => {
+    if (breathRef.current) clearTimeout(breathRef.current);
+    if (breathTickRef.current) clearInterval(breathTickRef.current);
+  }, []);
   useEffect(() => () => { audioRef.current?.pause(); }, []);
 
   const phaseInfo = breathMode.phases[breathPhase];
@@ -726,7 +736,7 @@ export function BienestarView() {
                   initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                   className="absolute -bottom-10 left-0 right-0 text-center">
                   <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#6C63FF', letterSpacing: '0.04em' }}>
-                    {phaseInfo?.label}...
+                    {phaseInfo?.label}… {breathSecondsLeft}s
                   </span>
                 </motion.div>
               )}
@@ -748,8 +758,8 @@ export function BienestarView() {
                 </div>
                 <div className="w-px h-10" style={{ background: 'rgba(108,99,255,0.2)' }} />
                 <div className="text-center">
-                  <p style={{ fontSize: '0.7rem', color: 'var(--p-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Duración</p>
-                  <p style={{ fontSize: '1rem', fontWeight: 700, color: '#FFB347' }}>{(phaseInfo?.duration || 0) / 1000}s</p>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--p-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Tiempo</p>
+                  <p style={{ fontSize: '1rem', fontWeight: 700, color: '#FFB347' }}>{breathSecondsLeft}s</p>
                 </div>
               </motion.div>
             )}
