@@ -576,7 +576,17 @@ export function ParchesView({ linkedEvents = [] }: {
   const leaveParche = async (p: UiParche) => {
     if (!meId) return;
     try { await parcheService.removeMember(p.id, meId); addToast({ type: 'info', title: 'Saliste del parche', message: p.name }); setSelectedParche(EMPTY_PARCHE); await Promise.all([loadMine(), loadPublicos()]); }
-    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo salir', message: friendlyError(e, 'No te pudimos sacar del parche. Intenta de nuevo.') }); }
+    catch (e: any) {
+      // 409 = CannotRemoveOwner: el dueño no puede abandonar su propio parche.
+      const status = e?.response?.status;
+      addToast({
+        type: 'reporte',
+        title: status === 409 ? 'El dueño no puede salirse' : 'No se pudo salir',
+        message: status === 409
+          ? 'Eres quien creó este parche; no puede quedar sin dueño. Si ya no lo quieres, elimínalo.'
+          : friendlyError(e, 'No te pudimos sacar del parche. Intenta de nuevo.'),
+      });
+    }
   };
   const generateInvite = async (p: UiParche) => {
     setInviteLoading(true);
@@ -613,7 +623,16 @@ export function ParchesView({ linkedEvents = [] }: {
   };
   const deleteParcheHandler = async (p: UiParche) => {
     try { await parcheService.remove(p.id); addToast({ type: 'info', title: 'Parche eliminado', message: p.name }); setSelectedParche(EMPTY_PARCHE); await Promise.all([loadMine(), loadPublicos()]); }
-    catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo eliminar', message: friendlyError(e, 'No se pudo eliminar el parche. Intenta de nuevo.') }); }
+    catch (e: any) {
+      const status = e?.response?.status;
+      addToast({
+        type: 'reporte',
+        title: status === 403 ? 'Solo el dueño puede eliminar' : 'No se pudo eliminar',
+        message: status === 403
+          ? 'Este parche solo lo puede eliminar quien lo creó. Si quieres irte, usa "Salirse del parche".'
+          : friendlyError(e, 'No se pudo eliminar el parche. Intenta de nuevo.'),
+      });
+    }
   };
   const createParcheHandler = async () => {
     if (!createName.trim()) { setCreateError('Ponle un nombre al parche.'); return; }

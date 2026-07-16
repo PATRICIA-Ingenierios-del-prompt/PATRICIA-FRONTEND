@@ -1235,7 +1235,8 @@ function AppCore() {
       case 'eventos':        return <EventosView
                                 onTrackEvent={(eventId) => { setTrackEventId(eventId); goToAppView('ubicacion'); }}
                                 enrolledIds={enrolledIds}
-                                onEnroll={(e) => setEnrolledEvents(prev => prev.some(x => x.eventId === e.eventId) ? prev : [...prev, e])} />;
+                                onEnroll={(e) => setEnrolledEvents(prev => prev.some(x => x.eventId === e.eventId) ? prev : [...prev, e])}
+                                onLeave={(eventId) => setEnrolledEvents(prev => prev.filter(x => x.eventId !== eventId))} />;
       case 'ubicacion':      return <LocationView eventId={trackEventId} enrolledEvents={enrolledEvents} onConsumePreset={() => setTrackEventId(null)} />;
       case 'matching':       return <MatchingView />;
       case 'bienestar':      return <BienestarView />;

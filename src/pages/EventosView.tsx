@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { MapPin, Calendar, Clock, Users, Plus, Globe, Filter, ChevronRight, X, RefreshCw, Navigation } from 'lucide-react';
+import { MapPin, Calendar, Clock, Users, Plus, Globe, Filter, ChevronRight, X, RefreshCw, Navigation, LogOut, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 import { useTheme } from '../store/ThemeContext';
@@ -7,6 +7,7 @@ import { addToast } from '../components/ToastSystem';
 import { eventService } from '../services/eventService';
 import { parcheService } from '../services/parcheService';
 import { friendlyError } from '../lib/errorMessages';
+import { useAuth } from '../store/AuthContext';
 import type { EventCategory, EventMapResponse, EventResponse, ParcheSummaryResponse, UUID } from '../types/patricia';
 import {
   ALL_CATEGORIES, CATEGORY_META, DARK_MAP_STYLES, ECI_CENTER, GMAPS_LOADER_ID, GOOGLE_MAPS_KEY, pinSvg,
@@ -114,9 +115,10 @@ function EventSummaryCard({ event, enrolled, onMore, onEnroll, onTrack, onClose 
 }
 
 /* ─────────────── detail modal ─────────────── */
-function EventDetailModal({ event, detail, loading, enrolled, onClose, onEnroll, onTrack }: {
+function EventDetailModal({ event, detail, loading, enrolled, onClose, onEnroll, onTrack, onLeave, onDelete }: {
   event: UiEvent; detail: EventResponse | null; loading: boolean; enrolled: boolean;
   onClose: () => void; onEnroll: (id: UUID) => void; onTrack: (id: UUID) => void;
+  onLeave: (id: UUID) => void; onDelete: (id: UUID) => void;
 }) {
   const t = useTheme();
   const capacity = detail?.maxCapacity ?? event.capacity;
@@ -155,10 +157,19 @@ function EventDetailModal({ event, detail, loading, enrolled, onClose, onEnroll,
             <div className="h-2 rounded-full overflow-hidden" style={{ background: t.inputBg }}><div className="h-full rounded-full" style={{ width: `${Math.min(pct, 100)}%`, background: full ? '#FF4D6A' : `linear-gradient(90deg, ${event.color}, ${event.color}80)` }} /></div>
           </div>
           {enrolled ? (
-            <button onClick={() => onTrack(event.id)} className="w-full py-3.5 rounded-xl text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2" style={{ background: 'linear-gradient(135deg,#7FE7C4,#5BC8FF)', color: '#0a0a14' }}><Navigation size={16} /> Ver ubicación en vivo</button>
+            <>
+              <button onClick={() => onTrack(event.id)} className="w-full py-3.5 rounded-xl text-sm font-semibold hover:opacity-90 flex items-center justify-center gap-2" style={{ background: 'linear-gradient(135deg,#7FE7C4,#5BC8FF)', color: '#0a0a14' }}><Navigation size={16} /> Ver ubicación en vivo</button>
+              <button onClick={() => onLeave(event.id)} className="w-full mt-2.5 py-3 rounded-xl text-sm font-semibold hover:opacity-80 flex items-center justify-center gap-2 border" style={{ background: 'transparent', color: '#FF4D6A', borderColor: 'rgba(255,77,106,0.35)' }}><LogOut size={15} /> Salirme del evento</button>
+            </>
           ) : (
             <button onClick={() => onEnroll(event.id)} disabled={full} className="w-full py-3.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed" style={{ background: full ? 'rgba(255,77,106,0.1)' : `linear-gradient(135deg, ${event.color}, ${event.color}CC)`, color: full ? '#FF4D6A' : 'white' }}>{full ? 'Sin cupos disponibles' : '+ Inscribirse al evento'}</button>
           )}
+          {/* El back valida quién es el dueño (403 si no lo es) — el contrato
+              actual no expone ownerId, así que el botón se muestra siempre y
+              el error 403 se traduce a un toast claro. */}
+          <button onClick={() => onDelete(event.id)} className="w-full mt-2.5 py-2 rounded-xl text-xs hover:opacity-80 flex items-center justify-center gap-1.5" style={{ background: 'transparent', color: t.textMuted }}>
+            <Trash2 size={12} /> Eliminar evento <span style={{ fontSize: '0.6rem' }}>(solo el creador)</span>
+          </button>
         </div>
       </motion.div>
     </div>
@@ -276,12 +287,14 @@ function CreateEventModal({ onClose, onCreated }: { onClose: () => void; onCreat
 }
 
 /* ─────────────── main view ─────────────── */
-export function EventosView({ onTrackEvent, enrolledIds, onEnroll }: {
+export function EventosView({ onTrackEvent, enrolledIds, onEnroll, onLeave }: {
   onTrackEvent?: (eventId: UUID) => void;
   enrolledIds?: Set<UUID>;
   onEnroll?: (e: EnrolledEvent) => void;
+  onLeave?: (eventId: UUID) => void;
 }) {
   const t = useTheme();
+  const { userId: meId } = useAuth();
   const [raw, setRaw] = useState<EventMapResponse[]>([]);
   const [detailCache, setDetailCache] = useState<Map<UUID, EventResponse>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -345,6 +358,37 @@ export function EventosView({ onTrackEvent, enrolledIds, onEnroll }: {
   };
   const track = (id: UUID) => onTrackEvent ? onTrackEvent(id) : addToast({ type: 'info', title: 'Ubicación en vivo', message: 'Abre la vista de Ubicación.' });
 
+  const leaveEvent = async (id: UUID) => {
+    if (!meId) return;
+    try {
+      await eventService.removeParticipant(id, meId);
+      onLeave?.(id);
+      setRaw(prev => prev.map(e => e.eventId === id ? { ...e, spotsLeft: e.spotsLeft + 1 } : e));
+      setDetailId(null);
+      addToast({ type: 'info', title: 'Saliste del evento', message: 'Ya no estás inscrito.' });
+    } catch (e: any) {
+      addToast({ type: 'reporte', title: 'No se pudo salir', message: friendlyError(e, 'No te pudimos sacar del evento. Intenta de nuevo.') });
+    }
+  };
+
+  const deleteEventHandler = async (id: UUID) => {
+    try {
+      await eventService.remove(id);
+      setDetailId(null);
+      addToast({ type: 'info', title: 'Evento eliminado', message: 'El evento fue eliminado.' });
+      await load();
+    } catch (e: any) {
+      const status = e?.response?.status;
+      addToast({
+        type: 'reporte',
+        title: status === 403 ? 'Solo el creador puede eliminar' : 'No se pudo eliminar',
+        message: status === 403
+          ? 'Este evento solo lo puede eliminar quien lo creó.'
+          : friendlyError(e, 'No se pudo eliminar el evento. Intenta de nuevo.'),
+      });
+    }
+  };
+
   return (
     <div className="h-full overflow-y-auto pb-6">
       <div className="flex items-center justify-between mb-5">
@@ -395,7 +439,7 @@ export function EventosView({ onTrackEvent, enrolledIds, onEnroll }: {
       </AnimatePresence>
 
       <AnimatePresence>
-        {detailEvent && <EventDetailModal event={detailEvent} detail={detail} loading={detailLoading} enrolled={localEnrolled.has(detailEvent.id)} onClose={() => setDetailId(null)} onEnroll={enroll} onTrack={track} />}
+        {detailEvent && <EventDetailModal event={detailEvent} detail={detail} loading={detailLoading} enrolled={localEnrolled.has(detailEvent.id)} onClose={() => setDetailId(null)} onEnroll={enroll} onTrack={track} onLeave={leaveEvent} onDelete={deleteEventHandler} />}
       </AnimatePresence>
 
       {showCreate && <CreateEventModal onClose={() => setShowCreate(false)} onCreated={load} />}
