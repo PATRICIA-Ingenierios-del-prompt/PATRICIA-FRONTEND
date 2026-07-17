@@ -95,6 +95,14 @@ interface UiMember {
   mono: string;          // profile photo if set; otherwise a deterministic mono
 }
 
+/** Real parche member, hydrated from Parches (IDs) + Users (names/fotos). */
+interface UiMember {
+  userId: string;
+  name: string;          // "Nombre Apellidos" from Users MS, or a fallback label
+  isSelf: boolean;
+  gradient: string;      // deterministic per-user card background
+  mono: string;          // profile photo if set; otherwise a deterministic mono
+}
 // Card-art pools: each user gets a stable gradient/mono pair derived from
 // their UUID so the parqués-card look survives the move to real data.
 const MEMBER_GRADIENTS = [
@@ -111,6 +119,7 @@ function memberHash(userId: string): number {
   for (let i = 0; i < userId.length; i++) h = (h * 31 + userId.charCodeAt(i)) >>> 0;
   return h;
 }
+
 const QUICK_REACTIONS = ['👍','❤️','😂','🔥','🙏','✅','👏','😮'];
 
 // ── useBoard error surfacing in CollabCanvas ──
@@ -423,7 +432,7 @@ export function ParchesView({ linkedEvents = [] }: {
   const [showMembers, setShowMembers] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
-  const [reportMember, setReportMember] = useState<UiMember | null>(null);
+  const [reportMember, setReportMember] = useState<string|null>(null);
   const [viewMemberProfile, setViewMemberProfile] = useState<UiMember | null>(null);
   const [members, setMembers] = useState<UiMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
@@ -609,14 +618,7 @@ export function ParchesView({ linkedEvents = [] }: {
   };
   const generateInvite = async (p: UiParche) => {
     setInviteLoading(true);
-    try {
-      const r = await parcheService.createInvite({ parcheId: p.id });
-      // Never open the modal without a real token — an unexpected 2xx with an
-      // empty body would otherwise show an empty "code" popup.
-      if (!r?.token) throw Object.assign(new Error('empty invite token'), { response: { status: 403 } });
-      setInviteCopied(false);
-      setInviteModal({ token: r.token, expiresInSeconds: r.expiresInSeconds });
-    }
+    try { const r = await parcheService.createInvite({ parcheId: p.id }); setInviteCopied(false); setInviteModal({ token: r.token, expiresInSeconds: r.expiresInSeconds }); }
     catch (e: any) {
       // The backend is precise about WHY (403 owner-only; 409 full/public) —
       // surface that instead of a generic "try again" that would never work.
