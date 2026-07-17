@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { adminService } from '../services/adminService';
+import type { SupportTicketResponse, UUID } from '../types/patricia';
 
 export type SupportStatus = 'pendiente' | 'resuelto';
 
@@ -11,53 +13,69 @@ export interface SupportMessage {
   status: SupportStatus;
 }
 
-const MOCK_MESSAGES: SupportMessage[] = [
-  {
-    id: 'sup1',
-    name: 'Daniela Ospina',
-    email: 'daniela.ospina@mail.escuelaing.edu.co',
-    message: 'No me llega el código de verificación al correo, ¿qué puedo hacer?',
-    date: new Date(Date.now() - 1000 * 60 * 60 * 14).toISOString(),
-    status: 'pendiente',
-  },
-  {
-    id: 'sup2',
-    name: 'Felipe Martínez',
-    email: 'felipe.martinez@mail.escuelaing.edu.co',
-    message: '¿Cómo cambio mi carrera en el perfil? No encuentro la opción.',
-    date: new Date(Date.now() - 1000 * 60 * 60 * 50).toISOString(),
-    status: 'resuelto',
-  },
-];
+function mapTicket(t: SupportTicketResponse): SupportMessage {
+  return {
+    id: t.id,
+    name: t.name,
+    email: t.email,
+    message: t.message,
+    date: t.createdAt,
+    status: t.status === 'RESOLVED' ? 'resuelto' : 'pendiente',
+  };
+}
 
 interface SupportContextValue {
   messages: SupportMessage[];
-  addMessage: (msg: Omit<SupportMessage, 'id' | 'date' | 'status'>) => void;
-  resolveMessage: (id: string) => void;
+  loading: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
+  addMessage: (msg: { name: string; email: string; message: string }) => Promise<void>;
+  resolveMessage: (id: string) => Promise<void>;
 }
 
 const SupportContext = createContext<SupportContextValue>({
   messages: [],
-  addMessage: () => {},
-  resolveMessage: () => {},
+  loading: false,
+  error: null,
+  refresh: async () => {},
+  addMessage: async () => {},
+  resolveMessage: async () => {},
 });
 
 export function SupportProvider({ children }: { children: ReactNode }) {
-  const [messages, setMessages] = useState<SupportMessage[]>(MOCK_MESSAGES);
+  const [messages, setMessages] = useState<SupportMessage[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const addMessage = useCallback((msg: Omit<SupportMessage, 'id' | 'date' | 'status'>) => {
-    setMessages(prev => [
-      { ...msg, id: Math.random().toString(36).slice(2), date: new Date().toISOString(), status: 'pendiente' },
-      ...prev,
-    ]);
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const tickets = await adminService.getSupportTickets();
+      setMessages(tickets.map(mapTicket));
+    } catch (e: any) {
+      setError(e?.response?.data?.message || e?.message || 'Error cargando soporte');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const resolveMessage = useCallback((id: string) => {
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const addMessage = useCallback(async (msg: { name: string; email: string; message: string }) => {
+    await adminService.createSupportTicket(msg);
+    await refresh();
+  }, [refresh]);
+
+  const resolveMessage = useCallback(async (id: string) => {
+    await adminService.resolveSupportTicket(id as UUID);
     setMessages(prev => prev.map(m => (m.id === id ? { ...m, status: 'resuelto' } : m)));
   }, []);
 
   return (
-    <SupportContext.Provider value={{ messages, addMessage, resolveMessage }}>
+    <SupportContext.Provider value={{ messages, loading, error, refresh, addMessage, resolveMessage }}>
       {children}
     </SupportContext.Provider>
   );

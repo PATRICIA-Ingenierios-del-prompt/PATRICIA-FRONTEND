@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { adminService } from '../services/adminService';
+import type { ParcheReportResponse, ParcheReportType, UUID } from '../types/patricia';
 
 export type ReportCategory =
   | 'Comportamiento inapropiado'
@@ -19,73 +21,91 @@ export interface UserReport {
   status: ReportStatus;
 }
 
-const MOCK_REPORTS: UserReport[] = [
-  {
-    id: 'r1',
-    reportedUserName: 'Carlos Ruiz',
-    parcheName: 'Cálculo III',
-    category: 'Acoso o bullying',
-    description: 'Envía mensajes insistentes fuera del tema del parche a varias personas del grupo.',
-    date: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
-    status: 'pendiente',
-  },
-  {
-    id: 'r2',
-    reportedUserName: 'Andrés C.',
-    parcheName: 'Gamers ECI',
-    category: 'Spam o publicidad',
-    description: 'Comparte enlaces a su canal de Twitch repetidamente en el chat.',
-    date: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(),
-    status: 'pendiente',
-  },
-  {
-    id: 'r3',
-    reportedUserName: 'María González',
-    parcheName: 'Arte y Cultura',
-    category: 'Contenido ofensivo',
-    description: 'Subió una imagen inapropiada al lienzo colaborativo del parche.',
-    date: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
-    status: 'resuelto',
-  },
-  {
-    id: 'r4',
-    reportedUserName: 'Santiago Méndez',
-    parcheName: 'Música y Producción',
-    category: 'Comportamiento inapropiado',
-    description: 'Discusiones agresivas recurrentes durante las sesiones de voz.',
-    date: new Date(Date.now() - 1000 * 60 * 60 * 120).toISOString(),
-    status: 'pendiente',
-  },
-];
+const TYPE_LABELS: Record<ParcheReportType, ReportCategory> = {
+  SPAM: 'Spam o publicidad',
+  BAD_BEHAVIOUR: 'Comportamiento inapropiado',
+  BULLYING: 'Acoso o bullying',
+  OFFENSIVE_CONTENT: 'Contenido ofensivo',
+  OTHER: 'Otro',
+};
+
+function mapReport(r: ParcheReportResponse): UserReport {
+  return {
+    id: r.reportId,
+    reportedUserName: r.reportedUserName || 'Usuario desconocido',
+    parcheName: r.parcheName || 'Parche desconocido',
+    category: TYPE_LABELS[r.reportType] || 'Otro',
+    description: r.description,
+    date: r.createdAt,
+    status: r.status === 'RESOLVED' ? 'resuelto' : 'pendiente',
+  };
+}
 
 interface ReportsContextValue {
   reports: UserReport[];
-  addReport: (report: Omit<UserReport, 'id' | 'date' | 'status'>) => void;
-  resolveReport: (id: string) => void;
+  loading: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
+  addReport: (parcheId: UUID, reportedId: UUID, reportedUserName: string, parcheName: string, reportType: ParcheReportType, description: string) => Promise<void>;
+  resolveReport: (id: string) => Promise<void>;
 }
 
 const ReportsContext = createContext<ReportsContextValue>({
   reports: [],
-  addReport: () => {},
-  resolveReport: () => {},
+  loading: false,
+  error: null,
+  refresh: async () => {},
+  addReport: async () => {},
+  resolveReport: async () => {},
 });
 
 export function ReportsProvider({ children }: { children: ReactNode }) {
-  const [reports, setReports] = useState<UserReport[]>(MOCK_REPORTS);
+  const [reports, setReports] = useState<UserReport[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const addReport = useCallback((report: Omit<UserReport, 'id' | 'date' | 'status'>) => {
-    setReports(prev => [
-      { ...report, id: Math.random().toString(36).slice(2), date: new Date().toISOString(), status: 'pendiente' },
-      ...prev,
-    ]);
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const page = await adminService.getReports('PENDING', 0, 200);
+      setReports(page.content.map(mapReport));
+    } catch (e: any) {
+      setError(e?.response?.data?.message || e?.message || 'Error cargando reportes');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const resolveReport = useCallback((id: string) => {
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const addReport = useCallback(async (
+    parcheId: UUID,
+    reportedId: UUID,
+    reportedUserName: string,
+    parcheName: string,
+    reportType: ParcheReportType,
+    description: string,
+  ) => {
+    await adminService.createReport(parcheId, {
+      reportedId,
+      reportType,
+      description,
+      reportedUserName,
+      parcheName,
+    });
+    await refresh();
+  }, [refresh]);
+
+  const resolveReport = useCallback(async (id: string) => {
+    await adminService.resolveReport(id);
     setReports(prev => prev.map(r => (r.id === id ? { ...r, status: 'resuelto' } : r)));
   }, []);
 
   return (
-    <ReportsContext.Provider value={{ reports, addReport, resolveReport }}>
+    <ReportsContext.Provider value={{ reports, loading, error, refresh, addReport, resolveReport }}>
       {children}
     </ReportsContext.Provider>
   );

@@ -90,13 +90,21 @@ function AyudaContent({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState(userName ?? '');
   const [email, setEmail] = useState(userEmail ?? '');
   const [message, setMessage] = useState('');
-  const canSubmit = message.trim().length > 0;
+  const [submitting, setSubmitting] = useState(false);
+  const canSubmit = message.trim().length > 0 && !submitting;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit) return;
-    addMessage({ name: name.trim() || 'Anónimo', email: email.trim(), message: message.trim() });
-    addToast({ type: 'info', title: 'Mensaje enviado', message: 'Nuestro equipo te responderá pronto.' });
-    onClose();
+    setSubmitting(true);
+    try {
+      await addMessage({ name: name.trim() || 'Anónimo', email: email.trim(), message: message.trim() });
+      addToast({ type: 'info', title: 'Mensaje enviado', message: 'Nuestro equipo te responderá pronto.' });
+      onClose();
+    } catch {
+      addToast({ type: 'reporte', title: 'No se pudo enviar', message: 'Intenta de nuevo más tarde.' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const inputStyle: React.CSSProperties = {

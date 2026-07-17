@@ -95,6 +95,33 @@ export interface ParcheSummaryResponse {
 export interface CreateInviteRequest { parcheId: UUID; }
 export interface InviteTokenResponse { token: string; expiresInSeconds: number; }
 
+/* ── Reports (Parches) ── */
+export type ParcheReportType =
+  | 'SPAM' | 'BAD_BEHAVIOUR' | 'BULLYING' | 'OFFENSIVE_CONTENT' | 'OTHER';
+export type ReportStatus = 'PENDING' | 'RESOLVED';
+
+export interface CreateParcheReportRequest {
+  reportedId: UUID;
+  reportType: ParcheReportType;
+  description: string;
+  reportedUserName?: string;
+  parcheName?: string;
+}
+
+export interface ParcheReportResponse {
+  reportId: UUID;
+  parcheId: UUID;
+  creatorId: UUID;
+  reportedId: UUID;
+  reportType: ParcheReportType;
+  description: string;
+  reportedUserName: string;
+  parcheName: string;
+  status: ReportStatus;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
 /* ── Events ── */
 export type EventCategory = ParcheCategory; // same enum on the Events MS
 export type ReportType =
@@ -218,4 +245,35 @@ export interface DecisionResponse {
   match: MatchResponse | null;
 }
 
+/* ── Admin ── */
+export interface CarreraCount {
+  carrera: string;
+  count: number;
+}
 
+export interface RecentSignup {
+  id: UUID;
+  name: string;
+  carrera: string;
+  date: string;
+}
+
+export interface AdminDashboardResponse {
+  totalUsuarios: number;
+  carreraBreakdown: CarreraCount[];
+  recentSignups: RecentSignup[];
+}
+
+export interface AdminParcheStatsResponse {
+  totalParches: number;
+}
+
+export interface SupportTicketResponse {
+  id: UUID;
+  name: string;
+  email: string;
+  message: string;
+  status: 'PENDING' | 'RESOLVED';
+  createdAt: string;
+  resolvedAt: string | null;
+}

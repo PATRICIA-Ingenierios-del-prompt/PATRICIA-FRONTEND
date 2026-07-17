@@ -22,7 +22,7 @@ import { AuthProvider, useAuth } from './store/AuthContext';
 import { ReportsProvider } from './store/ReportsContext';
 import { SupportProvider } from './store/SupportContext';
 import { useNotifications } from './store/NotificationsContext';
-import { isAdminEmail } from './lib/admin';
+import { isAdmin } from './lib/admin';
 import { userService } from './services/userService';
 import { matchingService } from './services/matchingService';
 import { logrosService } from './services/logrosService';
@@ -953,15 +953,15 @@ function AppCore() {
   const isAppRoute = currentPath === '/app' || currentPath.startsWith('/app/');
 
   // Auth — name derived from JWT email claim (karol.estupinan-v@ → "Karol Estupinan")
-  const { userName, userEmail, userId } = useAuth();
+  const { userName, userEmail, userId, roles } = useAuth();
   const displayName = userName ?? userEmail ?? 'Usuario';
   const initials = displayName
     .split(' ').filter(Boolean).slice(0, 2)
     .map((w: string) => w[0].toUpperCase()).join('');
   const [profileFoto, setProfileFoto] = useState<string | undefined>(undefined);
-  const isAdmin = isAdminEmail(userEmail);
+  const admin = isAdmin(roles);
   const navItemsBase = NAV_ITEMS.map(item => item.id === 'matching' && pendingMatchCount > 0 ? { ...item, badge: pendingMatchCount } : item);
-  const navItems = isAdmin ? [...navItemsBase, { id: 'admin' as ViewId, label: 'Admin', icon: ShieldCheck }] : navItemsBase;
+  const navItems = admin ? [...navItemsBase, { id: 'admin' as ViewId, label: 'Admin', icon: ShieldCheck }] : navItemsBase;
 
   const setLandingTarget = (target: 'login' | 'register') => {
     setAuthState(target === 'login' ? 'loginform' : 'register');
@@ -984,7 +984,7 @@ function AppCore() {
     }
 
     const viewFromPath = getViewFromPath(currentPath);
-    if (viewFromPath === 'admin' && !isAdmin) {
+    if (viewFromPath === 'admin' && !admin) {
       navigate('/app/home', { replace: true });
       return;
     }
@@ -998,7 +998,7 @@ function AppCore() {
     }
 
     sessionStorage.setItem(LAST_APP_PATH_KEY, currentPath);
-  }, [authState, activeView, currentPath, isAppRoute, isAdmin, navigate]);
+  }, [authState, activeView, currentPath, isAppRoute, admin, navigate]);
 
   // If a previous session was force-logged-out (expired refresh token), explain why.
   useEffect(() => {
@@ -1143,7 +1143,7 @@ function AppCore() {
       case 'notificaciones': return <NotificationsPanel />;
       case 'album':          return <AlbumView />;
       case 'ajustes':        return <AjustesView onLogout={handleLogout} onEditProfile={handleEditProfile} visionMode={visionMode} setVisionMode={setVisionMode} dyslexiaMode={dyslexiaMode} setDyslexiaMode={(v) => { setDyslexiaMode(v); applyDyslexiaMode(v); }} />;
-      case 'admin':           return isAdmin ? <AdminView /> : <HomeView onNavigate={goToAppView} />;
+      case 'admin':           return admin ? <AdminView /> : <HomeView onNavigate={goToAppView} />;
       default:               return <HomeView onNavigate={goToAppView} />;
     }
   };
