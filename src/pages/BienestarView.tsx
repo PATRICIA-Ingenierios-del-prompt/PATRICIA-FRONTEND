@@ -144,8 +144,6 @@ export function BienestarView() {
   const [playingSound, setPlayingSound] = useState<number | null>(null);
   const [volume, setVolume] = useState(70);
   const [muted, setMuted] = useState(false);
-  const [diaryNote, setDiaryNote] = useState('');
-  const [diaryEmotion, setDiaryEmotion] = useState<string | null>(null);
   const [breathMode, setBreathMode] = useState(BREATHING_MODES[0]);
   const [breathActive, setBreathActive] = useState(false);
   const [breathPhase, setBreathPhase] = useState(0);
@@ -154,7 +152,13 @@ export function BienestarView() {
   const [activePrompt, setActivePrompt] = useState(0);
   const [diaryEntries, setDiaryEntries] = useState<DiaryEntry[]>(() => loadDiaryEntries());
   const todayIso = new Date().toISOString().slice(0, 10);
-  const savedToday = diaryEntries.some(e => e.isoDate === todayIso);
+  const todayEntry = diaryEntries.find(e => e.isoDate === todayIso) ?? null;
+  const savedToday = !!todayEntry;
+  // Precargamos lo que ya se guardó hoy — antes el textarea quedaba vacío pero
+  // el botón bloqueado, dando la sensación de que "ya escribiste algo" sin
+  // poder verlo ni editarlo.
+  const [diaryNote, setDiaryNote] = useState(() => todayEntry?.note ?? '');
+  const [diaryEmotion, setDiaryEmotion] = useState<string | null>(() => todayEntry?.emotion ?? null);
   const [diaryError, setDiaryError] = useState<string | null>(null);
   const breathRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const breathTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -480,20 +484,17 @@ export function BienestarView() {
                       saveDiaryEntries(next);
                       return next;
                     });
-                    setDiaryNote('');
-                    setDiaryEmotion(null);
                   }}
-                  disabled={savedToday}
-                  whileHover={!savedToday ? { scale: 1.03 } : {}}
-                  whileTap={!savedToday ? { scale: 0.97 } : {}}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={{ background: savedToday ? 'rgba(127,231,196,0.3)' : '#6C63FF', color: 'white', boxShadow: savedToday ? 'none' : '0 4px 14px rgba(108,99,255,0.35)' }}>
-                  {savedToday ? '✓ Guardado' : 'Guardar registro'}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                  style={{ background: '#6C63FF', color: 'white', boxShadow: '0 4px 14px rgba(108,99,255,0.35)' }}>
+                  {savedToday ? 'Actualizar registro' : 'Guardar registro'}
                 </motion.button>
               </div>
 
               <AnimatePresence>
-                {diaryError && !savedToday && (
+                {diaryError && (
                   <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                     className="mt-2 px-3 py-2.5 rounded-xl flex items-center gap-2"
                     style={{ background: 'rgba(255,77,106,0.08)', border: '1px solid rgba(255,77,106,0.25)' }}>
