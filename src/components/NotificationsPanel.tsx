@@ -1,56 +1,48 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Bell, X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useTheme } from '../store/ThemeContext';
 import { useNotifications, type NotificationItem } from '../store/NotificationsContext';
-import { matchingService } from '../services/matchingService';
 
 const notifEmoji: Record<string, string> = {
   match: '💜',
   chat: '💬',
   evento: '🎉',
+  parche: '👥',
   reporte: '⚠️',
   xp: '⚡',
   logro: '🏆',
   info: 'ℹ️',
 };
 
+function formatTime(iso: string) {
+  try {
+    const date = new Date(iso);
+    const now = new Date();
+    const diffMin = Math.floor((now.getTime() - date.getTime()) / 60000);
+    if (diffMin < 1) return 'Hace un momento';
+    if (diffMin < 60) return `Hace ${diffMin} min`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `Hace ${diffH} h`;
+    const diffD = Math.floor(diffH / 24);
+    if (diffD < 7) return `Hace ${diffD} d`;
+    return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+  } catch {
+    return iso;
+  }
+}
+
 export function NotificationsPanel() {
   const t = useTheme();
   const navigate = useNavigate();
-  const { notifications, unreadCount, addNotification, markAsRead, markAllAsRead, removeNotification, setPendingMatchCount } = useNotifications();
-  const [loading, setLoading] = useState(true);
+  const { notifications, unreadCount, refresh, loading, markAsRead, markAllAsRead, removeNotification } = useNotifications();
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    matchingService
-      .solicitudesRecibidas()
-      .then(ids => {
-        if (cancelled) return;
-        setPendingMatchCount(ids.length);
-        ids.forEach(id => {
-          addNotification({
-            id: `match-${id}`,
-            type: 'match',
-            text: 'Tienes una nueva solicitud de match esperando tu respuesta.',
-            payload: { matchUserId: id },
-          });
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setPendingMatchCount(0);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [addNotification, setPendingMatchCount]);
+    refresh();
+  }, [refresh]);
 
-  const handleClick = (n: NotificationItem) => {
-    markAsRead(n.id);
+  const handleClick = async (n: NotificationItem) => {
+    await markAsRead(n.id);
     if (n.payload?.chatUserId) {
       navigate('/app/chats', { state: { initialUserId: n.payload.chatUserId } });
       return;
@@ -72,10 +64,10 @@ export function NotificationsPanel() {
   return (
     <div className="h-full overflow-y-auto pb-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 style={{ fontWeight: 700, fontSize: '1.3rem', color: t.text }}>Notificaciones</h2>
+        <h2 style={{ fontWeight: 700, fontSize: '1.3rem', color: t.text }}>Notificaciones {unreadCount > 0 ? `(${unreadCount})` : ''}</h2>
         {notifications.length > 0 && (
           <button
-            onClick={markAllAsRead}
+            onClick={() => markAllAsRead()}
             className="text-sm hover:opacity-70"
             style={{ color: '#6C63FF' }}
           >
@@ -129,7 +121,7 @@ export function NotificationsPanel() {
                   {n.text}
                 </p>
                 <p style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '4px' }}>
-                  Hace {n.time}
+                  {formatTime(n.time)}
                 </p>
               </div>
               <button
