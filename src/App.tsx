@@ -107,9 +107,10 @@ const NOTIFICATIONS_DATA = [
 
 const notifEmoji: Record<string, string> = { match: '💜', chat: '💬', evento: '🎉', reporte: '⚠️', xp: '⚡', logro: '🏆', info: 'ℹ️' };
 
-function NotificationsView() {
+type NotifItem = typeof NOTIFICATIONS_DATA[number];
+
+function NotificationsView({ notifs, setNotifs }: { notifs: NotifItem[]; setNotifs: React.Dispatch<React.SetStateAction<NotifItem[]>> }) {
   const t = useTheme();
-  const [notifs, setNotifs] = useState(NOTIFICATIONS_DATA);
   return (
     <div className="h-full overflow-y-auto pb-6">
       <div className="flex items-center justify-between mb-6">
@@ -979,6 +980,7 @@ function AppCore() {
   return 'login';
 });
   const [activeView, setActiveView] = useState<ViewId>('home');
+  const [notifs, setNotifs] = useState(NOTIFICATIONS_DATA);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1136,7 +1138,7 @@ function AppCore() {
       case 'matching':       return <MatchingView />;
       case 'bienestar':      return <BienestarView />;
       case 'perfil':         return <ProfileView />;
-      case 'notificaciones': return <NotificationsView />;
+      case 'notificaciones': return <NotificationsView notifs={notifs} setNotifs={setNotifs} />;
       case 'album':          return <AlbumView />;
       case 'ajustes':        return <AjustesView onLogout={handleLogout} onEditProfile={handleEditProfile} visionMode={visionMode} setVisionMode={setVisionMode} dyslexiaMode={dyslexiaMode} setDyslexiaMode={(v) => { setDyslexiaMode(v); applyDyslexiaMode(v); }} />;
       case 'admin':           return isAdmin ? <AdminView /> : <HomeView onNavigate={goToAppView} />;
