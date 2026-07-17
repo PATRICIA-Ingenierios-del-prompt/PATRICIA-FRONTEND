@@ -840,6 +840,9 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
   const { userId } = useAuth();
   const [notifToggles, setNotifToggles] = useState({ matches: true, parches: true, eventos: false });
   const [legalModal, setLegalModal] = useState<LegalModalType>(null);
+  const [language, setLanguage] = useState<'es' | 'en' | 'fr'>(() => {
+    return (localStorage.getItem('ulink-language') as any) || 'es';
+  });
 
   const [activeSection, setActiveSection] = useState<'privacidad' | 'notificaciones' | 'mas'>('privacidad');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -893,12 +896,17 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
 
   const Toggle = ({ on, onToggle }: { on: boolean; onToggle: () => void }) => (
     <button onClick={onToggle}
-      className="w-11 h-6 rounded-full relative transition-all"
+      className="w-11 h-6 rounded-full relative transition-all flex-shrink-0"
       style={{ background: on ? '#6C63FF' : 'rgba(108,99,255,0.2)' }}>
       <div className="w-4 h-4 rounded-full bg-white absolute top-1 transition-all"
         style={{ left: on ? '24px' : '4px', boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }} />
     </button>
   );
+
+  const handleLanguageChange = (lang: 'es' | 'en' | 'fr') => {
+    setLanguage(lang);
+    localStorage.setItem('ulink-language', lang);
+  };
 
   return (
     <div className="h-full overflow-y-auto pb-6">
@@ -944,6 +952,34 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
           <AccessibilityPanel mode={visionMode} setMode={setVisionMode} dyslexia={dyslexiaMode}
             setDyslexia={(v) => { setDyslexiaMode(v); applyDyslexiaMode(v); }} />
 
+          {/* Idioma */}
+          <div className="rounded-2xl border p-5" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
+            <p style={{ fontWeight: 700, fontSize: '1.05rem', color: t.text, marginBottom: '4px' }}>Idioma</p>
+            <p style={{ fontSize: '0.85rem', color: t.textMuted, marginBottom: '16px' }}>Elige el idioma de la aplicación (beta)</p>
+            
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { id: 'es', label: 'Español', icon: '🇪🇸' },
+                { id: 'en', label: 'English', icon: '🇺🇸' },
+                { id: 'fr', label: 'Français', icon: '🇫🇷' },
+              ].map(lang => (
+                <button
+                  key={lang.id}
+                  onClick={() => handleLanguageChange(lang.id as any)}
+                  className="flex flex-col items-center justify-center p-3 rounded-xl border transition-all hover:-translate-y-1"
+                  style={{
+                    background: language === lang.id ? 'rgba(108,99,255,0.1)' : 'transparent',
+                    borderColor: language === lang.id ? '#6C63FF' : t.cardBorder,
+                  }}
+                >
+                  <span style={{ fontSize: '1.5rem', marginBottom: '8px' }}>{lang.icon}</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: language === lang.id ? '#6C63FF' : t.text }}>
+                    {lang.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
 
         </div>
 
