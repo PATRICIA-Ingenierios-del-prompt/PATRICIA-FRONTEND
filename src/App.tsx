@@ -935,7 +935,7 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
         ))}
       </div>
 
->>>>>>> 4ce468c2c3af39ff93f94e3998ad2461c1d8d1a4
+
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
         {/* Left — main settings */}
         <div className="col-span-1 xl:col-span-2 space-y-4">
