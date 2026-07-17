@@ -144,7 +144,9 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
           .catch(() => {});
 
         const unsub = socketRef.current?.subscribeToParche(cid, {
-          onMessage: msg => setRtMessages(prev => [...prev, msg]),
+          onMessage: msg => {
+            setRtMessages(prev => [...prev, msg]);
+          },
         });
         if (unsub) unsubRef.current = unsub;
       })
