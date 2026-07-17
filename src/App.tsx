@@ -1074,7 +1074,7 @@ function AppCore() {
         if (cancelled) return;
         setPendingMatchCount(ids.length);
         ids.forEach(id => addNotification({
-          id: `match-${id}`,
+          id: `match-pending-${id}`,
           type: 'match',
           text: 'Tienes una nueva solicitud de match esperando tu respuesta.',
           payload: { matchUserId: id },

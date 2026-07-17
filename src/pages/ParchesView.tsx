@@ -21,7 +21,6 @@ import { Stroke, Point } from '../types/board';
 import { addToast } from '../components/ToastSystem';
 import { useTheme } from '../store/ThemeContext';
 import { useAuth } from '../store/AuthContext';
-import { useNotifications } from '../store/NotificationsContext';
 import { useReports, type ReportCategory } from '../store/ReportsContext';
 import { friendlyError } from '../lib/errorMessages';
 import { parcheService } from '../services/parcheService';
@@ -391,7 +390,6 @@ export function ParchesView({ linkedEvents = [] }: {
 }) {
   const t = useTheme();
   const { userId: meId, userName } = useAuth();
-  const { addNotification } = useNotifications();
   const location = useLocation();
   const initialParcheId = (location.state as { initialParcheId?: string } | null)?.initialParcheId;
   // Real data: public parches (browse) + my memberships (from /api/parches/me).
@@ -711,15 +709,6 @@ useEffect(() => {
     const unsub = socketRef.current?.subscribeToParche(cid, {
       onMessage: msg => {
         setRtMessages(prev => [...prev, msg]);
-        if (msg.senderId !== meId && selectedParche.id) {
-          const preview = msg.type === 'FILE' || msg.type === 'IMAGE' ? 'Archivo adjunto' : (msg.content || 'Mensaje nuevo');
-          addNotification({
-            id: `chat-parche-${msg.id}`,
-            type: 'chat',
-            text: `${msg.senderUsername} en ${selectedParche.name}: ${preview}`,
-            payload: { parcheId: selectedParche.id },
-          });
-        }
       },
       onVoiceEvent: evt => {
         if (evt.signalType === 'JOIN' && evt.senderUserId !== meId) {
