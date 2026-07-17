@@ -441,8 +441,17 @@ export function MatchingView() {
     setLoadingSearch(true);
     (async () => {
       try {
-        const sugerencias = await matchingService.obtenerSugerencias(200);
-        const display = await hydrate(sugerencias.map(s => ({ id: s.candidatoId, scoreTotal: s.scoreTotal })));
+        const [sugerencias, solicitudIds, matchesRaw] = await Promise.all([
+          matchingService.obtenerSugerencias(200),
+          matchingService.solicitudesRecibidas(),
+          matchingService.listarMatches(),
+        ]);
+        const entries = new Map<string, { id: string; scoreTotal?: number }>();
+        sugerencias.forEach(s => entries.set(s.candidatoId, { id: s.candidatoId, scoreTotal: s.scoreTotal }));
+        solicitudIds.forEach(id => { if (!entries.has(id)) entries.set(id, { id }); });
+        matchesRaw.forEach(m => { if (!entries.has(m.otroUsuarioId)) entries.set(m.otroUsuarioId, { id: m.otroUsuarioId, scoreTotal: m.scoreTotal }); });
+
+        const display = await hydrate(Array.from(entries.values()));
         setSearchPool(display);
       } catch (e) {
         addToast({ type: 'info', title: 'No se pudo buscar', message: friendlyError(e, 'Intenta de nuevo más tarde.') });
