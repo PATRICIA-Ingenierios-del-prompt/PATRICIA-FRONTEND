@@ -93,6 +93,26 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const pollingRef = useRef<number | null>(null);
 
+  const deletedIdsRef = useRef<Set<string>>(new Set<string>());
+  
+  // Initialize deleted IDs from storage once on mount
+  useEffect(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('ulink-notifications-deleted') : null;
+      if (raw) {
+        deletedIdsRef.current = new Set(JSON.parse(raw) as string[]);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const saveDeletedIds = (set: Set<string>) => {
+    try {
+      localStorage.setItem('ulink-notifications-deleted', JSON.stringify(Array.from(set)));
+    } catch {}
+  };
+
   const refresh = useCallback(async () => {
     // Notifications are user-scoped; skip polling while logged out so we don't
     // fire authenticated requests (and 401s) on the landing page.
@@ -101,10 +121,23 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     try {
       const server = await notificationService.getNotifications();
       setNotifications(prev => {
-        const serverItems = server.map(serverToItem);
-        const localOnly = prev.filter(p => !p.serverId && !serverItems.some(s => s.id === p.id));
+        const deleted = deletedIdsRef.current;
+        const prevMap = new Map(prev.map(p => [p.id, p]));
+        
+        const serverItems = server
+          .map(serverToItem)
+          .filter(s => !deleted.has(s.id))
+          .map(s => {
+            const local = prevMap.get(s.id);
+            if (local && local.read) {
+              return { ...s, read: true };
+            }
+            return s;
+          });
+
+        const localOnly = prev.filter(p => !p.serverId && !serverItems.some(s => s.id === p.id) && !deleted.has(p.id));
         const serverIds = new Set(serverItems.map(s => s.id));
-        const dedupedServer = prev.filter(p => p.serverId && !serverIds.has(p.id));
+        const dedupedServer = prev.filter(p => p.serverId && !serverIds.has(p.id) && !deleted.has(p.id));
         return [...dedupedServer, ...serverItems, ...localOnly].sort(
           (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
         );
@@ -174,6 +207,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const removeNotification = useCallback((id: string) => {
+    deletedIdsRef.current.add(id);
+    saveDeletedIds(deletedIdsRef.current);
     setNotifications(prev => prev.filter(n => n.id !== id));
   }, []);
 
