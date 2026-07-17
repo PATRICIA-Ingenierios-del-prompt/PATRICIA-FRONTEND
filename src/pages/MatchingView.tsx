@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router';
 import { X, Heart, MessageCircle, Check, Send, ArrowLeft, RotateCcw, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
@@ -322,6 +323,7 @@ function ChatModal({ person, onClose }: { person: { name: string; avatar: string
 export function MatchingView() {
   const t = useTheme();
   const { userId } = useAuth();
+  const navigate = useNavigate();
 
   // ── Photo gate ──────────────────────────────────────────────────────────
   // Verifica si el usuario ya tiene foto de perfil. Al subir una nueva se usa
@@ -515,6 +517,7 @@ export function MatchingView() {
   const [viewProfile, setViewProfile] = useState<DisplayCandidate | null>(null);
   const [viewProfileIsMatch, setViewProfileIsMatch] = useState(false);
   const [chatWith, setChatWith] = useState<{ name: string; avatar: string; gradient: string; foto?: string } | null>(null);
+  // Navegación al chat privado real (ChatsView) con el match pre-seleccionado.
 
   const current = candidates[0];
   const next = candidates[1];
@@ -553,7 +556,9 @@ export function MatchingView() {
     }
   };
 
-  const openChat = (person: { name: string; avatar: string; gradient: string; foto?: string }) => setChatWith(person);
+  const openChat = (person: { id: string; name: string; avatar: string; gradient: string; foto?: string }) => {
+    navigate('/app/chats', { state: { initialUserId: person.id } });
+  };
 
   // ── Photo gate UI ────────────────────────────────────────────────────────
   if (checkingPhoto) {
@@ -1031,7 +1036,7 @@ export function MatchingView() {
                 <p style={{ fontSize: '0.75rem', color: t.textMuted }}>
                   {m.carrera}{m.semestre ? ` · ${m.semestre}º sem.` : ''}
                 </p>
-                <button onClick={() => openChat({ name: m.nombre, avatar: m.avatar, gradient: m.gradient, foto: m.foto })}
+                <button onClick={() => openChat({ id: m.id, name: m.nombre, avatar: m.avatar, gradient: m.gradient, foto: m.foto })}
                   className="mt-3 w-full py-2 rounded-xl text-sm flex items-center justify-center gap-1.5 transition-all hover:opacity-80"
                   style={{ background: '#6C63FF', color: 'white' }}>
                   <MessageCircle size={14} /> Enviar mensaje
