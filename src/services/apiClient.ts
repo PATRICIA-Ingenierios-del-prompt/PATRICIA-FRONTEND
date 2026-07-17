@@ -66,6 +66,15 @@ apiClient.interceptors.response.use(
 
     original._retry = true;
 
+    // No refresh token → the user isn't logged in (e.g. background notification
+    // polling on the landing page). A 401 is expected here, so reject quietly.
+    // Reloading would remount the app, re-fire the request, 401 again and reload
+    // forever — the "page keeps reloading" bug.
+    const refreshToken = tokenManager.getRefreshToken();
+    if (!refreshToken) {
+      return Promise.reject(error);
+    }
+
     if (isRefreshing) {
       return new Promise(resolve => {
         pendingQueue.push(token => {
@@ -77,9 +86,6 @@ apiClient.interceptors.response.use(
 
     isRefreshing = true;
     try {
-      const refreshToken = tokenManager.getRefreshToken();
-      if (!refreshToken) throw new Error('no refresh token');
-
       const { data } = await apiClient.post<TokenResponse>(
         '/auth/refresh',
         { refreshToken },

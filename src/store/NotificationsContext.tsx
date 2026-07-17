@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode, useMemo, useRef } from 'react';
 import { notificationService, type NotificationResponse } from '../services/notificationService';
+import { tokenManager } from '../services/tokenManager';
 
 export type LocalNotificationType = 'match' | 'chat' | 'evento' | 'parche' | 'logro' | 'info';
 
@@ -93,6 +94,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const pollingRef = useRef<number | null>(null);
 
   const refresh = useCallback(async () => {
+    // Notifications are user-scoped; skip polling while logged out so we don't
+    // fire authenticated requests (and 401s) on the landing page.
+    if (!tokenManager.getAccessToken()) return;
     setLoading(true);
     try {
       const server = await notificationService.getNotifications();
