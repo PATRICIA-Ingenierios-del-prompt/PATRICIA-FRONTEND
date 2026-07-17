@@ -21,7 +21,6 @@ import { AdminView } from './pages/AdminView';
 import { AuthProvider, useAuth } from './store/AuthContext';
 import { ReportsProvider } from './store/ReportsContext';
 import { SupportProvider } from './store/SupportContext';
-import { useNotifications } from './store/NotificationsContext';
 import { isAdminEmail } from './lib/admin';
 import { userService } from './services/userService';
 import { matchingService } from './services/matchingService';
@@ -34,7 +33,6 @@ import { LAST_APP_PATH_KEY, SESSION_EXPIRED_KEY } from './lib/sessionKeys';
 import { AccessibilityPanel, ColorBlindFilters, applyDyslexiaMode, getVisionFilter, type VisionMode } from './components/ColorAccessibility';
 import { ImageWithFallback } from './components/ImageWithFallback';
 import { LegalModals, type LegalModalType } from './components/LegalContent';
-import { NotificationsPanel } from './components/NotificationsPanel';
 import logoNuevoOscuroImg from './assets/logoNuevoOscuro.png';
 import logoNuevoClaroImg from './assets/logoNuevoClaro.png';
 import { useLocation, useNavigate } from 'react-router';
@@ -100,6 +98,85 @@ const VIEW_LABELS: Record<ViewId, string> = {
   perfil:         'Mi Perfil',
   admin:          'Panel Admin',
 };
+
+type NotificationItem = { id: string; type: 'match' | 'chat' | 'evento' | 'reporte' | 'xp' | 'logro' | 'info'; text: string; time: string; read: boolean };
+
+const notifEmoji: Record<string, string> = { match: '💜', chat: '💬', evento: '🎉', reporte: '⚠️', xp: '⚡', logro: '🏆', info: 'ℹ️' };
+
+/**
+ * Sin microservicio de notificaciones todavía: por ahora armamos la lista a
+ * partir de señales reales que sí existen (solicitudes de match pendientes).
+ * Cuando exista un endpoint de notificaciones dedicado, reemplazar este fetch.
+ */
+function NotificationsView() {
+  const t = useTheme();
+  const [notifs, setNotifs] = useState<NotificationItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const ids = await matchingService.solicitudesRecibidas();
+        if (cancelled) return;
+        setNotifs(ids.map(id => ({
+          id: `solicitud-${id}`,
+          type: 'match',
+          text: 'Tienes una nueva solicitud de match esperando tu respuesta.',
+          time: 'reciente',
+          read: false,
+        })));
+      } catch {
+        if (!cancelled) setNotifs([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  return (
+    <div className="h-full overflow-y-auto pb-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 style={{ fontWeight: 700, fontSize: '1.3rem', color: t.text }}>Notificaciones</h2>
+        {notifs.length > 0 && (
+          <button onClick={() => setNotifs(p => p.map(n => ({ ...n, read: true })))}
+            className="text-sm hover:opacity-70" style={{ color: '#6C63FF' }}>
+            Marcar todas como leídas
+          </button>
+        )}
+      </div>
+      {loading ? (
+        <p style={{ fontSize: '0.85rem', color: t.textMuted, padding: '48px 0', textAlign: 'center' }}>Cargando notificaciones...</p>
+      ) : notifs.length === 0 ? (
+        <div className="text-center py-16 rounded-2xl border" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
+          <Bell size={32} style={{ color: t.textMuted, margin: '0 auto 12px' }} />
+          <p style={{ fontWeight: 600, color: t.text }}>No tienes notificaciones por ahora</p>
+          <p style={{ fontSize: '0.82rem', color: t.textMuted, marginTop: '6px' }}>Te avisaremos aquí cuando pase algo nuevo</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {notifs.map(n => (
+            <div key={n.id}
+              className="flex items-start gap-4 p-4 rounded-2xl border cursor-pointer transition-all"
+              style={{ background: n.read ? t.cardBg : 'var(--p-input)', borderColor: n.read ? t.cardBorder : 'rgba(108,99,255,0.3)' }}
+              onClick={() => setNotifs(p => p.map(x => x.id === n.id ? { ...x, read: true } : x))}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl flex-shrink-0"
+                style={{ background: 'rgba(108,99,255,0.1)' }}>
+                {notifEmoji[n.type]}
+              </div>
+              <div className="flex-1">
+                <p style={{ fontSize: '0.88rem', color: n.read ? t.textMuted : t.text, fontWeight: n.read ? 400 : 500 }}>{n.text}</p>
+                <p style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '4px' }}>Hace {n.time}</p>
+              </div>
+              {!n.read && <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1" style={{ background: '#6C63FF' }} />}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function CampusView() {
   const t = useTheme();
@@ -944,7 +1021,7 @@ function AppCore() {
   const [activeView, setActiveView] = useState<ViewId>('home');
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { unreadCount, pendingMatchCount, setPendingMatchCount, addNotification } = useNotifications();
+  const [pendingRequests, setPendingRequests] = useState(0);
   const [sidebarXp, setSidebarXp] = useState<number | null>(null);
   const [darkMode, setDarkMode] = useState(true);
   const location = useLocation();
@@ -960,7 +1037,7 @@ function AppCore() {
     .map((w: string) => w[0].toUpperCase()).join('');
   const [profileFoto, setProfileFoto] = useState<string | undefined>(undefined);
   const isAdmin = isAdminEmail(userEmail);
-  const navItemsBase = NAV_ITEMS.map(item => item.id === 'matching' && pendingMatchCount > 0 ? { ...item, badge: pendingMatchCount } : item);
+  const navItemsBase = NAV_ITEMS.map(item => item.id === 'matching' && pendingRequests > 0 ? { ...item, badge: pendingRequests } : item);
   const navItems = isAdmin ? [...navItemsBase, { id: 'admin' as ViewId, label: 'Admin', icon: ShieldCheck }] : navItemsBase;
 
   const setLandingTarget = (target: 'login' | 'register') => {
@@ -1065,24 +1142,15 @@ function AppCore() {
     return () => clearTimeout(t0);
   }, [authState]);
 
-  // Solicitudes de match pendientes reales — alimenta el badge de Matching y las notificaciones.
+  // Solicitudes de match pendientes reales — alimenta el badge de Matching y el punto de la campana.
   useEffect(() => {
     if (authState !== 'app') return;
     let cancelled = false;
     matchingService.solicitudesRecibidas()
-      .then(ids => {
-        if (cancelled) return;
-        setPendingMatchCount(ids.length);
-        ids.forEach(id => addNotification({
-          id: `match-pending-${id}`,
-          type: 'match',
-          text: 'Tienes una nueva solicitud de match esperando tu respuesta.',
-          payload: { matchUserId: id },
-        }));
-      })
-      .catch(() => { if (!cancelled) setPendingMatchCount(0); });
+      .then(ids => { if (!cancelled) setPendingRequests(ids.length); })
+      .catch(() => { if (!cancelled) setPendingRequests(0); });
     return () => { cancelled = true; };
-  }, [authState, addNotification, setPendingMatchCount]);
+  }, [authState]);
 
   // XP real del usuario — alimenta la pastilla de usuario en el sidebar.
   useEffect(() => {
@@ -1140,7 +1208,7 @@ function AppCore() {
       case 'matching':       return <MatchingView />;
       case 'bienestar':      return <BienestarView />;
       case 'perfil':         return <ProfileView />;
-      case 'notificaciones': return <NotificationsPanel />;
+      case 'notificaciones': return <NotificationsView />;
       case 'album':          return <AlbumView />;
       case 'ajustes':        return <AjustesView onLogout={handleLogout} onEditProfile={handleEditProfile} visionMode={visionMode} setVisionMode={setVisionMode} dyslexiaMode={dyslexiaMode} setDyslexiaMode={(v) => { setDyslexiaMode(v); applyDyslexiaMode(v); }} />;
       case 'admin':           return isAdmin ? <AdminView /> : <HomeView onNavigate={goToAppView} />;
@@ -1318,7 +1386,7 @@ function AppCore() {
               className="relative w-9 h-9 rounded-xl flex items-center justify-center hover:opacity-70 transition-all"
               style={{ background: 'rgba(108,99,255,0.1)' }}>
               <Bell size={17} style={{ color: 'var(--p-muted)' }} />
-              {unreadCount > 0 && <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: '#FF4D6A' }} />}
+              {pendingRequests > 0 && <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: '#FF4D6A' }} />}
             </button>
             {/* Theme toggle in topbar */}
             <button onClick={() => setDarkMode(d => !d)}

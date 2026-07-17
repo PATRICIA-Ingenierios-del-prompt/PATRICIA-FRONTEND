@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { useLocation } from 'react-router';
 import { createPortal } from 'react-dom';
 import {
   Plus, Users, Lock, Globe, Mic, MicOff, Send, Smile,
@@ -390,8 +389,6 @@ export function ParchesView({ linkedEvents = [] }: {
 }) {
   const t = useTheme();
   const { userId: meId, userName } = useAuth();
-  const location = useLocation();
-  const initialParcheId = (location.state as { initialParcheId?: string } | null)?.initialParcheId;
   // Real data: public parches (browse) + my memberships (from /api/parches/me).
   const [publicos, setPublicos] = useState<UiParche[]>([]);
   const [mine, setMine] = useState<UiParche[]>([]);
@@ -502,14 +499,6 @@ export function ParchesView({ linkedEvents = [] }: {
     const timer = setTimeout(() => { void loadPublicos().finally(() => setLoadingList(false)); }, 250);
     return () => clearTimeout(timer);
   }, [loadPublicos]);
-
-  // Si venimos desde una notificación, abrir el parche referido automáticamente.
-  useEffect(() => {
-    if (!initialParcheId) return;
-    const all = [...mine, ...publicos];
-    const target = all.find(p => p.id === initialParcheId);
-    if (target) setSelectedParche(target);
-  }, [initialParcheId, mine, publicos]);
 
   const membershipIds = new Set(mine.map(p => p.id));
   const isMember = (p: UiParche) => !!p.id && membershipIds.has(p.id);
@@ -707,9 +696,7 @@ useEffect(() => {
 
     // STOMP
     const unsub = socketRef.current?.subscribeToParche(cid, {
-      onMessage: msg => {
-        setRtMessages(prev => [...prev, msg]);
-      },
+      onMessage: msg => setRtMessages(prev => [...prev, msg]),
       onVoiceEvent: evt => {
         if (evt.signalType === 'JOIN' && evt.senderUserId !== meId) {
           setVoiceParticipants(prev =>
