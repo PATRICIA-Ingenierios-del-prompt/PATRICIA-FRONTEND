@@ -1,23 +1,26 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { useTheme } from '../store/ThemeContext';
 import { useAuth } from '../store/AuthContext';
 import { useReports, type UserReport } from '../store/ReportsContext';
 import { useSupport } from '../store/SupportContext';
-import { isAdminEmail } from '../lib/admin';
-import { CARRERA_BREAKDOWN, TOTAL_USERS_REGISTERED, TOTAL_PARCHES, RECENT_SIGNUPS } from '../lib/mockAdminData';
+import { isAdmin } from '../lib/admin';
+import { adminService } from '../services/adminService';
+import type { AdminDashboardResponse, AdminParcheStatsResponse } from '../types/patricia';
 
 type AdminTab = 'resumen' | 'reportes' | 'soporte';
 
-const BAR_HUE = '#6C63FF'; // single series — same hue throughout, per dataviz guidance
+const BAR_HUE = '#6C63FF';
 const STATUS_COLOR: Record<UserReport['status'], string> = { pendiente: '#FFB347', resuelto: '#7FE7C4' };
 
-function StatTile({ label, value }: { label: string; value: string | number }) {
+function StatTile({ label, value, loading }: { label: string; value: string | number; loading?: boolean }) {
   const t = useTheme();
   return (
     <div className="rounded-2xl p-5 border" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
       <p style={{ fontSize: '0.78rem', color: t.textMuted }}>{label}</p>
-      <p style={{ fontWeight: 700, fontSize: '1.9rem', color: t.text, marginTop: 6 }}>{value}</p>
+      <p style={{ fontWeight: 700, fontSize: '1.9rem', color: t.text, marginTop: 6 }}>
+        {loading ? '…' : value}
+      </p>
     </div>
   );
 }
@@ -28,12 +31,37 @@ function formatDate(iso: string) {
 
 export function AdminView() {
   const t = useTheme();
-  const { userEmail } = useAuth();
+  const { roles } = useAuth();
   const { reports, resolveReport } = useReports();
   const { messages, resolveMessage } = useSupport();
   const [tab, setTab] = useState<AdminTab>('resumen');
+  const [dashboard, setDashboard] = useState<AdminDashboardResponse | null>(null);
+  const [parcheStats, setParcheStats] = useState<AdminParcheStatsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!isAdminEmail(userEmail)) {
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([adminService.getDashboard(), adminService.getParcheStats()])
+      .then(([dash, stats]) => {
+        if (!cancelled) {
+          setDashboard(dash);
+          setParcheStats(stats);
+        }
+      })
+      .catch((e: any) => {
+        if (!cancelled) {
+          setError(e?.response?.data?.message || e?.message || 'Error cargando el panel');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!isAdmin(roles)) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
@@ -47,7 +75,8 @@ export function AdminView() {
 
   const pendingCount = reports.filter(r => r.status === 'pendiente').length;
   const pendingSupportCount = messages.filter(m => m.status === 'pendiente').length;
-  const maxCarreraCount = Math.max(...CARRERA_BREAKDOWN.map(c => c.count));
+  const carreraBreakdown = dashboard?.carreraBreakdown ?? [];
+  const maxCarreraCount = carreraBreakdown.length ? Math.max(...carreraBreakdown.map(c => c.count)) : 0;
   const sortedReports = [...reports].sort((a, b) => {
     if (a.status !== b.status) return a.status === 'pendiente' ? -1 : 1;
     return new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -78,19 +107,25 @@ export function AdminView() {
         ))}
       </div>
 
+      {error && (
+        <div className="mb-4 p-3 rounded-xl border" style={{ background: 'rgba(255,77,106,0.08)', borderColor: '#FF4D6A', color: '#FF4D6A' }}>
+          {error}
+        </div>
+      )}
+
       {tab === 'resumen' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatTile label="Usuarios registrados" value={TOTAL_USERS_REGISTERED.toLocaleString('es-CO')} />
-            <StatTile label="Parches activos" value={TOTAL_PARCHES.toLocaleString('es-CO')} />
-            <StatTile label="Reportes pendientes" value={pendingCount} />
+            <StatTile label="Usuarios registrados" value={(dashboard?.totalUsuarios ?? 0).toLocaleString('es-CO')} loading={loading} />
+            <StatTile label="Parches activos" value={(parcheStats?.totalParches ?? 0).toLocaleString('es-CO')} loading={loading} />
+            <StatTile label="Reportes pendientes" value={pendingCount} loading={false} />
           </div>
 
           <div className="rounded-2xl p-5 border" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
             <p style={{ fontWeight: 700, fontSize: '0.95rem', color: t.text, marginBottom: 4 }}>Usuarios por carrera</p>
-            <p style={{ fontSize: '0.78rem', color: t.textMuted, marginBottom: 18 }}>Distribución de los {TOTAL_USERS_REGISTERED.toLocaleString('es-CO')} usuarios registrados</p>
+            <p style={{ fontSize: '0.78rem', color: t.textMuted, marginBottom: 18 }}>Distribución de los {(dashboard?.totalUsuarios ?? 0).toLocaleString('es-CO')} usuarios registrados</p>
             <div className="space-y-3">
-              {CARRERA_BREAKDOWN.map(c => (
+              {carreraBreakdown.map(c => (
                 <div key={c.carrera} title={`${c.carrera}: ${c.count} usuarios`}>
                   <div className="flex items-baseline justify-between mb-1">
                     <span style={{ fontSize: '0.78rem', color: t.textSub }}>{c.carrera}</span>
@@ -104,13 +139,16 @@ export function AdminView() {
                   </div>
                 </div>
               ))}
+              {carreraBreakdown.length === 0 && !loading && (
+                <p style={{ fontSize: '0.85rem', color: t.textMuted }}>No hay datos de carrera disponibles.</p>
+              )}
             </div>
           </div>
 
           <div className="rounded-2xl p-5 border" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
             <p style={{ fontWeight: 700, fontSize: '0.95rem', color: t.text, marginBottom: 12 }}>Altas recientes</p>
             <div className="space-y-2">
-              {RECENT_SIGNUPS.map(s => (
+              {(dashboard?.recentSignups ?? []).map(s => (
                 <div key={s.id} className="flex items-center justify-between py-2 border-b last:border-0" style={{ borderColor: 'var(--p-divider)' }}>
                   <div>
                     <p style={{ fontSize: '0.85rem', fontWeight: 500, color: t.text }}>{s.name}</p>
@@ -119,6 +157,9 @@ export function AdminView() {
                   <span style={{ fontSize: '0.72rem', color: t.textMuted }}>{formatDate(s.date)}</span>
                 </div>
               ))}
+              {(dashboard?.recentSignups ?? []).length === 0 && !loading && (
+                <p style={{ fontSize: '0.85rem', color: t.textMuted }}>No hay altas recientes.</p>
+              )}
             </div>
           </div>
         </div>

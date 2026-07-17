@@ -26,7 +26,7 @@ import { friendlyError } from '../lib/errorMessages';
 import { parcheService } from '../services/parcheService';
 import { userService } from '../services/userService';
 import { CATEGORY_META, ALL_CATEGORIES } from '../lib/maps';
-import type { ParcheSummaryResponse, EventCategory } from '../types/patricia';
+import type { ParcheSummaryResponse, EventCategory, ParcheReportType, UUID } from '../types/patricia';
 import { ComunicacionSocket, type ChatMessage, type VoiceEvent, type VoiceSignalPayload } from '../services/comunicacionSocket';
 import { apiClient } from '../services/apiClient';
 
@@ -323,23 +323,39 @@ function CollabCanvas({ parcheId }: { parcheId: number }) {
 
 
 
-function ReportModal({ memberName, parcheName, onClose }: { memberName:string; parcheName:string; onClose:()=>void }) {
+function ReportModal({ member, parcheId, parcheName, onClose }: { member: UiMember; parcheId: UUID; parcheName: string; onClose: () => void }) {
   const { addReport } = useReports();
   const [reason, setReason] = useState<ReportCategory | ''>('');
   const [description, setDescription] = useState('');
-  const canSubmit = !!reason && description.trim().length > 0;
+  const [submitting, setSubmitting] = useState(false);
+  const canSubmit = !!reason && description.trim().length > 0 && !submitting;
 
-  const handleSubmit = () => {
+  const CATEGORY_TO_TYPE: Record<ReportCategory, ParcheReportType> = {
+    'Comportamiento inapropiado': 'BAD_BEHAVIOUR',
+    'Spam o publicidad': 'SPAM',
+    'Contenido ofensivo': 'OFFENSIVE_CONTENT',
+    'Acoso o bullying': 'BULLYING',
+    'Otro': 'OTHER',
+  };
+
+  const handleSubmit = async () => {
     if (!canSubmit) return;
-    addReport({ reportedUserName: memberName, parcheName, category: reason as ReportCategory, description: description.trim() });
-    addToast({ type: 'reporte', title: 'Reporte enviado', message: 'Gracias, nuestro equipo lo revisará pronto.' });
-    onClose();
+    setSubmitting(true);
+    try {
+      await addReport(parcheId, member.userId, member.name, parcheName, CATEGORY_TO_TYPE[reason as ReportCategory], description.trim());
+      addToast({ type: 'reporte', title: 'Reporte enviado', message: 'Gracias, nuestro equipo lo revisará pronto.' });
+      onClose();
+    } catch (e: any) {
+      addToast({ type: 'reporte', title: 'No se pudo enviar', message: e?.response?.data?.message || 'Intenta de nuevo.' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background:'rgba(0,0,0,0.7)' }} onClick={onClose}>
       <div className="rounded-2xl p-6 w-96 border" style={{ background:'var(--p-card)', borderColor:'rgba(255,77,106,0.3)' }} onClick={e=>e.stopPropagation()}>
-        <h3 style={{ fontWeight:700, marginBottom:'4px' }}>Denunciar a {memberName}</h3>
+        <h3 style={{ fontWeight:700, marginBottom:'4px' }}>Denunciar a {member.name}</h3>
         <p style={{ fontSize:'0.8rem', color:'var(--p-muted)', marginBottom:'16px' }}>Tu reporte es anónimo</p>
         <div className="space-y-2 mb-4">
           {(['Comportamiento inapropiado','Spam o publicidad','Contenido ofensivo','Acoso o bullying','Otro'] as ReportCategory[]).map(r=>(
@@ -407,7 +423,7 @@ export function ParchesView({ linkedEvents = [] }: {
   const [showMembers, setShowMembers] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
-  const [reportMember, setReportMember] = useState<string|null>(null);
+  const [reportMember, setReportMember] = useState<UiMember | null>(null);
   const [viewMemberProfile, setViewMemberProfile] = useState<UiMember | null>(null);
   const [members, setMembers] = useState<UiMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
@@ -1662,7 +1678,7 @@ const realLeaveVoice = () => {
                                 <button key={opt.label}
                                   onClick={()=>{
                                     if(opt.label==='Ver perfil') setViewMemberProfile(m);
-                                    if(opt.danger) setReportMember(m.name);
+                                    if(opt.danger) setReportMember(m);
                                     setMemberMenuOpen(null);
                                   }}
                                   className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs hover:bg-white/5 transition-all"
@@ -1802,7 +1818,7 @@ const realLeaveVoice = () => {
         )}
       </AnimatePresence>
 
-      {reportMember && <ReportModal memberName={reportMember} parcheName={selectedParche.name} onClose={()=>setReportMember(null)} />}
+      {reportMember && <ReportModal member={reportMember} parcheName={selectedParche.name} parcheId={selectedParche.parcheId} onClose={()=>setReportMember(null)} />}
 
       {/* Member profile modal */}
       {viewMemberProfile && createPortal(

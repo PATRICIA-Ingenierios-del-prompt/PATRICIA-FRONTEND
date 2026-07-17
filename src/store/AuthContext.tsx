@@ -31,6 +31,11 @@ function extractUserId(token: string): string | null {
   return claims?.sub ?? claims?.userId ?? claims?.id ?? null;
 }
 
+function extractRoles(token: string): string[] {
+  const claims = decodeJwt(token);
+  return Array.isArray(claims?.roles) ? claims.roles.map(String) : [];
+}
+
 /**
  * Derive display name from the JWT or — if no name claim — from the ECI
  * institutional email pattern: karol.estupinan-v@mail... → "Karol Estupinan"
@@ -74,6 +79,7 @@ interface AuthContextValue {
   userId: string | null;
   userEmail: string | null;
   userName: string | null;
+  roles: string[];
   isAuthenticated: boolean;
   login: (accessToken: string, refreshToken: string) => void;
   logout: () => Promise<void>;
@@ -85,6 +91,7 @@ const AuthContext = createContext<AuthContextValue>({
   userId: null,
   userEmail: null,
   userName: null,
+  roles: [],
   isAuthenticated: false,
   login: () => {},
   logout: async () => {},
@@ -114,6 +121,10 @@ export function AuthProvider({ children, onLogout }: AuthProviderProps) {
     const t = tokenManager.getAccessToken();
     return t ? extractUserInfo(t).name : null;
   });
+  const [roles, setRoles] = useState<string[]>(() => {
+    const t = tokenManager.getAccessToken();
+    return t ? extractRoles(t) : [];
+  });
 
   // On mount: if we have a stored token but no name, try the profile service
   useEffect(() => {
@@ -140,6 +151,7 @@ export function AuthProvider({ children, onLogout }: AuthProviderProps) {
     const info = extractUserInfo(newAccessToken);
     setUserEmail(info.email);
     setUserName(info.name);
+    setRoles(extractRoles(newAccessToken));
 
     if (import.meta.env.DEV) {
       console.debug('[AuthContext] JWT claims:', decodeJwt(newAccessToken));
@@ -162,6 +174,7 @@ export function AuthProvider({ children, onLogout }: AuthProviderProps) {
     setUserId(null);
     setUserEmail(null);
     setUserName(null);
+    setRoles([]);
     onLogout?.();
   }, [onLogout]);
 
@@ -169,7 +182,7 @@ export function AuthProvider({ children, onLogout }: AuthProviderProps) {
 
   return (
     <AuthContext.Provider value={{
-      accessToken, userId, userEmail, userName,
+      accessToken, userId, userEmail, userName, roles,
       isAuthenticated: !!accessToken,
       login, logout, setUserName: setUserNameExternal,
     }}>
