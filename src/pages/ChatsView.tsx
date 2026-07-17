@@ -12,6 +12,7 @@ import { dmService } from '../services/dmService';
 import { apiClient } from '../services/apiClient';
 import { ComunicacionSocket, type ChatMessage } from '../services/comunicacionSocket';
 import { useAuth } from '../store/AuthContext';
+import { useNotifications } from '../store/NotificationsContext';
 import type { MatchResponse } from '../types/patricia';
 
 // ── Visual-only helpers (el backend no manda color de avatar) ───────────────
@@ -56,6 +57,7 @@ type ViewId = 'home' | 'matching' | 'parches' | 'campus' | 'eventos' | 'bienesta
 export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId) => void }) {
   const t = useTheme();
   const { userId: meId, userName } = useAuth();
+  const { addNotification } = useNotifications();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [selected, setSelected] = useState<Contact | null>(null);
@@ -144,7 +146,18 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
           .catch(() => {});
 
         const unsub = socketRef.current?.subscribeToParche(cid, {
-          onMessage: msg => setRtMessages(prev => [...prev, msg]),
+          onMessage: msg => {
+            setRtMessages(prev => [...prev, msg]);
+            if (msg.senderId !== meId && selected) {
+              const preview = msg.type === 'FILE' || msg.type === 'IMAGE' ? 'Archivo adjunto' : (msg.content || 'Mensaje nuevo');
+              addNotification({
+                id: `chat-dm-${msg.id}`,
+                type: 'chat',
+                text: `${msg.senderUsername}: ${preview}`,
+                payload: { chatUserId: selected.userId },
+              });
+            }
+          },
         });
         if (unsub) unsubRef.current = unsub;
       })
