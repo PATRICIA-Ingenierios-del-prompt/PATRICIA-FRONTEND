@@ -43,7 +43,12 @@ export interface ComunicacionSocketOptions {
   onKicked?: (evt: { parcheId: string; reason: string }) => void;
 }
 
-const WS_URL = '/ws-stomp'; // proxied by vite to localhost:8084
+const WS_PATH = '/ws-stomp';
+// En producción el frontend puede vivir en un CDN distinto al Gateway; VITE_WS_URL
+// permite apuntar el WebSocket al Gateway directamente (ej: wss://u-link.duckdns.org/ws-stomp).
+// En desarrollo con Vite proxy se omite y se usa el host actual.
+const WS_BASE = (import.meta.env.VITE_WS_URL as string | undefined) ?? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
+const WS_URL = `${WS_BASE.replace(/\/$/, '')}${WS_PATH}`;
 
 export class ComunicacionSocket {
   private client: Client;
@@ -53,14 +58,14 @@ export class ComunicacionSocket {
 
   constructor(private opts: ComunicacionSocketOptions = {}) {
     this.client = new Client({
-      brokerURL: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}${WS_URL}`,
+      brokerURL: WS_URL,
       beforeConnect: async () => {
         const token = tokenManager.getAccessToken() ?? '';
         // The gateway validates the JWT on the HTTP upgrade itself; browsers
         // can't set headers on a WebSocket handshake, so the token rides
         // ?access_token= (same mechanism as /ws/geo) and the gateway strips it
         // before forwarding. The CONNECT header stays for the MS's own check.
-        this.client.brokerURL = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}${WS_URL}?access_token=${encodeURIComponent(token)}`;
+        this.client.brokerURL = `${WS_URL}?access_token=${encodeURIComponent(token)}`;
         this.client.connectHeaders = {
           Authorization: `Bearer ${token}`,
           'X-Username': this.displayName ?? '',
@@ -75,6 +80,9 @@ export class ComunicacionSocket {
         opts.onConnect?.();
       },
       onWebSocketClose: () => opts.onDisconnect?.(),
+      onStompError: (frame) => {
+        console.error('[comms] STOMP error:', frame.headers['message']);
+      },
     });
   }
 

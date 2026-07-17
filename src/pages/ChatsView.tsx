@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router';
 import { Search, Send, Smile, Paperclip, MoreHorizontal, ArrowLeft, Heart } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '../store/ThemeContext';
@@ -70,6 +71,8 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
   // Cachea el channelId ya resuelto por userId para no golpear el backend
   // cada vez que se vuelve a seleccionar el mismo contacto.
   const channelCacheRef = useRef<Record<string, string>>({});
+  const location = useLocation();
+  const initialUserId = (location.state as { initialUserId?: string } | null)?.initialUserId;
 
   const loadContacts = useCallback(async () => {
     setLoadingContacts(true);
@@ -99,6 +102,13 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
   }, []);
 
   useEffect(() => { void loadContacts(); }, [loadContacts]);
+
+  // Si venimos desde Matching con un usuario pre-seleccionado, abrirlo automáticamente.
+  useEffect(() => {
+    if (!initialUserId || loadingContacts || contacts.length === 0) return;
+    const target = contacts.find(c => c.userId === initialUserId);
+    if (target) setSelected(target);
+  }, [initialUserId, contacts, loadingContacts]);
 
   // Socket init — una sola conexión STOMP para toda la vista de chats.
   useEffect(() => {
