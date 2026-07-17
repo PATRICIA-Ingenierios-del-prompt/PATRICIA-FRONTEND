@@ -7,6 +7,10 @@ import { addToast } from '../components/ToastSystem';
 import { friendlyError } from '../lib/errorMessages';
 import { matchingService } from '../services/matchingService';
 import { userService, type PerfilResponse } from '../services/userService';
+import { dmService } from '../services/dmService';
+import { apiClient } from '../services/apiClient';
+import { ComunicacionSocket, type ChatMessage } from '../services/comunicacionSocket';
+import { useAuth } from '../store/AuthContext';
 import type { MatchResponse } from '../types/patricia';
 
 // ── Visual-only helpers (el backend no manda color de avatar) ───────────────
@@ -46,25 +50,26 @@ interface Contact {
   disponibilidad?: string;
 }
 
-interface Message {
-  id: number;
-  text: string;
-  time: string;
-  isMe: boolean;
-}
-
 type ViewId = 'home' | 'matching' | 'parches' | 'campus' | 'eventos' | 'bienestar' | 'album' | 'notificaciones' | 'ranking' | 'ajustes' | 'perfil';
 
 export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId) => void }) {
   const t = useTheme();
+  const { userId: meId, userName } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [selected, setSelected] = useState<Contact | null>(null);
-  const [messagesByMatch, setMessagesByMatch] = useState<Record<string, Message[]>>({});
+  const [channelId, setChannelId] = useState<string | null>(null);
+  const [loadingChannel, setLoadingChannel] = useState(false);
+  const [rtMessages, setRtMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [search, setSearch] = useState('');
   const [showContactProfile, setShowContactProfile] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const socketRef = useRef<ComunicacionSocket | null>(null);
+  const unsubRef = useRef<(() => void) | null>(null);
+  // Cachea el channelId ya resuelto por userId para no golpear el backend
+  // cada vez que se vuelve a seleccionar el mismo contacto.
+  const channelCacheRef = useRef<Record<string, string>>({});
 
   const loadContacts = useCallback(async () => {
     setLoadingContacts(true);
@@ -95,21 +100,64 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
 
   useEffect(() => { void loadContacts(); }, [loadContacts]);
 
+  // Socket init — una sola conexión STOMP para toda la vista de chats.
+  useEffect(() => {
+    const socket = new ComunicacionSocket({ onConnect: () => console.log('[comms] conectado (DM)') });
+    socket.setDisplayName(userName);
+    socket.activate();
+    socketRef.current = socket;
+    return () => { socket.deactivate(); };
+  }, []);
+
+  // Al elegir un contacto: asegurar el canal privado, traer historial y
+  // suscribirse en tiempo real. Mismo patrón que ParchesView con su parche.
+  useEffect(() => {
+    unsubRef.current?.();
+    setRtMessages([]);
+    setChannelId(null);
+    if (!selected) return;
+
+    let alive = true;
+    setLoadingChannel(true);
+
+    const cached = channelCacheRef.current[selected.userId];
+    const ensure = cached ? Promise.resolve(cached) : dmService.ensureChannel(selected.userId);
+
+    ensure
+      .then(cid => {
+        if (!alive) return;
+        channelCacheRef.current[selected.userId] = cid;
+        setChannelId(cid);
+
+        apiClient.get(`/api/chat/${cid}/messages?page=0&size=50`)
+          .then(r => { if (alive) setRtMessages([...(r.data.content ?? [])].reverse()); })
+          .catch(() => {});
+
+        const unsub = socketRef.current?.subscribeToParche(cid, {
+          onMessage: msg => setRtMessages(prev => [...prev, msg]),
+        });
+        if (unsub) unsubRef.current = unsub;
+      })
+      .catch(e => {
+        if (alive) addToast({ type: 'info', title: 'No se pudo abrir el chat', message: friendlyError(e, 'Intenta de nuevo más tarde.') });
+      })
+      .finally(() => { if (alive) setLoadingChannel(false); });
+
+    return () => { alive = false; unsubRef.current?.(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.userId]);
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [selected, messagesByMatch]);
+  }, [rtMessages]);
 
   const send = () => {
-    if (!input.trim() || !selected) return;
+    if (!input.trim() || !channelId) return;
     if (!navigator.onLine) {
       addToast({ type: 'reporte', title: 'Sin conexión', message: 'Verifica tu conexión a internet para enviar mensajes.' });
       return;
     }
-    const now = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-    setMessagesByMatch(prev => {
-      const list = prev[selected.matchId] ?? [];
-      return { ...prev, [selected.matchId]: [...list, { id: list.length + 1, text: input, time: now, isMe: true }] };
-    });
+    socketRef.current?.sendMessage(channelId, input.trim());
     setInput('');
   };
 
@@ -118,7 +166,6 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
     c.program.toLowerCase().includes(search.toLowerCase())
   );
 
-  const messages = selected ? (messagesByMatch[selected.matchId] ?? []) : [];
   const cardStyle = { background: t.cardBg, borderColor: t.cardBorder };
 
   return (
@@ -245,36 +292,43 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2"
           style={{ background: t.darkMode ? '#0D0B1E' : t.bg }}>
-          {messages.length === 0 && (
+          {loadingChannel ? (
+            <div className="h-full flex items-center justify-center text-center px-6">
+              <p style={{ fontSize: '0.82rem', color: t.textMuted }}>Conectando el chat…</p>
+            </div>
+          ) : rtMessages.length === 0 ? (
             <div className="h-full flex items-center justify-center text-center px-6">
               <p style={{ fontSize: '0.82rem', color: t.textMuted }}>
                 Aún no hay mensajes con {selected.name.split(' ')[0]}. ¡Escribe el primero!
               </p>
             </div>
-          )}
-          {messages.map(msg => (
-            <motion.div key={msg.id}
-              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-              className={`flex ${msg.isMe ? 'justify-end' : 'justify-start'}`}>
-              <div className="max-w-[65%]">
-                <div className="px-4 py-2.5 rounded-2xl"
-                  style={{
-                    background: msg.isMe
-                      ? 'linear-gradient(135deg, #6C63FF, #8B7FFF)'
-                      : t.darkMode ? '#1E1C30' : '#F0EEFF',
-                    color: msg.isMe ? '#FFFFFF' : t.darkMode ? '#E0DAFF' : '#1A1829',
-                    borderRadius: msg.isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                    border: msg.isMe ? 'none' : `1px solid ${t.darkMode ? 'rgba(108,99,255,0.25)' : 'rgba(108,99,255,0.2)'}`,
-                    fontSize: '0.87rem', lineHeight: 1.5,
-                  }}>
-                  {msg.text}
+          ) : rtMessages.map(msg => {
+            const isMe = msg.senderId === meId;
+            const time = new Date(msg.sentAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+            return (
+              <motion.div key={msg.id}
+                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                <div className="max-w-[65%]">
+                  <div className="px-4 py-2.5 rounded-2xl"
+                    style={{
+                      background: isMe
+                        ? 'linear-gradient(135deg, #6C63FF, #8B7FFF)'
+                        : t.darkMode ? '#1E1C30' : '#F0EEFF',
+                      color: isMe ? '#FFFFFF' : t.darkMode ? '#E0DAFF' : '#1A1829',
+                      borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                      border: isMe ? 'none' : `1px solid ${t.darkMode ? 'rgba(108,99,255,0.25)' : 'rgba(108,99,255,0.2)'}`,
+                      fontSize: '0.87rem', lineHeight: 1.5,
+                    }}>
+                    {msg.content}
+                  </div>
+                  <div className={`flex items-center gap-1 mt-1 ${isMe ? 'justify-end' : ''}`}>
+                    <span style={{ fontSize: '0.6rem', color: t.textMuted }}>{time}</span>
+                  </div>
                 </div>
-                <div className={`flex items-center gap-1 mt-1 ${msg.isMe ? 'justify-end' : ''}`}>
-                  <span style={{ fontSize: '0.6rem', color: t.textMuted }}>{msg.time}</span>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
           <div ref={endRef} />
         </div>
 

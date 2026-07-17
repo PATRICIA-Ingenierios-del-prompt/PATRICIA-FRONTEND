@@ -88,6 +88,7 @@ export default defineConfig(({ mode }) => {
   '/api/boards':    { target: gatewayUrl, changeOrigin: true },
   // Comunicación MS directo
   '/api/chat':  { target: 'http://localhost:8084', changeOrigin: true },
+  '/api/dm':    { target: 'http://localhost:8084', changeOrigin: true },
   '/api/voice': { target: 'http://localhost:8084', changeOrigin: true },
   '/ws-stomp':  { target: 'http://localhost:8084', changeOrigin: true, ws: true },
   '/ws/geo':    { target: gatewayUrl, changeOrigin: true, ws: true },
