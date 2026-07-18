@@ -12,6 +12,7 @@ import { dmService } from '../services/dmService';
 import { apiClient } from '../services/apiClient';
 import { ComunicacionSocket, type ChatMessage } from '../services/comunicacionSocket';
 import { useAuth } from '../store/AuthContext';
+import { useTranslation } from 'react-i18next';
 import type { MatchResponse } from '../types/patricia';
 
 // ── Visual-only helpers (el backend no manda color de avatar) ───────────────
@@ -54,6 +55,7 @@ interface Contact {
 type ViewId = 'home' | 'matching' | 'parches' | 'campus' | 'eventos' | 'bienestar' | 'album' | 'notificaciones' | 'ranking' | 'ajustes' | 'perfil';
 
 export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId) => void }) {
+  const { t: tr } = useTranslation();
   const t = useTheme();
   const { userId: meId, userName } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -95,7 +97,7 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
       });
       setContacts(built);
     } catch (e) {
-      addToast({ type: 'info', title: 'No se pudieron cargar tus chats', message: friendlyError(e, 'Intenta de nuevo más tarde.') });
+      addToast({ type: 'info', title: tr('chats.error_loading_title'), message: friendlyError(e, tr('chats.error_loading_msg')) });
     } finally {
       setLoadingContacts(false);
     }
@@ -151,7 +153,7 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
         if (unsub) unsubRef.current = unsub;
       })
       .catch(e => {
-        if (alive) addToast({ type: 'info', title: 'No se pudo abrir el chat', message: friendlyError(e, 'Intenta de nuevo más tarde.') });
+        if (alive) addToast({ type: 'info', title: tr('chats.error_open_chat_title'), message: friendlyError(e, tr('chats.error_loading_msg')) });
       })
       .finally(() => { if (alive) setLoadingChannel(false); });
 
@@ -166,7 +168,7 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
   const send = () => {
     if (!input.trim() || !channelId) return;
     if (!navigator.onLine) {
-      addToast({ type: 'reporte', title: 'Sin conexión', message: 'Verifica tu conexión a internet para enviar mensajes.' });
+      addToast({ type: 'reporte', title: tr('chats.offline_title'), message: tr('chats.offline_msg') });
       return;
     }
     socketRef.current?.sendMessage(channelId, input.trim());
@@ -187,11 +189,11 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
       {/* ── Contact list ── */}
       <div className="w-72 flex-shrink-0 flex flex-col border-r" style={{ background: t.darkMode ? '#13111F' : '#FAFAFF', borderColor: t.divider }}>
         <div className="p-4 border-b" style={{ borderColor: t.divider }}>
-          <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text, marginBottom: '12px' }}>Chats Privados</h3>
+          <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text, marginBottom: '12px' }}>{tr('chats.title')}</h3>
           <div className="relative">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: t.textMuted }} />
             <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar chat..."
+              placeholder={tr('chats.search')}
               className="w-full rounded-xl pl-8 pr-3 py-2 text-xs outline-none"
               style={{ background: t.inputBg, color: t.text, border: `1px solid ${t.cardBorder}` }} />
           </div>
@@ -199,18 +201,18 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
 
         <div className="flex-1 overflow-y-auto py-1">
           {loadingContacts ? (
-            <p style={{ fontSize: '0.78rem', color: t.textMuted, textAlign: 'center', padding: '32px 16px' }}>Cargando chats...</p>
+            <p style={{ fontSize: '0.78rem', color: t.textMuted, textAlign: 'center', padding: '32px 16px' }}>{tr('chats.loading')}</p>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 gap-2 px-4 text-center">
               {contacts.length === 0 ? (
                 <>
                   <Heart size={22} style={{ color: t.textMuted }} />
-                  <p style={{ fontSize: '0.78rem', color: t.textMuted }}>Aún no tienes matches. Ve a Matching para conectar con alguien.</p>
+                  <p style={{ fontSize: '0.78rem', color: t.textMuted }}>{tr('chats.no_matches')}</p>
                 </>
               ) : (
                 <>
                   <Search size={22} style={{ color: t.textMuted }} />
-                  <p style={{ fontSize: '0.78rem', color: t.textMuted }}>No se encontraron chats con "{search}"</p>
+                  <p style={{ fontSize: '0.78rem', color: t.textMuted }}>{tr('chats.no_results', { search })}</p>
                 </>
               )}
             </div>
@@ -261,7 +263,7 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
       {/* ── Chat area ── */}
       {!selected ? (
         <div className="flex-1 flex items-center justify-center" style={{ background: t.darkMode ? '#0D0B1E' : t.bg }}>
-          <p style={{ fontSize: '0.85rem', color: t.textMuted }}>Selecciona un chat para empezar a conversar</p>
+          <p style={{ fontSize: '0.85rem', color: t.textMuted }}>{tr('chats.select_chat')}</p>
         </div>
       ) : (
       <div className="flex-1 flex flex-col" style={{ background: t.darkMode ? '#0D0B1E' : t.bg }}>
@@ -296,7 +298,7 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
           <div className="flex justify-center pt-4 pb-2">
             <div className="flex items-center gap-2 px-4 py-1.5 rounded-full"
               style={{ background: 'rgba(108,99,255,0.1)', border: '1px solid rgba(108,99,255,0.2)' }}>
-              <span style={{ fontSize: '0.75rem', color: '#6C63FF' }}>{selected.matchPct}% de compatibilidad con {selected.name.split(' ')[0]}</span>
+              <span style={{ fontSize: '0.75rem', color: '#6C63FF' }}>{tr('chats.compatibility_with', { pct: selected.matchPct, name: selected.name.split(' ')[0] })}</span>
             </div>
           </div>
         )}
@@ -306,12 +308,12 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
           style={{ background: t.darkMode ? '#0D0B1E' : t.bg }}>
           {loadingChannel ? (
             <div className="h-full flex items-center justify-center text-center px-6">
-              <p style={{ fontSize: '0.82rem', color: t.textMuted }}>Conectando el chat…</p>
+              <p style={{ fontSize: '0.82rem', color: t.textMuted }}>{tr('chats.connecting')}</p>
             </div>
           ) : rtMessages.length === 0 ? (
             <div className="h-full flex items-center justify-center text-center px-6">
               <p style={{ fontSize: '0.82rem', color: t.textMuted }}>
-                Aún no hay mensajes con {selected.name.split(' ')[0]}. ¡Escribe el primero!
+                {tr('chats.no_messages', { name: selected.name.split(' ')[0] })}
               </p>
             </div>
           ) : rtMessages.map(msg => {
@@ -352,7 +354,7 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
             <button className="hover:opacity-70"><Paperclip size={18} style={{ color: t.textMuted }} /></button>
             <input value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && send()}
-              placeholder={`Mensaje a ${selected.name.split(' ')[0]}...`}
+              placeholder={tr('chats.message_placeholder', { name: selected.name.split(' ')[0] })}
               className="flex-1 bg-transparent outline-none"
               style={{ fontSize: '0.87rem', color: t.text }} />
             <button onClick={send}
@@ -395,7 +397,7 @@ export function ChatsView({ onNavigate: _onNavigate }: { onNavigate?: (v: ViewId
               <div className="flex items-center gap-2 mb-3">
                 <span className="px-2.5 py-1 rounded-full text-xs font-semibold"
                   style={{ background: 'rgba(108,99,255,0.12)', color: '#6C63FF' }}>
-                  {selected.matchPct}% compatibilidad
+                  {tr('chats.compatibility', { pct: selected.matchPct })}
                 </span>
               </div>
             )}

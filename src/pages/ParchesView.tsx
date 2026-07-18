@@ -23,6 +23,7 @@ import { useTheme } from '../store/ThemeContext';
 import { useAuth } from '../store/AuthContext';
 import { useReports, type ReportCategory } from '../store/ReportsContext';
 import { friendlyError } from '../lib/errorMessages';
+import { useTranslation } from 'react-i18next';
 import { parcheService } from '../services/parcheService';
 import { userService } from '../services/userService';
 import { CATEGORY_META, ALL_CATEGORIES } from '../lib/maps';
@@ -125,6 +126,7 @@ const QUICK_REACTIONS = ['👍','❤️','😂','🔥','🙏','✅','👏','😮
 // ── useBoard error surfacing in CollabCanvas ──
 function CollabCanvas({ parcheId }: { parcheId: number }) {
   const { boardId, strokes, remoteCursors, isConnected, error: boardError, sendStroke, sendCursor, clearBoard } = useBoard(parcheId, 'ME');
+  const { t: tr } = useTranslation();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -334,6 +336,7 @@ function CollabCanvas({ parcheId }: { parcheId: number }) {
 
 function ReportModal({ member, parcheId, parcheName, onClose }: { member: UiMember; parcheId: UUID; parcheName: string; onClose: () => void }) {
   const { addReport } = useReports();
+  const { t: tr } = useTranslation();
   const [reason, setReason] = useState<ReportCategory | ''>('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -413,6 +416,7 @@ function memberSched(name: string): Set<string> {
 export function ParchesView({ linkedEvents = [] }: {
   linkedEvents?: Array<{ parcheId: number; eventTitle: string; eventEmoji: string; eventDate: string }>;
 }) {
+  const { t: tr } = useTranslation();
   const t = useTheme();
   const { userId: meId, userName } = useAuth();
   const location = useLocation();
@@ -1102,7 +1106,7 @@ const realLeaveVoice = () => {
           <button onClick={()=>setShowCreate(true)}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
             style={{ background:'#7FE7C4', color:'#0F0E1A' }}>
-            <Plus size={15} /> Crear Parche
+            <Plus size={15} /> {tr('parches.create_new')}
           </button>
         </div>
       </div>
@@ -1114,21 +1118,21 @@ const realLeaveVoice = () => {
         {!selectedParche.id ? (
           <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 text-center px-10" style={{ background:'rgba(13,11,30,0.9)' }}>
             <div className="w-16 h-16 rounded-full flex items-center justify-center text-3xl" style={{ background:'rgba(108,99,255,0.12)' }}>🧭</div>
-            <p style={{ fontWeight:700, fontSize:'1rem', color:'var(--p-text)' }}>Explora los parches</p>
-            <p style={{ fontSize:'0.82rem', color:'var(--p-muted)', maxWidth:360, lineHeight:1.6 }}>Elige un parche de la lista. Únete a los públicos con un toque, o entra a un privado con su código.</p>
+            <p style={{ fontWeight:700, fontSize:'1rem', color:'var(--p-text)' }}>{tr('parches.explore')}</p>
+            <p style={{ fontSize:'0.82rem', color:'var(--p-muted)', maxWidth:360, lineHeight:1.6 }}>{scope === 'public' ? tr('parches.search_public') : tr('parches.search_private')}</p>
           </div>
         ) : !isMember(selectedParche) && (
           <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 text-center px-10" style={{ background:'rgba(13,11,30,0.86)', backdropFilter:'blur(7px)' }}>
             <ParcheAvatar parche={selectedParche} size={64} textSize="1.9rem" rounded="2xl" />
             <div>
               <p style={{ fontWeight:800, fontSize:'1.1rem', color:'var(--p-text)' }}>{selectedParche.name}</p>
-              <p style={{ fontSize:'0.8rem', color:'var(--p-muted)', marginTop:4 }}>{selectedParche.memberCount}/{selectedParche.maxCapacity} miembros</p>
+              <p style={{ fontSize:'0.8rem', color:'var(--p-muted)', marginTop:4 }}>{tr('parches.members_count', { count: selectedParche.memberCount })}</p>
             </div>
-            <div className="flex items-center gap-2" style={{ color:'var(--p-muted)', fontSize:'0.82rem' }}><Lock size={14} /> El chat y las herramientas están bloqueados hasta que te unas</div>
+            <div className="flex items-center gap-2" style={{ color:'var(--p-muted)', fontSize:'0.82rem' }}><Lock size={14} /></div>
             {selectedParche.type==='public' ? (
-              <button onClick={()=>joinPublic(selectedParche)} className="px-6 py-3 rounded-xl text-sm font-semibold hover:opacity-90" style={{ background:'linear-gradient(135deg,#6C63FF,#8B7FFF)', color:'white' }}>Unirme al parche</button>
+              <button onClick={()=>joinPublic(selectedParche)} className="px-6 py-3 rounded-xl text-sm font-semibold hover:opacity-90" style={{ background:'linear-gradient(135deg,#6C63FF,#8B7FFF)', color:'white' }}>{tr('parches.join')}</button>
             ) : (
-              <p style={{ fontSize:'0.78rem', color:'var(--p-muted)', maxWidth:320 }}>Este es un parche privado. Únete con su código desde la pestaña Privados.</p>
+              <p style={{ fontSize:'0.78rem', color:'var(--p-muted)', maxWidth:320 }}>{tr('parches.join_code_placeholder')}</p>
             )}
           </div>
         )}
@@ -1163,7 +1167,7 @@ const realLeaveVoice = () => {
                 )}
               </div>
               <span style={{ fontSize:'0.68rem', color:'var(--p-muted)' }}>
-                <span style={{ color:'#7FE7C4' }}>●</span> {selectedParche.memberCount}/{selectedParche.maxCapacity} miembros
+                <span style={{ color:'#7FE7C4' }}>●</span> {tr('parches.members_count', { count: selectedParche.memberCount })}
               </span>
             </div>
           </div>
@@ -1172,13 +1176,13 @@ const realLeaveVoice = () => {
               <button onClick={()=>void generateInvite(selectedParche)} disabled={inviteLoading}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-50"
                 style={{ background:'rgba(127,231,196,0.16)', color:'#7FE7C4', border:'1px solid rgba(127,231,196,0.35)' }}>
-                <KeyRound size={14} /> {inviteLoading ? 'Generando…' : isMobile ? 'Invitar' : 'Invitar al parche'}
+                <KeyRound size={14} /> {inviteLoading ? '...' : isMobile ? tr('parches.copy_invite') : tr('parches.copy_invite')}
               </button>
             )}
             <button onClick={()=>setShowMembers(v=>!v)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-all"
               style={{ background: showMembers ? 'rgba(108,99,255,0.2)' : 'var(--p-input)', color:'var(--p-muted)' }}>
-              <Users size={14} /> Miembros
+              <Users size={14} /> {tr('parches.members')}
             </button>
             {/* Settings dropdown */}
             <div className="relative">
@@ -1198,18 +1202,18 @@ const realLeaveVoice = () => {
                       <button onClick={() => { setSettingsMenuOpen(false); void generateInvite(selectedParche); }}
                         className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left hover:opacity-80 transition-all border-b"
                         style={{ color:'var(--p-text)', borderColor:'var(--p-divider)' }}>
-                        <KeyRound size={14} /> Generar código de invitación
+                        <KeyRound size={14} /> {tr('parches.copy_invite')}
                       </button>
                     )}
                     <button onClick={() => { setSettingsMenuOpen(false); void leaveParche(selectedParche); }}
                       className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left hover:opacity-80 transition-all border-b"
                       style={{ color:'#FF4D6A', borderColor:'var(--p-divider)' }}>
-                      <LogOut size={14} /> Salirse del parche
+                      <LogOut size={14} /> {tr('parches.leave')}
                     </button>
                     <button onClick={() => { setSettingsMenuOpen(false); void deleteParcheHandler(selectedParche); }}
                       className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-left hover:opacity-80 transition-all"
                       style={{ color:'#FF4D6A' }}>
-                      <Trash2 size={14} /> Eliminar parche <span style={{ fontSize:'0.62rem', color:'var(--p-muted)' }}>(dueño)</span>
+                      <Trash2 size={14} /> {tr('parches.delete')}
                     </button>
                   </motion.div>
                 )}
