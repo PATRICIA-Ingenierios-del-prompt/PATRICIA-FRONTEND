@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { authService } from '../services/authService';
 import { useAuth } from '../store/AuthContext';
 import { friendlyError } from '../lib/errorMessages';
+import { useTranslation } from 'react-i18next';
 import { LegalModals, RegisterConsentModal, type LegalModalType } from '../components/LegalContent';
 
 const MS_CLIENT_ID = 'd378f378-5c84-4dc8-8ce6-85bf56b42a45';
@@ -46,6 +47,7 @@ function MicrosoftLogo({ size = 20 }: { size?: number }) {
 }
 
 export function RegisterView({ onRegister, onGoLogin, onDecline, darkMode = true, setDarkMode }: RegisterViewProps) {
+  const { t } = useTranslation();
   const { login } = useAuth();
 
   const [step, setStep]       = useState<RegisterStep>('main');
@@ -203,7 +205,7 @@ export function RegisterView({ onRegister, onGoLogin, onDecline, darkMode = true
           {darkMode
             ? <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm0 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM4.22 4.22a1 1 0 011.42 0l.7.71a1 1 0 01-1.41 1.41l-.71-.7a1 1 0 010-1.42zm13.72 13.72a1 1 0 011.42 0 1 1 0 010 1.42l-.71.7a1 1 0 01-1.41-1.41l.7-.71zM2 12a1 1 0 011-1h1a1 1 0 110 2H3a1 1 0 01-1-1zm17 0a1 1 0 011-1h1a1 1 0 110 2h-1a1 1 0 01-1-1zM6.34 17.66a1 1 0 010 1.41l-.71.71a1 1 0 01-1.41-1.41l.7-.71a1 1 0 011.42 0zm11.32-11.32a1 1 0 010 1.41l-.71.71a1 1 0 01-1.41-1.41l.7-.71a1 1 0 011.42 0zM12 7a5 5 0 110 10A5 5 0 0112 7z" /></svg>
             : <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" /></svg>}
-          <span style={{ fontSize: '0.78rem', fontWeight: 600 }}>{darkMode ? 'Modo claro' : 'Modo oscuro'}</span>
+          <span style={{ fontSize: '0.78rem', fontWeight: 600 }}>{darkMode ? t('register.light_mode') : t('register.dark_mode')}</span>
         </button>
       )}
 
@@ -222,7 +224,7 @@ export function RegisterView({ onRegister, onGoLogin, onDecline, darkMode = true
                 onClick={goBack}
                 className="flex items-center gap-1.5 mb-4 hover:opacity-70 transition-opacity"
                 style={{ color: mutedCol, fontSize: '0.82rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                <ArrowLeft size={15} /> Volver
+                <ArrowLeft size={15} /> {t('register.back')}
               </motion.button>
             )}
           </AnimatePresence>
@@ -254,8 +256,8 @@ export function RegisterView({ onRegister, onGoLogin, onDecline, darkMode = true
             {step === 'main' && (
               <motion.div key="main" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.22 }}>
                 <div className="text-center mb-8">
-                  <h1 style={{ fontWeight: 800, fontSize: '1.6rem', color: textCol, marginBottom: '8px' }}>Crear cuenta</h1>
-                  <p style={{ fontSize: '0.88rem', color: mutedCol, lineHeight: 1.6 }}>Regístrate con tu cuenta institucional ECI</p>
+                  <h1 style={{ fontWeight: 800, fontSize: '1.6rem', color: textCol, marginBottom: '8px' }}>{t('register.title')}</h1>
+                  <p style={{ fontSize: '0.88rem', color: mutedCol, lineHeight: 1.6 }}>{t('register.subtitle')}</p>
                 </div>
 
                 <motion.button
@@ -271,12 +273,12 @@ export function RegisterView({ onRegister, onGoLogin, onDecline, darkMode = true
                 </motion.button>
 
                 <p className="text-center mt-3" style={{ fontSize: '0.75rem', color: mutedCol }}>
-                  Solo cuentas <span style={{ color: darkMode ? '#7FE7C4' : '#0D9D74', fontWeight: 600 }}>@mail.escuelaing.edu.co</span>
+                  {t('register.only_domains')} <span style={{ color: darkMode ? '#7FE7C4' : '#0D9D74', fontWeight: 600 }}>@mail.escuelaing.edu.co</span>
                 </p>
 
                 <div className="flex items-center gap-3 my-5">
                   <div className="flex-1 h-px" style={{ background: 'rgba(108,99,255,0.15)' }} />
-                  <span style={{ fontSize: '0.75rem', color: mutedCol }}>o</span>
+                  <span style={{ fontSize: '0.75rem', color: mutedCol }}>{t('register.or')}</span>
                   <div className="flex-1 h-px" style={{ background: 'rgba(108,99,255,0.15)' }} />
                 </div>
 
@@ -286,19 +288,19 @@ export function RegisterView({ onRegister, onGoLogin, onDecline, darkMode = true
                   whileTap={{ scale: 0.98 }}
                   style={outlinedBtn}>
                   <Mail size={18} />
-                  Registrarse con código por correo
+                  {t('register.email_code')}
                 </motion.button>
 
                 <div className="flex items-center gap-3 mt-7 mb-5">
                   <div className="flex-1 h-px" style={{ background: 'rgba(108,99,255,0.12)' }} />
-                  <span style={{ fontSize: '0.72rem', color: mutedCol }}>¿Ya tienes cuenta?</span>
+                  <span style={{ fontSize: '0.72rem', color: mutedCol }}>{t('register.already_have_account')}</span>
                   <div className="flex-1 h-px" style={{ background: 'rgba(108,99,255,0.12)' }} />
                 </div>
 
                 <button onClick={onGoLogin}
                   className="w-full py-3 rounded-2xl font-semibold transition-all hover:opacity-80"
                   style={{ background: 'transparent', border: `1.5px solid ${darkMode ? 'rgba(108,99,255,0.35)' : 'rgba(108,99,255,0.3)'}`, color: darkMode ? '#A09AE0' : '#6C63FF', fontSize: '0.95rem', cursor: 'pointer' }}>
-                  Iniciar sesión
+                  {t('register.login')}
                 </button>
               </motion.div>
             )}
@@ -307,14 +309,14 @@ export function RegisterView({ onRegister, onGoLogin, onDecline, darkMode = true
             {step === 'email' && (
               <motion.div key="email" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.22 }}>
                 <div className="text-center mb-6">
-                  <h1 style={{ fontWeight: 800, fontSize: '1.4rem', color: textCol, marginBottom: '6px' }}>Ingresa tu correo</h1>
+                  <h1 style={{ fontWeight: 800, fontSize: '1.4rem', color: textCol, marginBottom: '6px' }}>{t('register.email_title')}</h1>
                   <p style={{ fontSize: '0.83rem', color: mutedCol, lineHeight: 1.6 }}>
-                    Te enviaremos un código de 6 dígitos para verificar tu identidad.
+                    {t('register.email_subtitle')}
                   </p>
                 </div>
                 <div className="mb-4">
                   <label style={{ fontSize: '0.78rem', fontWeight: 600, color: darkMode ? '#C0BAE0' : '#3D3660', display: 'block', marginBottom: '6px' }}>
-                    Correo institucional
+                    {t('register.email_label')}
                   </label>
                   <input type="email" value={email}
                     onChange={e => { setEmail(e.target.value); setError(''); }}
@@ -329,7 +331,7 @@ export function RegisterView({ onRegister, onGoLogin, onDecline, darkMode = true
                   whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} style={primaryBtn}>
                   {loading
                     ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    : 'Enviar código'}
+                    : t('register.send_code')}
                 </motion.button>
               </motion.div>
             )}
@@ -338,9 +340,9 @@ export function RegisterView({ onRegister, onGoLogin, onDecline, darkMode = true
             {step === 'otp' && (
               <motion.div key="otp" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.22 }}>
                 <div className="text-center mb-6">
-                  <h1 style={{ fontWeight: 800, fontSize: '1.4rem', color: textCol, marginBottom: '6px' }}>Verifica tu identidad</h1>
+                  <h1 style={{ fontWeight: 800, fontSize: '1.4rem', color: textCol, marginBottom: '6px' }}>{t('register.verify_title')}</h1>
                   <p style={{ fontSize: '0.83rem', color: mutedCol, lineHeight: 1.6 }}>
-                    Ingresa el código enviado a{' '}
+                    {t('register.verify_subtitle')}{' '}
                     <span style={{ color: darkMode ? '#7FE7C4' : '#0D9D74', fontWeight: 600 }}>{maskedEmail}</span>
                   </p>
                 </div>
@@ -362,18 +364,18 @@ export function RegisterView({ onRegister, onGoLogin, onDecline, darkMode = true
                   whileHover={{ scale: loading ? 1 : 1.02 }} whileTap={{ scale: 0.98 }} style={primaryBtn}>
                   {loading
                     ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    : 'Verificar código'}
+                    : t('register.verify_code')}
                 </motion.button>
 
                 <p className="text-center mt-4" style={{ fontSize: '0.78rem', color: mutedCol }}>
-                  ¿No llegó el código?{' '}
+                  {t('register.no_code')}{' '}
                   {otpCooldown > 0 ? (
-                    <span style={{ color: mutedCol }}>Reenviar en {otpCooldown}s</span>
+                    <span style={{ color: mutedCol }}>{t('register.resend_in', { count: otpCooldown })}</span>
                   ) : (
                     <button onClick={() => { setError(''); handleRequestOtp(); }} disabled={loading}
                       style={{ color: darkMode ? '#7FE7C4' : '#6C63FF', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
                       className="hover:underline">
-                      Reenviar
+                      {t('register.resend')}
                     </button>
                   )}
                 </p>
