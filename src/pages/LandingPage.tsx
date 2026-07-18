@@ -19,7 +19,6 @@ import monoCoderFImg     from '../assets/monoCoderN.png';
 import monoEstudioFImg   from '../assets/monoEstudiosoN.png';
 import monoCoderNewImg   from '../assets/monoCoderNew.png';
 import { motion, AnimatePresence } from 'motion/react';
-import { useTranslation } from 'react-i18next';
 import { LegalModals, type LegalModalType } from '../components/LegalContent';
 
 interface LandingPageProps {
@@ -29,6 +28,20 @@ interface LandingPageProps {
   setDarkMode: (v: boolean) => void;
 }
 
+const FEATURES = [
+  { img: monoSocialFImg,    icon: Users,    color: '#6C63FF', title: 'Parches Virtuales',    desc: 'Grupos por intereses con chat, voz, lienzo colaborativo y juegos como Parqués integrados.' },
+  { img: monoCulturaFImg,   icon: Heart,    color: '#FF6B9D', title: 'Matching Inteligente', desc: 'Encuentra estudiantes con tu misma vibra académica. Algoritmo basado en intereses y carrera.' },
+  { img: monoMusicaFImg,    icon: Calendar, color: '#7FE7C4', title: 'Eventos del Campus',   desc: 'Hackathones, charlas empresariales, torneos y actividades con geolocalización en tiempo real.' },
+  { img: monoTranquiloFImg, icon: Smile,    color: '#FFB347', title: 'Bienestar 24/7',       desc: 'Chatbot de apoyo, diario emocional con IA, respiración guiada y sonidos de relajación.' },
+  { img: monoCoderFImg,     icon: Zap,      color: '#A78BFA', title: 'Álbum de Monas',       desc: '12 personajes coleccionables con 4 rarezas. Gana XP participando y sube en el ranking.' },
+  { img: monoEstudioFImg,   icon: Shield,   color: '#00D9FF', title: 'Solo para la ECI',     desc: 'Verificación con correo institucional. Tu comunidad privada y segura.' },
+];
+
+const STEPS = [
+  { color: '#6C63FF', icon: '✉️', title: 'Regístrate con tu correo ECI', desc: 'Solo @mail.escuelaing.edu.co. Verificación automática e instantánea.' },
+  { color: '#7FE7C4', icon: '🏷️', title: 'Elige tus intereses',          desc: 'Selecciona de 11 categorías y más de 70 intereses para personalizar todo.' },
+  { color: '#FFB347', icon: '🎪', title: 'Únete a parches y eventos',    desc: 'Conecta con compañeros afines, asiste a eventos y sube tu XP en la comunidad.' },
+];
 
 const GALLERY = [
   { img: lp1,         label: 'Comunidad',  desc: 'Parches y grupos de interés',   color: '#6C63FF', info: 'Encuentra tu gente: parches de estudio, deporte, arte y más, siempre activos en el campus.' },
@@ -40,20 +53,6 @@ const GALLERY = [
 ];
 
 export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: LandingPageProps) {
-  const { t } = useTranslation();
-  const FEATURES = [
-    { img: monoSocialFImg,    icon: Users,    color: '#6C63FF', title: t('landing.feature_groups'),    desc: t('landing.feature_groups_desc') },
-    { img: monoCulturaFImg,   icon: Heart,    color: '#FF6B9D', title: t('landing.feature_matching'),  desc: t('landing.feature_matching_desc') },
-    { img: monoMusicaFImg,    icon: Calendar, color: '#7FE7C4', title: t('landing.feature_events'),    desc: t('landing.feature_events_desc') },
-    { img: monoTranquiloFImg, icon: Smile,    color: '#FFB347', title: t('landing.feature_wellness'),  desc: t('landing.feature_wellness_desc') },
-    { img: monoCoderFImg,     icon: Zap,      color: '#A78BFA', title: t('landing.feature_album'),     desc: t('landing.feature_album_desc') },
-    { img: monoEstudioFImg,   icon: Shield,   color: '#00D9FF', title: t('landing.feature_eci'),       desc: t('landing.feature_eci_desc') },
-  ];
-  const STEPS = [
-    { color: '#6C63FF', icon: '✉️', title: t('landing.step1_title'), desc: t('landing.step1_desc') },
-    { color: '#7FE7C4', icon: '🏷️', title: t('landing.step2_title'), desc: t('landing.step2_desc') },
-    { color: '#FFB347', icon: '🎪', title: t('landing.step3_title'), desc: t('landing.step3_desc') },
-  ];
   const [featureIdx, setFeatureIdx] = useState(0);
   const [galleryOrder, setGalleryOrder] = useState([0, 1, 2, 3, 4, 5]);
   const [mobileExpandedIdx, setMobileExpandedIdx] = useState<number | null>(null);
@@ -91,7 +90,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
           <ImageWithFallback src={dark ? logoNuevoOscuroImg : logoNuevoClaroImg} alt="U•link" className="object-contain" style={{ height: 44 }} />
         </div>
         <div className="hidden md:flex items-center gap-7">
-          {[{ label: t('landing.nav_features'), id: 'funcionalidades' }, { label: t('landing.nav_how'), id: 'como-funciona' }].map(({ label, id }) => (
+          {[{ label: 'Funcionalidades', id: 'funcionalidades' }, { label: '¿Cómo funciona?', id: 'como-funciona' }].map(({ label, id }) => (
             <button key={id} onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })}
               className="text-sm font-medium transition-colors hover:opacity-70" style={{ color: textS, background: 'none', border: 'none' }}>
               {label}
@@ -108,7 +107,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
           <button onClick={onLogin}
             className="hidden sm:flex px-4 py-2 rounded-xl text-sm font-medium border transition-all hover:opacity-80"
             style={{ borderColor: '#6C63FF', color: '#6C63FF', background: 'transparent' }}>
-            {t('landing.login')}
+            Iniciar sesión
           </button>
           {/* Compact login icon for mobile */}
           <button onClick={onLogin}
@@ -159,7 +158,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
               style={{ background:'rgba(108,99,255,0.14)', border:'1px solid rgba(108,99,255,0.32)' }}>
               <div className="w-2 h-2 rounded-full animate-pulse" style={{ background:'#7FE7C4' }} />
               <span style={{ fontSize:'0.72rem', color:'#7FE7C4', fontWeight:700, letterSpacing:'0.06em' }}>
-                {t('landing.hero_badge')}
+                EXCLUSIVO · Escuela Colombiana de Ingeniería
               </span>
             </div>
 
@@ -169,14 +168,14 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
               </span>
             </div>
             <h1 style={{ fontWeight:900, fontSize:'clamp(1.9rem,3.5vw,3rem)', lineHeight:1.1, color:'white', marginBottom:'22px', textShadow:'0 2px 16px rgba(0,0,0,0.35)' }}>
-              {t('landing.hero_title')}<br />
+              Conecta, aprende y<br />
               <span style={{ background:'linear-gradient(135deg,#A89BFF,#7FE7C4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
-                {t('landing.hero_title_highlight')}
+                crece juntos
               </span>
             </h1>
 
             <p style={{ fontSize:'1.05rem', color:'rgba(255,255,255,0.82)', lineHeight:1.78, marginBottom:'36px', maxWidth:460, textShadow:'0 1px 8px rgba(0,0,0,0.4)' }}>
-              {t('landing.hero_desc')}
+              La plataforma social construida 100% para estudiantes de la ECI. Parches, matching inteligente, eventos y bienestar, todo en un lugar.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 mb-8">
@@ -184,18 +183,18 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                 whileHover={{ scale:1.04, boxShadow:'0 14px 40px rgba(108,99,255,0.65)' }} whileTap={{ scale:0.97 }}
                 className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-base"
                 style={{ background:'linear-gradient(135deg,#6C63FF,#8B7FFF)', color:'white', boxShadow:'0 4px 24px rgba(108,99,255,0.48)' }}>
-                {t('landing.create_account')} <ArrowRight size={18} />
+                Crear cuenta gratis <ArrowRight size={18} />
               </motion.button>
               <button onClick={onLogin}
                 className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-semibold text-base transition-all"
                 style={{ border:'2px solid rgba(255,255,255,0.55)', color:'white', background:'rgba(255,255,255,0.12)', backdropFilter:'blur(8px)' }}>
-                {t('landing.already_account')}
+                Ya tengo cuenta
               </button>
             </div>
 
             {/* Feature pills */}
             <div className="flex flex-wrap gap-2">
-              {[t('landing.tag_matching'),t('landing.tag_groups'),t('landing.tag_events'),t('landing.tag_wellness'),t('landing.tag_album')].map(tag => (
+              {['Matching IA','Parches virtuales','Eventos campus','Bienestar 24/7','Álbum de Monas'].map(tag => (
                 <span key={tag} className="px-3 py-1.5 rounded-full text-xs font-medium"
                   style={{ background:'rgba(0,0,0,0.28)', color:'rgba(255,255,255,0.88)', border:'1px solid rgba(255,255,255,0.22)', backdropFilter:'blur(6px)' }}>
                   {tag}

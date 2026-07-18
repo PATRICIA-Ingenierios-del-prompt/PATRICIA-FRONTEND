@@ -9,7 +9,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { userService, type OnboardingPayload } from '../services/userService';
 import { useAuth } from '../store/AuthContext';
 import { friendlyError } from '../lib/errorMessages';
-import { useTranslation } from 'react-i18next';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface OnboardingViewProps {
@@ -39,10 +38,15 @@ const ECI_CARRERAS = [
 ];
 const SEMESTRES = ['1°', '2°', '3°', '4°', '5°', '6°', '7°', '8°', '9°', '10°'];
 const GENEROS = [
-  { id: 'masculino' },
-  { id: 'femenino' },
-  { id: 'otro' },
-  { id: 'nd' },
+  { id: 'masculino', label: 'Masculino' },
+  { id: 'femenino',  label: 'Femenino' },
+  { id: 'otro',      label: 'Otro' },
+  { id: 'nd',        label: 'Prefiero no decirlo' },
+];
+const STEP_META = [
+  { title: 'Datos Básicos',    sub: 'Cuéntanos quién eres' },
+  { title: 'Perfil Académico', sub: 'Carrera, semestre y datos personales' },
+  { title: 'Intereses',        sub: 'Elige tus categorías favoritas' },
 ];
 
 // ── Shared styles helper ────────────────────────────────────────────────────
@@ -119,15 +123,14 @@ function StepDatosBasicos({ data, setData, onNext, dark }: {
   data: FormData; setData: (fn: (d: FormData) => FormData) => void;
   onNext: () => void; dark: boolean;
 }) {
-  const { t } = useTranslation();
   const [focused, setFocused] = useState<string | null>(null);
   const [errors, setErrors]   = useState<Record<string, string>>({});
   const set = (k: keyof FormData, v: string) => setData(d => ({ ...d, [k]: v }));
 
   const handleNext = () => {
     const errs: Record<string, string> = {};
-    if (!data.nombre.trim())    errs.nombre    = t('onboarding.name_required');
-    if (!data.apellidos.trim()) errs.apellidos = t('onboarding.surname_required');
+    if (!data.nombre.trim())    errs.nombre    = 'El nombre es requerido';
+    if (!data.apellidos.trim()) errs.apellidos = 'Los apellidos son requeridos';
     setErrors(errs);
     if (Object.keys(errs).length === 0) onNext();
   };
@@ -139,18 +142,18 @@ function StepDatosBasicos({ data, setData, onNext, dark }: {
     <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}
       transition={{ duration: 0.25 }} className="space-y-5">
       <div>
-        <label style={labelStyle(dark)}>{t('onboarding.name_label')}</label>
+        <label style={labelStyle(dark)}>Nombre</label>
         <input value={data.nombre} onChange={e => set('nombre', e.target.value)}
           onFocus={() => setFocused('nombre')} onBlur={() => setFocused(null)}
-          placeholder={t('onboarding.name_placeholder')}
+          placeholder="Tu nombre"
           style={inputStyle(focused === 'nombre', dark, !!errors.nombre)} />
         {errors.nombre && <p style={{ fontSize: '0.72rem', color: '#FF4757', marginTop: '4px' }}>{errors.nombre}</p>}
       </div>
       <div>
-        <label style={labelStyle(dark)}>{t('onboarding.surname_label')}</label>
+        <label style={labelStyle(dark)}>Apellidos</label>
         <input value={data.apellidos} onChange={e => set('apellidos', e.target.value)}
           onFocus={() => setFocused('apellidos')} onBlur={() => setFocused(null)}
-          placeholder={t('onboarding.surname_placeholder')}
+          placeholder="Tus apellidos"
           style={inputStyle(focused === 'apellidos', dark, !!errors.apellidos)} />
         {errors.apellidos && <p style={{ fontSize: '0.72rem', color: '#FF4757', marginTop: '4px' }}>{errors.apellidos}</p>}
       </div>
@@ -160,7 +163,7 @@ function StepDatosBasicos({ data, setData, onNext, dark }: {
         style={{ background: canContinue ? 'linear-gradient(135deg,#6C63FF,#5250d0)' : 'rgba(108,99,255,0.3)', color: 'white' }}>
         Continuar <ChevronRight size={18} />
       </motion.button>
-      <p style={{ textAlign: 'center', fontSize: '0.75rem', color: muted }}>{t('onboarding.step_label', { step: 1, total: 3 })}</p>
+      <p style={{ textAlign: 'center', fontSize: '0.75rem', color: muted }}>Paso 1 de 3</p>
     </motion.div>
   );
 }
@@ -170,7 +173,6 @@ function StepPerfil({ data, setData, onNext, onBack, dark }: {
   data: FormData; setData: (fn: (d: FormData) => FormData) => void;
   onNext: () => void; onBack: () => void; dark: boolean;
 }) {
-  const { t } = useTranslation();
   const [focused, setFocused] = useState<string | null>(null);
   const set = (k: keyof FormData, v: string) => setData(d => ({ ...d, [k]: v }));
 
@@ -189,14 +191,14 @@ function StepPerfil({ data, setData, onNext, onBack, dark }: {
 
       {/* ── Datos académicos ── */}
       <div className="rounded-2xl p-4 border" style={{ borderColor: 'rgba(108,99,255,0.2)', background: idleBg }}>
-        <p style={{ fontWeight: 700, fontSize: '0.9rem', color: text, marginBottom: '14px' }}>{t('onboarding.academic_title')}</p>
+        <p style={{ fontWeight: 700, fontSize: '0.9rem', color: text, marginBottom: '14px' }}>Datos académicos</p>
         <div className="mb-4">
-          <label style={labelStyle(dark)}>{t('onboarding.career_label')}</label>
+          <label style={labelStyle(dark)}>Carrera *</label>
           <div className="relative">
             <select value={data.carrera} onChange={e => set('carrera', e.target.value)}
               onFocus={() => setFocused('carrera')} onBlur={() => setFocused(null)}
               style={{ ...inputStyle(focused === 'carrera', dark), appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer', paddingRight: '36px' }}>
-              <option value="" disabled style={{ background: dark ? '#1A1A2E' : '#fff' }}>{t('onboarding.career_placeholder')}</option>
+              <option value="" disabled style={{ background: dark ? '#1A1A2E' : '#fff' }}>Selecciona tu carrera...</option>
               {ECI_CARRERAS.map(c => <option key={c} value={c} style={{ background: dark ? '#1A1A2E' : '#fff', color: dark ? '#E0E0FF' : '#1A1829' }}>{c}</option>)}
             </select>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -205,12 +207,12 @@ function StepPerfil({ data, setData, onNext, onBack, dark }: {
           </div>
         </div>
         <div className="mb-4">
-          <label style={labelStyle(dark)}>{t('onboarding.second_career_label')} <span style={{ color: muted, fontWeight: 400, fontSize: '0.75rem' }}>{t('onboarding.second_career_optional')}</span></label>
+          <label style={labelStyle(dark)}>Segunda carrera <span style={{ color: muted, fontWeight: 400, fontSize: '0.75rem' }}>(opcional)</span></label>
           <div className="relative">
             <select value={data.segundaCarrera} onChange={e => set('segundaCarrera', e.target.value)}
               onFocus={() => setFocused('segunda')} onBlur={() => setFocused(null)}
               style={{ ...inputStyle(focused === 'segunda', dark), appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer', paddingRight: '36px' }}>
-              <option value="" style={{ background: dark ? '#1A1A2E' : '#fff' }}>{t('onboarding.second_career_placeholder')}</option>
+              <option value="" style={{ background: dark ? '#1A1A2E' : '#fff' }}>Ninguna</option>
               {ECI_CARRERAS.filter(c => c !== data.carrera).map(c => <option key={c} value={c} style={{ background: dark ? '#1A1A2E' : '#fff' }}>{c}</option>)}
             </select>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -219,7 +221,7 @@ function StepPerfil({ data, setData, onNext, onBack, dark }: {
           </div>
         </div>
         <div>
-          <label style={labelStyle(dark)}>{t('onboarding.semester_label')}</label>
+          <label style={labelStyle(dark)}>Semestre *</label>
           <div className="grid grid-cols-5 gap-2">
             {SEMESTRES.map((s, i) => {
               const val = String(i + 1);
@@ -239,7 +241,7 @@ function StepPerfil({ data, setData, onNext, onBack, dark }: {
 
       {/* ── Fecha nacimiento ── */}
       <div>
-        <label style={labelStyle(dark)}>{t('onboarding.birthday_label')}</label>
+        <label style={labelStyle(dark)}>Fecha de nacimiento *</label>
         <input type="date" value={data.fechaNacimiento} onChange={e => set('fechaNacimiento', e.target.value)}
           onFocus={() => setFocused('fecha')} onBlur={() => setFocused(null)}
           max={new Date().toISOString().slice(0, 10)}
@@ -247,14 +249,14 @@ function StepPerfil({ data, setData, onNext, onBack, dark }: {
           className={dark ? '[color-scheme:dark]' : '[color-scheme:light]'} />
         {!ageInRange && (
           <p style={{ fontSize: '0.75rem', color: '#FF4757', marginTop: '6px', lineHeight: 1.4 }}>
-            {t('onboarding.birthday_error', { min: MIN_AGE, max: MAX_AGE })}
+            No cumple con el rango de edad ({MIN_AGE}-{MAX_AGE} años).
           </p>
         )}
       </div>
 
       {/* ── Género ── */}
       <div>
-        <label style={labelStyle(dark)}>{t('onboarding.gender_label')}</label>
+        <label style={labelStyle(dark)}>Género</label>
         <div className="grid grid-cols-2 gap-2">
           {GENEROS.map(g => (
             <button key={g.id} onClick={() => set('genero', g.id)}
@@ -267,7 +269,7 @@ function StepPerfil({ data, setData, onNext, onBack, dark }: {
                     className="w-2 h-2 rounded-full" style={{ background: '#6C63FF' }} />
                 )}
               </div>
-              <span style={{ fontWeight: data.genero === g.id ? 600 : 400 }}>{t(`onboarding.gender_${g.id}`)}</span>
+              <span style={{ fontWeight: data.genero === g.id ? 600 : 400 }}>{g.label}</span>
             </button>
           ))}
         </div>
@@ -291,7 +293,6 @@ function StepIntereses({ data, setData, onFinish, onBack, loading, dark }: {
   data: FormData; setData: (fn: (d: FormData) => FormData) => void;
   onFinish: () => void; onBack: () => void; loading: boolean; dark: boolean;
 }) {
-  const { t } = useTranslation();
   const selected = data.intereses;
   const valid = selected.length >= 3 && selected.length <= 12;
   const muted = dark ? '#999' : '#6B6490';
@@ -300,8 +301,8 @@ function StepIntereses({ data, setData, onFinish, onBack, loading, dark }: {
     <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}
       transition={{ duration: 0.25 }} className="space-y-5">
       <div className="text-center">
-        <p style={{ fontSize: '0.88rem', color: muted }}>{t('onboarding.interests_title')}</p>
-        <p style={{ fontSize: '0.78rem', color: muted, marginTop: '2px' }}>{t('onboarding.interests_subtitle')}</p>
+        <p style={{ fontSize: '0.88rem', color: muted }}>Elige tus Intereses</p>
+        <p style={{ fontSize: '0.78rem', color: muted, marginTop: '2px' }}>Selecciona mínimo 3 y máximo 12</p>
       </div>
       <InteresesPicker
         selected={selected}
@@ -315,7 +316,7 @@ function StepIntereses({ data, setData, onFinish, onBack, loading, dark }: {
         style={{ background: valid ? '#7FE7C4' : 'rgba(85,85,85,0.4)', color: valid ? '#0F0E1A' : '#888' }}>
         {loading
           ? <div className="w-5 h-5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
-          : <>{t('onboarding.complete')} <ChevronRight size={18} /></>
+          : <>Completar Registro <ChevronRight size={18} /></>
         }
       </motion.button>
       <button onClick={onBack} style={{ width: '100%', textAlign: 'center', fontSize: '0.8rem', color: muted, background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -328,7 +329,6 @@ function StepIntereses({ data, setData, onFinish, onBack, loading, dark }: {
 // ── Main OnboardingView ────────────────────────────────────────────────────
 export function OnboardingView({ onComplete, darkMode }: OnboardingViewProps) {
   const { userId, userEmail, setUserName } = useAuth();
-  const { t } = useTranslation();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -339,11 +339,6 @@ export function OnboardingView({ onComplete, darkMode }: OnboardingViewProps) {
 
   const dark = darkMode;
   const cardBg = dark ? '#1A1A2E' : '#FFFFFF';
-  const stepMeta = [
-    { title: t('onboarding.step1_title'), sub: t('onboarding.step1_subtitle') },
-    { title: t('onboarding.step2_title'), sub: t('onboarding.step2_subtitle') },
-    { title: t('onboarding.step3_title'), sub: t('onboarding.step3_subtitle') },
-  ];
   const textCol = dark ? '#E0E0FF' : '#1A1829';
   const mutedCol = dark ? '#999' : '#6B6490';
 
@@ -396,9 +391,9 @@ export function OnboardingView({ onComplete, darkMode }: OnboardingViewProps) {
           {/* Step title */}
           <div className="text-center mb-6">
             <h1 style={{ fontWeight: 800, fontSize: '1.5rem', color: textCol, marginBottom: '4px' }}>
-              {stepMeta[step - 1].title}
+              {STEP_META[step - 1].title}
             </h1>
-            <p style={{ fontSize: '0.85rem', color: mutedCol }}>{stepMeta[step - 1].sub}</p>
+            <p style={{ fontSize: '0.85rem', color: mutedCol }}>{STEP_META[step - 1].sub}</p>
           </div>
 
           {/* Step content */}
@@ -427,7 +422,7 @@ export function OnboardingView({ onComplete, darkMode }: OnboardingViewProps) {
 
           {/* Footer */}
           <p className="text-center mt-5" style={{ fontSize: '0.72rem', color: mutedCol }}>
-            {userEmail && <>{t('onboarding.registered_as')} <span style={{ color: dark ? '#7FE7C4' : '#0D9D74', fontWeight: 600 }}>{userEmail}</span></>}
+            {userEmail && <>Registrado como <span style={{ color: dark ? '#7FE7C4' : '#0D9D74', fontWeight: 600 }}>{userEmail}</span></>}
           </p>
         </div>
       </motion.div>

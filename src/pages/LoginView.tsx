@@ -112,9 +112,9 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
   const handleRequestOtp = async () => {
     setError('');
     const trimmed = email.trim().toLowerCase();
-    if (!trimmed) { setError(t('login.email_required')); return; }
+    if (!trimmed) { setError('Ingresa tu correo institucional.'); return; }
     if (!VALID_DOMAINS.some(d => trimmed.endsWith(d))) {
-      setError(t('login.domain_error'));
+      setError('Solo se permiten correos @mail.escuelaing.edu.co o @escuelaing.edu.co');
       return;
     }
     setLoading(true);
@@ -125,10 +125,10 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
       setTimeout(() => otpRefs.current[0]?.focus(), 120);
     } catch (e: any) {
       const status = e?.response?.status;
-      if (status === 403) setError(t('login.domain_not_allowed'));
-      else if (status === 429) setError(t('login.too_many_attempts'));
-      else if (status === 404) setError(t('login.account_not_found'));
-      else setError(friendlyError(e, t('login.code_send_error')));
+      if (status === 403) setError('Este dominio de correo no está permitido.');
+      else if (status === 429) setError('Demasiados intentos. Espera un momento.');
+      else if (status === 404) setError('No encontramos una cuenta con ese correo institucional.');
+      else setError(friendlyError(e, 'No se pudo enviar el código. Intenta de nuevo.'));
     } finally {
       setLoading(false);
     }
@@ -137,7 +137,7 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
   // ── OTP step 2: verify code ───────────────────────────────────────────────
   const handleVerifyOtp = async () => {
     const code = otp.join('');
-    if (code.length < 6) { setError(t('login.otp_required')); return; }
+    if (code.length < 6) { setError('Ingresa los 6 dígitos del código.'); return; }
     setLoading(true);
     setError('');
     try {
@@ -146,8 +146,8 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
       onLogin();
     } catch (e: any) {
       const status = e?.response?.status;
-      if (status === 401) setError(t('login.otp_invalid'));
-      else setError(friendlyError(e, t('login.otp_verify_error')));
+      if (status === 401) setError('Código incorrecto o expirado.');
+      else setError(friendlyError(e, 'Error al verificar. Intenta de nuevo.'));
       setOtp(['', '', '', '', '', '']);
       setTimeout(() => otpRefs.current[0]?.focus(), 120);
     } finally {
@@ -158,7 +158,7 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
   // ── Jurado: login con correo + contraseña, sin dominio institucional ──────
   const handleJuradoLogin = async () => {
     const trimmedEmail = juradoEmail.trim();
-    if (!trimmedEmail || !juradoPassword) { setError(t('login.jurado_required')); return; }
+    if (!trimmedEmail || !juradoPassword) { setError('Ingresa tu correo y contraseña.'); return; }
     setLoading(true);
     setError('');
     try {
@@ -167,8 +167,8 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
       onLogin({ jurado: true });
     } catch (e: any) {
       const status = e?.response?.status;
-      if (status === 401) setError(t('login.jurado_invalid'));
-      else setError(friendlyError(e, t('login.jurado_error')));
+      if (status === 401) setError('Correo o contraseña incorrectos');
+      else setError(friendlyError(e, 'No se pudo iniciar sesión. Intenta de nuevo.'));
     } finally {
       setLoading(false);
     }

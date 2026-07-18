@@ -104,13 +104,6 @@ const VIEW_LABELS: Record<ViewId, string> = {
   admin:          'Panel Admin',
 };
 
-function normalizeLanguage(value: string | null | undefined): 'es' | 'en' | 'fr' {
-  if (value === 'en' || value === 'fr' || value === 'es') return value;
-  if (value?.startsWith('en')) return 'en';
-  if (value?.startsWith('fr')) return 'fr';
-  return 'es';
-}
-
 function CampusView() {
   const t = useTheme();
   return (
@@ -852,8 +845,7 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
   const [notifToggles, setNotifToggles] = useState({ matches: true, parches: true, eventos: false });
   const [legalModal, setLegalModal] = useState<LegalModalType>(null);
   const [language, setLanguage] = useState<'es' | 'en' | 'fr'>(() => {
-    if (typeof window === 'undefined') return 'es';
-    return normalizeLanguage(window.localStorage.getItem('ulink-language'));
+    return (localStorage.getItem('ulink-language') as any) || 'es';
   });
 
   const [activeSection, setActiveSection] = useState<'privacidad' | 'notificaciones' | 'mas'>('privacidad');
@@ -862,15 +854,6 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [recovering, setRecovering] = useState(false);
   const [pendingDeletionSince, setPendingDeletionSince] = useState<string | null>(null);
-
-  useEffect(() => {
-    const savedLanguage = normalizeLanguage(window.localStorage.getItem('ulink-language'));
-    setLanguage(savedLanguage);
-    if (i18n.language !== savedLanguage) {
-      void i18n.changeLanguage(savedLanguage);
-    }
-    document.documentElement.lang = savedLanguage;
-  }, [i18n]);
 
   useEffect(() => {
     if (!userId) return;
@@ -926,9 +909,8 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
 
   const handleLanguageChange = (lang: 'es' | 'en' | 'fr') => {
     setLanguage(lang);
-    window.localStorage.setItem('ulink-language', lang);
-    document.documentElement.lang = lang;
-    void i18n.changeLanguage(lang);
+    localStorage.setItem('ulink-language', lang);
+    i18n.changeLanguage(lang);
   };
 
   return (
@@ -1132,7 +1114,6 @@ function AppCore() {
   const [activeView, setActiveView] = useState<ViewId>('home');
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeLanguage, setActiveLanguage] = useState<'es' | 'en' | 'fr'>(() => normalizeLanguage(typeof window !== 'undefined' ? window.localStorage.getItem('ulink-language') : null));
   const { unreadCount, pendingMatchCount, setPendingMatchCount, addNotification } = useNotifications();
   const [sidebarXp, setSidebarXp] = useState<number | null>(null);
   const [darkMode, setDarkMode] = useState(true);
@@ -1143,7 +1124,7 @@ function AppCore() {
 
   // Auth — name derived from JWT email claim (karol.estupinan-v@ → "Karol Estupinan")
   const { userName, userEmail, userId, roles, logout } = useAuth();
-  const { t: tr, i18n } = useTranslation();
+  const { t: tr } = useTranslation();
   const displayName = userName ?? userEmail ?? 'Usuario';
   const initials = displayName
     .split(' ').filter(Boolean).slice(0, 2)
@@ -1178,20 +1159,6 @@ function AppCore() {
   const setLandingTarget = (target: 'login' | 'register') => {
     setAuthState(target === 'login' ? 'loginform' : 'register');
   };
-  useEffect(() => {
-    const syncLanguage = (lng: string) => {
-      const normalized = normalizeLanguage(lng);
-      setActiveLanguage(normalized);
-      document.documentElement.lang = normalized;
-    };
-
-    syncLanguage(i18n.language || 'es');
-    i18n.on('languageChanged', syncLanguage);
-    return () => {
-      i18n.off('languageChanged', syncLanguage);
-    };
-  }, [i18n]);
-
   const [visionMode, setVisionMode] = useState<VisionMode>('normal');
   const [dyslexiaMode, setDyslexiaMode] = useState(false);
   const [linkedEvents, setLinkedEvents] = useState<Array<{parcheId: number; eventTitle: string; eventEmoji: string; eventDate: string}>>([]);
@@ -1391,7 +1358,7 @@ function AppCore() {
 
   return (
     <ThemeContext.Provider value={theme}>
-    <div key={activeLanguage} className={`size-full flex overflow-hidden relative${!darkMode ? ' light-theme' : ''}`} style={{
+    <div className={`size-full flex overflow-hidden relative${!darkMode ? ' light-theme' : ''}`} style={{
       fontFamily: "'Inter', 'Outfit', sans-serif",
       // CSS vars cascade to all children — components can use var(--p-*) in inline styles
       '--p-card':    theme.cardBg,
