@@ -188,6 +188,7 @@ function ScratchCanvas({ onComplete }: { onComplete: () => void }) {
   const isDown = useRef(false);
   const lastPos = useRef<{ x: number; y: number } | null>(null);
   const done = useRef(false);
+  const { t: tr } = useTranslation();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -204,8 +205,8 @@ function ScratchCanvas({ onComplete }: { onComplete: () => void }) {
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('✦ Raspa para', canvas.width / 2, canvas.height / 2 - 10);
-    ctx.fillText('revelar', canvas.width / 2, canvas.height / 2 + 10);
+    ctx.fillText(tr('album.canvas_scratch_line1'), canvas.width / 2, canvas.height / 2 - 10);
+    ctx.fillText(tr('album.canvas_scratch_line2'), canvas.width / 2, canvas.height / 2 + 10);
   }, []);
 
   const getPos = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -268,6 +269,7 @@ function ScratchCanvas({ onComplete }: { onComplete: () => void }) {
 function AlbumView() {
   const { userId } = useAuth();
   const t = useTheme();
+  const { t: tr } = useTranslation();
   const ad = t.darkMode;
   const aText    = ad ? 'white'                        : '#2A1F6E';
   const aSub     = ad ? 'rgba(255,255,255,0.52)'       : 'rgba(42,31,110,0.6)';
@@ -325,7 +327,7 @@ function AlbumView() {
     });
     setTimeout(() => {
       setJustUnlocked(mona);
-      addToast({ type: 'logro', title: '¡Mona desbloqueada!', message: `¡Conseguiste la ${mona.name}!` });
+      addToast({ type: 'logro', title: tr('album.toast_unlocked_title'), message: tr('album.toast_unlocked_msg', { name: mona.name }) });
     }, 300);
   };
 
@@ -347,20 +349,20 @@ function AlbumView() {
             style={{ width: 76, height: 76, filter: 'drop-shadow(0 6px 20px rgba(0,0,0,0.45))' }} />
           <div className="flex-1 min-w-0">
             <h2 style={{ fontWeight: 900, fontSize: '1.45rem', color: 'white', textShadow: '0 2px 12px rgba(0,0,0,0.35)', letterSpacing: '-0.02em' }}>
-              Álbum de Monas
+              {tr('album.title')}
             </h2>
-            <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', marginTop: '3px' }}>U•link · Colección Exclusiva ECI</p>
+            <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', marginTop: '3px' }}>{tr('album.subtitle')}</p>
             <div className="flex items-center gap-2 mt-3 flex-wrap">
               <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={{ background: 'rgba(255,255,255,0.18)', color: 'white', backdropFilter: 'blur(8px)' }}>
-                {unlockedCount}/{monas.length} coleccionadas
+                {tr('album.collected', { count: unlockedCount, total: monas.length })}
               </span>
               <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={{ background: 'rgba(255,179,71,0.28)', color: '#FFD95A', backdropFilter: 'blur(8px)' }}>
-                ⚡ {xpTotal.toLocaleString()} XP
+                {tr('album.xp_badge', { count: xpTotal.toLocaleString() })}
               </span>
               <button onClick={() => { setShowMonasGuide(true); setGuidePage(0); }}
                 className="px-2.5 py-1 rounded-full text-xs font-semibold transition-all hover:opacity-85"
                 style={{ background: 'rgba(127,231,196,0.22)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.4)', backdropFilter: 'blur(8px)' }}>
-                ¿Cómo se ganan?
+                {tr('album.guide_btn')}
               </button>
             </div>
           </div>
@@ -369,7 +371,7 @@ function AlbumView() {
 
       {/* Progress bar */}
       <div className="flex items-center justify-between mb-2">
-        <p style={{ fontSize: '0.75rem', color: t.textMuted }}>Progreso del álbum</p>
+        <p style={{ fontSize: '0.75rem', color: t.textMuted }}>{tr('album.progress')}</p>
         <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6C63FF' }}>{monas.length > 0 ? Math.round((unlockedCount / monas.length) * 100) : 0}%</p>
       </div>
       <div className="h-2 rounded-full mb-5 overflow-hidden" style={{ background: t.divider }}>
@@ -379,7 +381,7 @@ function AlbumView() {
       </div>
 
       {loadingMonas && (
-        <p style={{ fontSize: '0.82rem', color: t.textMuted, textAlign: 'center', padding: '24px 0' }}>Cargando álbum...</p>
+        <p style={{ fontSize: '0.82rem', color: t.textMuted, textAlign: 'center', padding: '24px 0' }}>{tr('album.loading')}</p>
       )}
 
       {/* Scratch hint banner */}
@@ -388,9 +390,8 @@ function AlbumView() {
           className="flex items-center gap-3 px-4 py-3 rounded-2xl mb-5"
           style={{ background: 'rgba(108,99,255,0.12)', border: '1px solid rgba(108,99,255,0.3)' }}>
           <motion.span animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 1 }} style={{ fontSize: '1.1rem' }}>✦</motion.span>
-          <p style={{ fontSize: '0.8rem', color: '#A89BFF', fontWeight: 500 }}>
-            ¡Ganaste monas nuevas! <strong style={{ color: '#6C63FF' }}>Tócalas para rasparlas y verlas.</strong>
-          </p>
+          <p style={{ fontSize: '0.8rem', color: '#A89BFF', fontWeight: 500 }}
+            dangerouslySetInnerHTML={{ __html: tr('album.scratch_hint') }} />
         </motion.div>
       )}
 
@@ -504,9 +505,8 @@ function AlbumView() {
                           animate={{ scale:[1,1.35,1], opacity:[0.85,1,0.85] }}
                           transition={{ duration:1.4, repeat:Infinity, ease:'easeInOut' }}
                           style={{ fontSize:'2.2rem', color:rc, lineHeight:1, filter:`drop-shadow(0 0 8px ${rc})` }}>✦</motion.span>
-                        <span style={{ fontSize:'0.55rem', fontWeight:900, color:rc, marginTop:7, textAlign:'center', textShadow:'0 1px 6px rgba(0,0,0,0.5)', lineHeight:1.4 }}>
-                          Toca para<br/>raspar
-                        </span>
+                        <span style={{ fontSize:'0.55rem', fontWeight:900, color:rc, marginTop:7, textAlign:'center', textShadow:'0 1px 6px rgba(0,0,0,0.5)', lineHeight:1.4 }}
+                          dangerouslySetInnerHTML={{ __html: tr('album.tap_scratch') }} />
                       </div>
                     )}
 
@@ -540,7 +540,7 @@ function AlbumView() {
           <button onClick={() => setAlbumPage(0)} disabled={albumPage === 0}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-25"
             style={{ background: aNavBg, color: aNavTxt, border: `1px solid ${aNavBord}`, backdropFilter: 'blur(8px)' }}>
-            ← Anterior
+            {tr('album.prev')}
           </button>
           <span style={{ fontSize:'0.68rem', color: aCnt, fontWeight:600 }}>
             {albumPage + 1} / 2
@@ -548,7 +548,7 @@ function AlbumView() {
           <button onClick={() => setAlbumPage(1)} disabled={albumPage === 1}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-25"
             style={{ background: aNavBg, color: aNavTxt, border: `1px solid ${aNavBord}`, backdropFilter: 'blur(8px)' }}>
-            Siguiente →
+            {tr('album.next')}
           </button>
         </div>
       </div>
@@ -579,10 +579,10 @@ function AlbumView() {
               {/* Header */}
               <div className="w-full px-6 pt-6 pb-4 text-center" style={{ background: `linear-gradient(135deg, ${scratchPopupMona.color}22, ${scratchPopupMona.color}08)` }}>
                 <p style={{ fontWeight: 800, fontSize: '0.65rem', color: scratchPopupMona.color, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: '6px' }}>
-                  Mona desbloqueada
+                  {tr('album.mona_unlocked')}
                 </p>
-                <h3 style={{ fontWeight: 900, fontSize: '1.3rem', color: t.text }}>¡Raspa para revelar!</h3>
-                <p style={{ fontSize: '0.78rem', color: t.textMuted, marginTop: '4px' }}>Desliza el dedo sobre la tarjeta</p>
+                <h3 style={{ fontWeight: 900, fontSize: '1.3rem', color: t.text }}>{tr('album.scratch_reveal')}</h3>
+                <p style={{ fontSize: '0.78rem', color: t.textMuted, marginTop: '4px' }}>{tr('album.scratch_desc')}</p>
               </div>
 
               {/* Scratch area */}
@@ -639,7 +639,7 @@ function AlbumView() {
                   transition={{ duration: 0.55, delay: 0.15 }}
                   style={{ fontSize: '2.2rem', marginBottom: '8px' }}>🎉</motion.div>
                 <p style={{ fontWeight: 800, fontSize: '0.65rem', color: justUnlocked.color, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: '16px' }}>
-                  ¡Mona desbloqueada!
+                  {tr('album.mona_unlocked')}
                 </p>
                 <motion.div className="mx-auto" style={{ width: 210, height: 210 }}
                   initial={{ scale: 0 }} animate={{ scale: 1 }}
@@ -658,7 +658,7 @@ function AlbumView() {
                   <button onClick={() => setJustUnlocked(null)}
                     className="w-full py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90"
                     style={{ background: `linear-gradient(135deg, ${justUnlocked.color}, ${justUnlocked.color}CC)`, color: 'white' }}>
-                    Listo
+                    {tr('album.done')}
                   </button>
                 </div>
               </div>
@@ -697,13 +697,13 @@ function AlbumView() {
                     <div className="relative z-10 flex items-start justify-between gap-4">
                       <div>
                         <p style={{ fontSize:'0.58rem', fontWeight:800, color:'rgba(255,255,255,0.55)', letterSpacing:'0.2em', textTransform:'uppercase', marginBottom:5 }}>
-                          Álbum U•link · Guía Oficial · Página {guidePage + 1} de {GUIDE_PAGES.length}
+                          {tr('album.guide_header', { current: guidePage + 1, total: GUIDE_PAGES.length })}
                         </p>
                         <h3 style={{ fontWeight:900, fontSize:'1.55rem', color:'white', letterSpacing:'-0.02em', lineHeight:1.1 }}>
                           {pg.rarity}
                         </h3>
                         <p style={{ fontSize:'0.78rem', color:'rgba(255,255,255,0.72)', marginTop:5 }}>
-                          +{pg.xp} XP por mona desbloqueada · {pageMonas.length} personaje{pageMonas.length !== 1 ? 's' : ''}
+                          {tr('album.xp_per_mona', { xp: pg.xp, count: pageMonas.length })}
                         </p>
                       </div>
                       <button onClick={() => setShowMonasGuide(false)}
@@ -766,12 +766,12 @@ function AlbumView() {
                                     <span className="px-2.5 py-0.5 rounded-full text-xs font-bold"
                                       style={{ background: unlk ? 'rgba(127,231,196,0.18)' : 'rgba(139,133,176,0.15)',
                                         color: unlk ? '#7FE7C4' : t.textMuted }}>
-                                      {unlk ? 'Obtenida' : 'Bloqueada'}
+                                      {unlk ? tr('album.obtained') : tr('album.locked')}
                                     </span>
                                   </div>
                                   {/* XP */}
                                   <p className="mb-3" style={{ fontSize:'0.72rem', color: t.textMuted }}>
-                                    +{mona.xp} XP al desbloquear
+                                    {tr('album.xp_unlock', { xp: mona.xp })}
                                   </p>
                                   {/* Cómo ganarla */}
                                   <div className="rounded-xl px-4 py-3"
@@ -779,7 +779,7 @@ function AlbumView() {
                                       border:`1px solid ${t.darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(108,99,255,0.13)'}` }}>
                                     <p style={{ fontSize:'0.62rem', fontWeight:800, color: unlk ? mona.color : pg.color,
                                       textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:5 }}>
-                                      Cómo ganarla
+                                      {tr('album.how_to_earn')}
                                     </p>
                                     <p style={{ fontSize:'0.82rem', color: t.textSub, lineHeight:1.6 }}>{mona.desc}</p>
                                   </div>
@@ -802,7 +802,7 @@ function AlbumView() {
                       style={{ background: t.darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(108,99,255,0.1)',
                         color: t.darkMode ? 'rgba(255,255,255,0.8)' : '#6C63FF',
                         border: `1px solid ${t.darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(108,99,255,0.2)'}` }}>
-                      ← Anterior
+                      {tr('album.prev')}
                     </button>
                     <div className="flex items-center gap-2">
                       {GUIDE_PAGES.map((gp, i) => (
@@ -818,7 +818,7 @@ function AlbumView() {
                       style={{ background: t.darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(108,99,255,0.1)',
                         color: t.darkMode ? 'rgba(255,255,255,0.8)' : '#6C63FF',
                         border: `1px solid ${t.darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(108,99,255,0.2)'}` }}>
-                      Siguiente →
+                      {tr('album.next')}
                     </button>
                   </div>
                 </motion.div>
@@ -870,11 +870,11 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
     setDeleteError(null);
     try {
       await userService.solicitarEliminacionCuenta(userId);
-      addToast({ type: 'info', title: 'Cuenta programada para eliminación', message: 'Tienes 24 horas para recuperarla — inicia sesión de nuevo antes de que pase ese tiempo.', duration: 8000 });
+      addToast({ type: 'info', title: tr('toasts.delete_scheduled_title'), message: tr('toasts.delete_scheduled_msg'), duration: 8000 });
       setShowDeleteConfirm(false);
       onLogout();
     } catch (e) {
-      setDeleteError(friendlyError(e, 'No se pudo procesar la solicitud. Intenta de nuevo.'));
+      setDeleteError(friendlyError(e, tr('toasts.delete_error_msg')));
     } finally {
       setDeleting(false);
     }
@@ -886,9 +886,9 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
     try {
       await userService.cancelarEliminacionCuenta(userId);
       setPendingDeletionSince(null);
-      addToast({ type: 'info', title: 'Cuenta recuperada', message: 'Se canceló la eliminación. Tu cuenta sigue activa.' });
+      addToast({ type: 'info', title: tr('toasts.recover_title'), message: tr('toasts.recover_msg') });
     } catch (e) {
-      addToast({ type: 'reporte', title: 'No se pudo recuperar la cuenta', message: friendlyError(e, 'Intenta de nuevo o contacta soporte.') });
+      addToast({ type: 'reporte', title: tr('toasts.recover_error_title'), message: tr('toasts.recover_error_msg') });
     } finally {
       setRecovering(false);
     }
@@ -922,13 +922,13 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
           style={{ background: 'rgba(255,77,106,0.08)', borderColor: 'rgba(255,77,106,0.3)' }}>
           <span style={{ fontSize: '1.3rem' }}>⚠️</span>
           <div className="flex-1 min-w-[200px]">
-            <p style={{ fontWeight: 700, fontSize: '0.88rem', color: '#FF4D6A' }}>Tu cuenta se eliminará pronto</p>
-            <p style={{ fontSize: '0.78rem', color: t.textMuted }}>Pediste eliminarla — todavía estás dentro de las 24 horas de gracia. Puedes recuperarla ahora.</p>
+            <p style={{ fontWeight: 700, fontSize: '0.88rem', color: '#FF4D6A' }}>{tr('settings.recover_banner_title')}</p>
+            <p style={{ fontSize: '0.78rem', color: t.textMuted }}>{tr('settings.recover_banner_desc')}</p>
           </div>
           <button onClick={handleRecoverAccount} disabled={recovering}
             className="px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60 flex-shrink-0"
             style={{ background: '#7FE7C4', color: '#0F0E1A' }}>
-            {recovering ? 'Recuperando…' : 'Recuperar cuenta'}
+            {recovering ? tr('settings.recovering_btn') : tr('settings.recover_btn')}
           </button>
         </div>
       )}
@@ -959,8 +959,8 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
 
           {/* Idioma */}
           <div className="rounded-2xl border p-5" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
-            <p style={{ fontWeight: 700, fontSize: '1.05rem', color: t.text, marginBottom: '4px' }}>Idioma</p>
-            <p style={{ fontSize: '0.85rem', color: t.textMuted, marginBottom: '16px' }}>Elige el idioma de la aplicación (beta)</p>
+            <p style={{ fontWeight: 700, fontSize: '1.05rem', color: t.text, marginBottom: '4px' }}>{tr('settings.language')}</p>
+            <p style={{ fontSize: '0.85rem', color: t.textMuted, marginBottom: '16px' }}>{tr('settings.language_desc')}</p>
             
             <div className="grid grid-cols-3 gap-3">
               {[
@@ -993,17 +993,17 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
 
           {/* Cerrar sesión / Eliminar cuenta */}
           <div className="rounded-2xl p-5 border" style={{ background: 'rgba(255,77,106,0.04)', borderColor: 'rgba(255,77,106,0.2)' }}>
-            <p style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '12px', color: '#FF4D6A' }}>Sesión y cuenta</p>
+            <p style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '12px', color: '#FF4D6A' }}>{tr('settings.session')}</p>
             <div className="space-y-2">
               <button onClick={onLogout}
                 className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
                 style={{ background: '#FF4D6A', color: 'white' }}>
-                Cerrar sesión
+                {tr('settings.logout')}
               </button>
               <button onClick={() => { setDeleteError(null); setShowDeleteConfirm(true); }}
                 className="w-full py-2.5 rounded-xl text-sm font-medium border transition-all hover:bg-red-500/10"
                 style={{ color: '#FF4D6A', borderColor: 'rgba(255,77,106,0.25)' }}>
-                Eliminar cuenta
+                {tr('settings.delete_account')}
               </button>
             </div>
           </div>
@@ -1011,12 +1011,12 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
           {/* Notificaciones */}
           <div className="rounded-2xl border overflow-hidden" style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
             <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: 'rgba(108,99,255,0.1)', background: 'rgba(108,99,255,0.05)' }}>
-              <span style={{ fontWeight: 700, color: '#6C63FF', fontSize: '0.9rem' }}>Notificaciones</span>
+              <span style={{ fontWeight: 700, color: '#6C63FF', fontSize: '0.9rem' }}>{tr('settings.notifications')}</span>
             </div>
             {([
-              { key: 'matches' as const, label: 'Nuevos matches',     desc: 'Alertas cuando alguien te da match' },
-              { key: 'parches' as const, label: 'Mensajes de parches', desc: 'Avisos de chats no leídos' },
-              { key: 'eventos' as const, label: 'Eventos cercanos',    desc: 'Recordatorios de eventos próximos' },
+              { key: 'matches' as const, label: tr('settings.notif_matches'),     desc: tr('settings.notif_matches_desc') },
+              { key: 'parches' as const, label: tr('settings.notif_parches'), desc: tr('settings.notif_parches_desc') },
+              { key: 'eventos' as const, label: tr('settings.notif_events'),    desc: tr('settings.notif_events_desc') },
             ]).map((item, i) => (
               <div key={i} className="flex items-center justify-between px-5 py-4 border-b last:border-0"
                 style={{ borderColor: 'var(--p-input)' }}>
@@ -1031,9 +1031,9 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
 
           {/* Sobre U•link — al final */}
           <div className="rounded-2xl p-5 border" style={{ background: t.cardBg, borderColor: 'var(--p-divider)' }}>
-            <p style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '16px', color: '#6C63FF' }}>Sobre U•link</p>
+            <p style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '16px', color: '#6C63FF' }}>{tr('settings.about')}</p>
             <div className="space-y-3">
-              {[{ label: 'Versión', value: '1.0.0' }, { label: 'Institución', value: 'ECI' }, { label: 'Soporte', value: '24/7' }].map(item => (
+              {[{ label: tr('settings.version'), value: '1.0.0' }, { label: tr('settings.institution'), value: 'ECI' }, { label: tr('settings.support'), value: '24/7' }].map(item => (
                 <div key={item.label} className="flex justify-between">
                   <span style={{ fontSize: '0.82rem', color: 'var(--p-muted)' }}>{item.label}</span>
                   <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{item.value}</span>
@@ -1042,9 +1042,9 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
             </div>
             <div className="mt-4 pt-4 border-t space-y-2" style={{ borderColor: 'rgba(108,99,255,0.1)' }}>
               {([
-                { label: 'Términos de uso', type: 'terminos' as const },
-                { label: 'Política de privacidad', type: 'privacidad' as const },
-                { label: 'Centro de ayuda', type: 'ayuda' as const },
+                { label: tr('settings.terms'), type: 'terminos' as const },
+                { label: tr('settings.privacy'), type: 'privacidad' as const },
+                { label: tr('settings.help_center'), type: 'ayuda' as const },
               ]).map(link => (
                 <button key={link.type} onClick={() => setLegalModal(link.type)} className="w-full text-left text-sm hover:underline" style={{ color: '#6C63FF' }}>{link.label}</button>
               ))}
@@ -1071,10 +1071,10 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
                   <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,77,106,0.14)' }}>
                     <span style={{ fontSize: '1.2rem' }}>⚠️</span>
                   </div>
-                  <p style={{ fontWeight: 800, fontSize: '1.05rem', color: t.text }}>¿Eliminar tu cuenta?</p>
+                  <p style={{ fontWeight: 800, fontSize: '1.05rem', color: t.text }}>{tr('settings.delete_confirm_title')}</p>
                 </div>
                 <p style={{ fontSize: '0.85rem', color: t.textMuted, lineHeight: 1.6, marginBottom: '20px' }}>
-                  Tienes <strong>24 horas</strong> para recuperar tu cuenta antes de que se borre. Pasado ese tiempo, el borrado es permanente y no se puede deshacer.
+                  {tr('settings.delete_confirm_desc')}
                 </p>
                 {deleteError && (
                   <p style={{ fontSize: '0.8rem', color: '#FF4D6A', marginBottom: '16px' }}>{deleteError}</p>
@@ -1083,12 +1083,12 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
                   <button onClick={() => setShowDeleteConfirm(false)} disabled={deleting}
                     className="flex-1 py-2.5 rounded-xl text-sm disabled:opacity-50"
                     style={{ background: 'rgba(108,99,255,0.1)', color: t.textMuted }}>
-                    Cancelar
+                    {tr('settings.cancel')}
                   </button>
                   <button onClick={handleDeleteAccount} disabled={deleting}
                     className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-60"
                     style={{ background: '#FF4D6A', color: 'white' }}>
-                    {deleting ? 'Procesando…' : 'Sí, eliminar'}
+                    {deleting ? tr('settings.processing') : tr('settings.yes_delete')}
                   </button>
                 </div>
               </div>
@@ -1133,11 +1133,25 @@ function AppCore() {
   const admin = isAdmin(roles);
   
   const TRANSLATED_NAV_ITEMS = NAV_ITEMS.map(item => {
-    // try to translate from nav namespace
     const key = `nav.${item.id}`;
     const translated = tr(key);
     return { ...item, label: translated !== key ? translated : item.label };
   });
+
+  const VIEW_LABELSTranslated: Record<ViewId, string> = {
+    home: tr('nav.home'),
+    matching: tr('nav.matches'),
+    parches: tr('nav.parches'),
+    chats: tr('nav.chats'),
+    eventos: tr('nav.events'),
+    ubicacion: tr('nav.ubicacion'),
+    bienestar: tr('nav.bienestar'),
+    album: tr('nav.album'),
+    notificaciones: tr('nav.notificaciones'),
+    ajustes: tr('nav.ajustes'),
+    perfil: tr('nav.perfil'),
+    admin: tr('nav.admin'),
+  };
 
   const navItemsBase = TRANSLATED_NAV_ITEMS.map(item => item.id === 'matching' && pendingMatchCount > 0 ? { ...item, badge: pendingMatchCount } : item);
   const navItems = admin ? [...navItemsBase, { id: 'admin' as ViewId, label: tr('nav.admin') !== 'nav.admin' ? tr('nav.admin') : 'Admin', icon: ShieldCheck }] : navItemsBase;
@@ -1185,8 +1199,8 @@ function AppCore() {
     sessionStorage.removeItem(SESSION_EXPIRED_KEY);
     addToast({
       type: 'reporte',
-      title: 'Tu sesión expiró',
-      message: 'Por seguridad cerramos tu sesión. Inicia sesión de nuevo.',
+      title: tr('toasts.session_expired_title'),
+      message: tr('toasts.session_expired_msg'),
     });
   }, []);
 
@@ -1213,8 +1227,8 @@ function AppCore() {
         if (fromRegister) {
           addToast({
             type: 'info',
-            title: 'Ya tienes una cuenta',
-            message: 'Este correo ya está registrado en U•link. ¡Bienvenido de vuelta!',
+            title: tr('toasts.already_account_title'),
+            message: tr('toasts.already_account_msg'),
             duration: 5000,
           });
         }
@@ -1242,7 +1256,7 @@ function AppCore() {
   // Welcome toast on login
   useEffect(() => {
     if (authState !== 'app') return;
-    const t0 = setTimeout(() => addToast({ type: 'logro', title: '¡Bienvenido, Explorador!', message: '¡Qué bueno tenerte de vuelta en U•link!', duration: 5000 }), 600);
+    const t0 = setTimeout(() => addToast({ type: 'logro', title: tr('toasts.welcome_title'), message: tr('toasts.welcome_msg'), duration: 5000 }), 600);
     return () => clearTimeout(t0);
   }, [authState]);
 
@@ -1257,7 +1271,7 @@ function AppCore() {
         ids.forEach(id => addNotification({
           id: `match-pending-${id}`,
           type: 'match',
-          text: 'Tienes una nueva solicitud de match esperando tu respuesta.',
+          text: tr('toasts.match_pending_msg'),
           payload: { matchUserId: id },
         }));
       })
@@ -1478,7 +1492,7 @@ function AppCore() {
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all hover:opacity-80"
                   style={{ background: 'rgba(255,77,106,0.08)', border: '1px solid rgba(255,77,106,0.15)', color: '#FF4D6A' }}>
                   <LogOut size={15} />
-                  <span style={{ fontSize: '0.8rem' }}>Cerrar sesión</span>
+                  <span style={{ fontSize: '0.8rem' }}>{tr('settings.logout')}</span>
                 </button>
               </div>
             </motion.div>
@@ -1498,7 +1512,7 @@ function AppCore() {
             <Menu size={18} style={{ color: theme.textMuted }} />
           </button>
           <h1 style={{ fontWeight: 700, fontSize: '1.05rem', whiteSpace: 'nowrap', color: theme.text }}>
-            {VIEW_LABELS[activeView]}
+            {VIEW_LABELSTranslated[activeView]}
           </h1>
           <div className="flex-1" />
           <div className="flex items-center gap-2 ml-auto">
