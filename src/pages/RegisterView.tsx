@@ -114,9 +114,9 @@ export function RegisterView({ onRegister, onGoLogin, onDecline, darkMode = true
   const handleRequestOtp = async () => {
     setError('');
     const trimmed = email.trim().toLowerCase();
-    if (!trimmed) { setError('Ingresa tu correo institucional.'); return; }
+    if (!trimmed) { setError(t('register.email_required')); return; }
     if (!VALID_DOMAINS.some(d => trimmed.endsWith(d))) {
-      setError('Solo se permiten correos @mail.escuelaing.edu.co o @escuelaing.edu.co');
+      setError(t('register.domain_error'));
       return;
     }
     setLoading(true);
@@ -127,9 +127,9 @@ export function RegisterView({ onRegister, onGoLogin, onDecline, darkMode = true
       setTimeout(() => otpRefs.current[0]?.focus(), 120);
     } catch (e: any) {
       const status = e?.response?.status;
-      if (status === 403) setError('Este dominio de correo no está permitido.');
-      else if (status === 429) setError('Demasiados intentos. Espera un momento.');
-      else setError(friendlyError(e, 'No se pudo enviar el código. Intenta de nuevo.'));
+      if (status === 403) setError(t('register.domain_not_allowed'));
+      else if (status === 429) setError(t('register.too_many_attempts'));
+      else setError(friendlyError(e, t('register.code_send_error')));
     } finally {
       setLoading(false);
     }
@@ -137,7 +137,7 @@ export function RegisterView({ onRegister, onGoLogin, onDecline, darkMode = true
 
   const handleVerifyOtp = async () => {
     const code = otp.join('');
-    if (code.length < 6) { setError('Ingresa los 6 dígitos del código.'); return; }
+    if (code.length < 6) { setError(t('register.otp_required')); return; }
     setLoading(true);
     setError('');
     try {
@@ -146,8 +146,8 @@ export function RegisterView({ onRegister, onGoLogin, onDecline, darkMode = true
       onRegister();
     } catch (e: any) {
       const status = e?.response?.status;
-      if (status === 401) setError('Código incorrecto o expirado.');
-      else setError(friendlyError(e, 'Error al verificar. Intenta de nuevo.'));
+      if (status === 401) setError(t('register.otp_invalid'));
+      else setError(friendlyError(e, t('register.otp_verify_error')));
       setOtp(['', '', '', '', '', '']);
       setTimeout(() => otpRefs.current[0]?.focus(), 120);
     } finally {

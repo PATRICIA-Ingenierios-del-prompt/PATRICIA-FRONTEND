@@ -10,6 +10,7 @@ import { matchingService } from '../services/matchingService';
 import { parcheService } from '../services/parcheService';
 import { addToast } from '../components/ToastSystem';
 import { friendlyError } from '../lib/errorMessages';
+import { useTranslation } from 'react-i18next';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DAYS  = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
@@ -60,6 +61,7 @@ interface EditModalProps {
 
 function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
   const t = useTheme();
+  const { t: tI18n } = useTranslation();
   const { setUserName } = useAuth();
   const [tab, setTab] = useState<'datos' | 'intereses'>('datos');
   const [saving, setSaving] = useState(false);
@@ -79,7 +81,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
   const set = (k: keyof typeof form, v: string) => { setForm(f => ({ ...f, [k]: v })); setError(null); };
 
   const handleSave = async () => {
-    if (!form.nombre.trim()) { setError('El nombre no puede estar vacío.'); return; }
+    if (!form.nombre.trim()) { setError(tI18n('profile.name_required')); return; }
     setSaving(true);
     setError(null);
     try {
@@ -93,10 +95,10 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
       const fullName = [form.nombre.trim(), form.apellidos.trim()].filter(Boolean).join(' ');
       setUserName(fullName);
       onSaved({ ...perfil, ...updated, nombre: form.nombre.trim(), apellidos: form.apellidos.trim(), intereses });
-      addToast({ type: 'info', title: 'Perfil actualizado', message: 'Tus cambios fueron guardados.' });
+      addToast({ type: 'info', title: tI18n('profile.save_success_title'), message: tI18n('profile.save_success_msg') });
       onClose();
     } catch (e: any) {
-      setError(friendlyError(e, 'No se pudieron guardar los cambios.'));
+      setError(friendlyError(e, tI18n('profile.save_error')));
     } finally {
       setSaving(false);
     }
@@ -124,7 +126,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
 
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b flex-shrink-0" style={{ borderColor: t.divider }}>
-          <h3 style={{ fontWeight: 700, fontSize: '1.1rem', color: t.text }}>Editar Perfil</h3>
+          <h3 style={{ fontWeight: 700, fontSize: '1.1rem', color: t.text }}>{tI18n('profile.edit_title')}</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:opacity-70"
             style={{ background: 'rgba(108,99,255,0.1)' }}>
             <X size={15} style={{ color: t.textMuted }} />
@@ -137,7 +139,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
             <button key={k} onClick={() => setTab(k)}
               className="flex-1 py-2 rounded-lg text-sm font-medium transition-all"
               style={{ background: tab === k ? '#6C63FF' : 'transparent', color: tab === k ? 'white' : t.textMuted }}>
-              {k === 'datos' ? 'Datos' : 'Intereses'}
+              {k === 'datos' ? tI18n('profile.tab_data') : tI18n('profile.tab_interests')}
             </button>
           ))}
         </div>
@@ -147,30 +149,30 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label style={labelStyle}>Nombre</label>
-                  <input value={form.nombre} onChange={e => set('nombre', e.target.value)} style={inputStyle} placeholder="Tu nombre" />
+                  <label style={labelStyle}>{tI18n('profile.name_label')}</label>
+                  <input value={form.nombre} onChange={e => set('nombre', e.target.value)} style={inputStyle} placeholder={tI18n('onboarding.name_placeholder')} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Apellidos</label>
-                  <input value={form.apellidos} onChange={e => set('apellidos', e.target.value)} style={inputStyle} placeholder="Tus apellidos" />
+                  <label style={labelStyle}>{tI18n('profile.surname_label')}</label>
+                  <input value={form.apellidos} onChange={e => set('apellidos', e.target.value)} style={inputStyle} placeholder={tI18n('onboarding.surname_placeholder')} />
                 </div>
               </div>
               <div>
-                <label style={labelStyle}>Biografía</label>
+                <label style={labelStyle}>{tI18n('profile.bio_label')}</label>
                 <textarea value={form.bio} onChange={e => set('bio', e.target.value)}
-                  rows={3} placeholder="Cuéntanos sobre ti…"
+                  rows={3} placeholder={tI18n('profile.bio_placeholder')}
                   style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
               </div>
               <div>
-                <label style={labelStyle}>Carrera</label>
+                <label style={labelStyle}>{tI18n('profile.career_label')}</label>
                 <select value={form.carrera} onChange={e => set('carrera', e.target.value)}
                   style={{ ...inputStyle, appearance: 'none', cursor: 'pointer' }}>
-                  <option value="">Selecciona…</option>
+                  <option value="">{tI18n('profile.career_placeholder')}</option>
                   {CARRERAS.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Semestre</label>
+                <label style={labelStyle}>{tI18n('profile.semester_label')}</label>
                 <div className="grid grid-cols-5 gap-2">
                   {SEMESTRES.map(s => (
                     <button key={s} onClick={() => set('semestre', s)}
@@ -189,7 +191,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
               <button onClick={handleSave} disabled={saving}
                 className="w-full py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
                 style={{ background: 'linear-gradient(135deg,#6C63FF,#5250d0)', color: 'white' }}>
-                {saving ? <><Loader2 size={16} className="animate-spin" /> Guardando…</> : 'Guardar cambios'}
+                {saving ? <><Loader2 size={16} className="animate-spin" /> {tI18n('profile.saving')}</> : tI18n('profile.save_changes')}
               </button>
             </>
           )}
@@ -199,7 +201,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
               <button onClick={handleSave} disabled={saving || intereses.length < 1}
                 className="w-full py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
                 style={{ background: '#7FE7C4', color: '#0F0E1A' }}>
-                {saving ? <><Loader2 size={16} className="animate-spin" /> Guardando…</> : 'Guardar intereses'}
+                {saving ? <><Loader2 size={16} className="animate-spin" /> {tI18n('profile.saving')}</> : tI18n('profile.save_interests')}
               </button>
             </>
           )}
@@ -346,7 +348,7 @@ export function ProfileView() {
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 rounded-full border-4 animate-spin"
             style={{ borderColor: 'rgba(108,99,255,0.2)', borderTopColor: '#6C63FF' }} />
-          <p style={{ fontSize: '0.85rem', color: t.textMuted }}>Cargando perfil…</p>
+          <p style={{ fontSize: '0.85rem', color: t.textMuted }}>{tI18n('profile.loading')}</p>
         </div>
       </div>
     );
@@ -395,14 +397,14 @@ export function ProfileView() {
                   style={{ background: 'rgba(0,0,0,0.55)' }}>
                   <Loader2 size={22} color="white" className="animate-spin" />
                   <span style={{ fontSize: '0.55rem', color: 'white', fontWeight: 700, textAlign: 'center', lineHeight: 1.2, maxWidth: '60px' }}>
-                    Verificando…
+                    {tI18n('profile.photo_verifying')}
                   </span>
                 </div>
               )}
               <input type="file" accept="image/*" id="profile-photo-input" className="hidden" onChange={handlePhotoChange} disabled={uploadingPhoto} />
               <label
                 htmlFor={uploadingPhoto ? undefined : 'profile-photo-input'}
-                title={uploadingPhoto ? 'Verificando foto…' : 'Cambiar foto de perfil'}
+                title={uploadingPhoto ? tI18n('profile.photo_verifying') : tI18n('profile.change_photo')}
                 className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center"
                 style={{
                   background: '#6C63FF',
@@ -421,7 +423,7 @@ export function ProfileView() {
             <button onClick={() => setShowEdit(true)}
               className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-semibold transition-all hover:opacity-90 mb-1"
               style={{ background: 'rgba(108,99,255,0.12)', color: '#6C63FF', border: '1px solid rgba(108,99,255,0.25)' }}>
-              <Edit2 size={14} /> Editar perfil
+              <Edit2 size={14} /> {tI18n('profile.edit_title')}
             </button>
           </div>
 
@@ -441,16 +443,16 @@ export function ProfileView() {
           ) : (
             <button onClick={() => setShowEdit(true)}
               style={{ fontSize: '0.88rem', color: t.textMuted, marginBottom: '24px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-              + Añadir una biografía
+              + {tI18n('profile.add_bio')}
             </button>
           )}
 
           {/* Stats */}
           <div className="flex gap-7">
             {[
-              { label: 'Conexiones', value: conexionesCount != null ? String(conexionesCount) : '—', color: '#6C63FF' },
-              { label: 'Parches',    value: parchesCount    != null ? String(parchesCount)    : '—', color: '#7FE7C4' },
-              { label: 'Disponible', value: schedule.size > 0 ? `${(schedule.size * 1.5).toFixed(schedule.size % 2 === 0 ? 0 : 1)}h` : '—', color: '#FFB347' },
+              { label: tI18n('profile.connections'), value: conexionesCount != null ? String(conexionesCount) : '—', color: '#6C63FF' },
+              { label: tI18n('profile.parches'),    value: parchesCount    != null ? String(parchesCount)    : '—', color: '#7FE7C4' },
+              { label: tI18n('profile.available'), value: schedule.size > 0 ? `${(schedule.size * 1.5).toFixed(schedule.size % 2 === 0 ? 0 : 1)}h` : '—', color: '#FFB347' },
             ].map(s => (
               <div key={s.label}>
                 <p style={{ fontWeight: 900, fontSize: '1.3rem', color: s.color, lineHeight: 1 }}>{s.value}</p>
@@ -469,7 +471,7 @@ export function ProfileView() {
 
           {/* Sobre mí */}
           <div className="rounded-2xl border p-6" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
-            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text, marginBottom: '16px' }}>Sobre mí</h3>
+            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text, marginBottom: '16px' }}>{tI18n('profile.about_me')}</h3>
             <div className="space-y-3">
               {carrera   && <div className="flex items-center gap-3"><GraduationCap size={15} style={{ color: t.textMuted }} /><span style={{ fontSize: '0.87rem', color: t.textSub }}>{carrera}</span></div>}
               {semestre  && <div className="flex items-center gap-3"><BookOpen size={15} style={{ color: t.textMuted }} /><span style={{ fontSize: '0.87rem', color: t.textSub }}>{semestre}</span></div>}
@@ -484,11 +486,11 @@ export function ProfileView() {
           {/* Intereses */}
           <div className="rounded-2xl border p-6" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
             <div className="flex items-center justify-between mb-4">
-              <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text }}>Intereses</h3>
+              <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text }}>{tI18n('profile.interests_title')}</h3>
               <button onClick={() => setShowEdit(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium hover:opacity-80 transition-all"
                 style={{ background: t.inputBg, color: '#6C63FF', border: '1px solid rgba(108,99,255,0.2)' }}>
-                <Edit2 size={12} /> Editar
+                <Edit2 size={12} /> {tI18n('profile.edit')}
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -515,7 +517,7 @@ export function ProfileView() {
                 <button onClick={() => setShowEdit(true)}
                   className="px-4 py-2 rounded-xl text-sm border-dashed border-2 hover:opacity-70"
                   style={{ color: t.textMuted, borderColor: 'rgba(108,99,255,0.3)' }}>
-                  + Añadir intereses
+                  + {tI18n('profile.add_interests')}
                 </button>
               )}
             </div>
@@ -527,8 +529,8 @@ export function ProfileView() {
           <div className="rounded-2xl border overflow-hidden" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
             <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: t.divider }}>
               <div>
-                <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text }}>Disponibilidad semanal</h3>
-                <p style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '2px' }}>Toca una franja para marcarla como disponible</p>
+                <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text }}>{tI18n('profile.schedule_title')}</h3>
+                <p style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '2px' }}>{tI18n('profile.schedule_desc')}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-3 py-1 rounded-full text-xs font-semibold"
@@ -543,7 +545,7 @@ export function ProfileView() {
                     style={{ background: 'linear-gradient(135deg,#6C63FF,#5250d0)', color: 'white' }}>
                     {savingSchedule
                       ? <><Loader2 size={12} className="animate-spin" /> Guardando…</>
-                      : <><Save size={12} /> Guardar</>
+                      : <><Save size={12} /> {tI18n('profile.save')}</>
                     }
                   </button>
                 )}
@@ -583,11 +585,11 @@ export function ProfileView() {
               <div className="flex items-center gap-4 mt-4 pt-4 border-t" style={{ borderColor: t.divider }}>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded" style={{ background: 'linear-gradient(135deg,#6C63FF,#A78BFA)' }} />
-                  <span style={{ fontSize: '0.72rem', color: t.textMuted }}>Disponible</span>
+                  <span style={{ fontSize: '0.72rem', color: t.textMuted }}>{tI18n('profile.available_label')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded border" style={{ background: t.darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)', borderColor: t.divider }} />
-                  <span style={{ fontSize: '0.72rem', color: t.textMuted }}>No disponible</span>
+                  <span style={{ fontSize: '0.72rem', color: t.textMuted }}>{tI18n('profile.unavailable_label')}</span>
                 </div>
               </div>
             </div>
