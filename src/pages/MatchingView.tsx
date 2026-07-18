@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
-import { X, Heart, MessageCircle, Check, Send, ArrowLeft, RotateCcw, Search } from 'lucide-react';
+import { X, Heart, MessageCircle, Check, Send, ArrowLeft, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
 import { useAuth } from '../store/AuthContext';
@@ -933,13 +933,6 @@ export function MatchingView() {
               </div>
 
               <div className="flex items-center justify-center gap-5 mt-5">
-                <motion.button disabled
-                  className="w-14 h-14 rounded-full flex items-center justify-center border-2 transition-all opacity-40 cursor-not-allowed"
-                  style={{ background: 'rgba(255,179,71,0.1)', borderColor: 'rgba(255,179,71,0.45)' }}
-                  title="Volver atrás no está disponible: cada decisión se registra de inmediato en el backend">
-                  <RotateCcw size={20} style={{ color: '#FFB347' }} />
-                </motion.button>
-
                 <motion.button onClick={() => swipe('right')} disabled={!!swipeDir}
                   whileHover={!swipeDir ? { scale: 1.1, boxShadow: '0 12px 36px rgba(127,231,196,0.55)' } : {}}
                   whileTap={!swipeDir ? { scale: 0.93 } : {}}
