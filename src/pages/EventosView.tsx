@@ -203,7 +203,54 @@ function CreateEventModal({ onClose, onCreated }: { onClose: () => void; onCreat
   }, []);
 
   const submit = async () => {
-    if (!form.name || !form.date || !form.start || !form.end) { addToast({ type: 'info', title: 'Faltan datos', message: 'Nombre, fecha y horas son obligatorios.' }); return; }
+    // ── Validación de campos obligatorios ──────────────────────────────────
+    if (!form.name.trim()) {
+      addToast({ type: 'info', title: 'Falta el nombre', message: 'Escribe un nombre para el evento.' });
+      return;
+    }
+    if (!form.date) {
+      addToast({ type: 'info', title: 'Falta la fecha', message: 'Selecciona la fecha del evento.' });
+      return;
+    }
+    if (!form.start || !form.end) {
+      addToast({ type: 'info', title: 'Faltan las horas', message: 'Selecciona la hora de inicio y la hora de fin.' });
+      return;
+    }
+
+    // ── Validación de fecha: no puede ser pasada ───────────────────────────
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const chosenDate = new Date(form.date + 'T00:00');
+    if (chosenDate < today) {
+      addToast({ type: 'info', title: 'Fecha inválida', message: `La fecha ${form.date} ya pasó. Elige una fecha a partir de hoy.` });
+      return;
+    }
+
+    // ── Validación de anticipación mínima de 30 min ────────────────────────
+    const startsAt = new Date(form.date + 'T' + form.start);
+    const now = new Date();
+    const diffMinutes = (startsAt.getTime() - now.getTime()) / 60000;
+    if (diffMinutes < 30) {
+      addToast({ type: 'info', title: 'Hora muy próxima', message: 'El evento debe crearse con al menos 30 minutos de anticipación. Elige una hora de inicio más tarde.' });
+      return;
+    }
+
+    // ── Validación de hora inicio ≠ hora fin ───────────────────────────────
+    if (form.start === form.end) {
+      addToast({ type: 'info', title: 'Horas iguales', message: 'La hora de inicio y la hora de fin no pueden ser iguales.' });
+      return;
+    }
+
+    // ── Validación de duración máxima de 24 h ─────────────────────────────
+    const endsAt = form.end > form.start
+      ? new Date(form.date + 'T' + form.end)
+      : new Date(new Date(form.date + 'T' + form.end).getTime() + 86400000); // siguiente día
+    const durationHours = (endsAt.getTime() - startsAt.getTime()) / 3600000;
+    if (durationHours > 24) {
+      addToast({ type: 'info', title: 'Duración excesiva', message: 'El evento no puede durar más de 24 horas.' });
+      return;
+    }
+
     if (!picked) { addToast({ type: 'info', title: 'Destino', message: 'Toca el mapa para marcar dónde será el evento.' }); return; }
     if (withMeeting && !pickedMeeting) { addToast({ type: 'info', title: 'Punto de encuentro', message: 'Marca el punto de encuentro en su mapa, o desactiva la casilla.' }); return; }
     setSaving(true);

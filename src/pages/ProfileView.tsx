@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
 import { useAuth } from '../store/AuthContext';
 import { userService, type PerfilResponse, type FranjaHoraria } from '../services/userService';
+import { matchingService } from '../services/matchingService';
+import { parcheService } from '../services/parcheService';
 import { addToast } from '../components/ToastSystem';
 import { friendlyError } from '../lib/errorMessages';
 
@@ -218,6 +220,8 @@ export function ProfileView() {
   const [savingSchedule, setSavingSchedule] = useState(false);
   const [scheduleChanged, setScheduleChanged] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [conexionesCount, setConexionesCount] = useState<number | null>(null);
+  const [parchesCount, setParchesCount] = useState<number | null>(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -242,6 +246,26 @@ export function ProfileView() {
         setSchedule(keys);
       })
       .catch(() => {}); // silencioso — la grilla empieza vacía si falla
+  }, [userId]);
+
+  // Carga el número real de conexiones (matches confirmados)
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    matchingService.listarMatches()
+      .then(matches => { if (!cancelled) setConexionesCount(matches.length); })
+      .catch(() => { if (!cancelled) setConexionesCount(0); });
+    return () => { cancelled = true; };
+  }, [userId]);
+
+  // Carga el número real de parches en los que el usuario es miembro
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    parcheService.mine({ page: 0, size: 1 })
+      .then(page => { if (!cancelled) setParchesCount(page.totalElements); })
+      .catch(() => { if (!cancelled) setParchesCount(0); });
+    return () => { cancelled = true; };
   }, [userId]);
 
   const toggleSlot = (key: string) => {
@@ -431,9 +455,9 @@ export function ProfileView() {
           {/* Stats */}
           <div className="flex gap-7">
             {[
-              { label: 'Conexiones', value: '—',              color: '#6C63FF' },
-              { label: 'Parches',    value: '—',              color: '#7FE7C4' },
-              { label: 'Disponible', value: `${schedule.size}h`, color: '#FFB347' },
+              { label: 'Conexiones', value: conexionesCount != null ? String(conexionesCount) : '—', color: '#6C63FF' },
+              { label: 'Parches',    value: parchesCount    != null ? String(parchesCount)    : '—', color: '#7FE7C4' },
+              { label: 'Disponible', value: schedule.size > 0 ? `${(schedule.size * 1.5).toFixed(schedule.size % 2 === 0 ? 0 : 1)}h` : '—', color: '#FFB347' },
             ].map(s => (
               <div key={s.label}>
                 <p style={{ fontWeight: 900, fontSize: '1.3rem', color: s.color, lineHeight: 1 }}>{s.value}</p>
@@ -516,7 +540,7 @@ export function ProfileView() {
               <div className="flex items-center gap-2">
                 <span className="px-3 py-1 rounded-full text-xs font-semibold"
                   style={{ background: 'rgba(127,231,196,0.12)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.25)' }}>
-                  {schedule.size} franjas
+                  {schedule.size} franja{schedule.size !== 1 ? 's' : ''} · {schedule.size > 0 ? `${(schedule.size * 1.5).toFixed(schedule.size % 2 === 0 ? 0 : 1)}h` : '0h'}
                 </span>
                 {scheduleChanged && (
                   <button
