@@ -5,7 +5,6 @@ import { useTheme } from '../store/ThemeContext';
 import { ImageWithFallback } from '../components/ImageWithFallback';
 import { addToast } from '../components/ToastSystem';
 import { sendChatMessage } from '../services/llmApi';
-import { useTranslation } from 'react-i18next';
 import monoPatriciaImg  from '../assets/monoFondoU.png';
 import monoULinkImg     from '../assets/monoULink.png';
 import monoDiarioImg    from '../assets/monoDiario.png';
@@ -18,48 +17,48 @@ import lluviaAudio      from '../assets/audio/lluvia.mp3';
 import bosqueAudio      from '../assets/audio/bosque.mp3';
 import olasAudio        from '../assets/audio/olas.mp3';
 
-const getInitMsgs = (tr: any) => [
-  { id: 1, from: 'bot', text: tr('bienestar.init_msg') },
+const INIT_MSGS = [
+  { id: 1, from: 'bot', text: '¡Hola! Soy Mono, tu compañero de bienestar. ¿Cómo te sientes hoy?' },
 ];
 
-const getBotResponses = (tr: any) => [
-  tr('bienestar.bot_r1'),
-  tr('bienestar.bot_r2'),
-  tr('bienestar.bot_r3'),
-  tr('bienestar.bot_r4'),
-  tr('bienestar.bot_r5'),
+const BOT_RESPONSES = [
+  'Entiendo, los parciales pueden ser muy agotadores. Recuerda que el estrés es temporal. ¿Quieres practicar una respiración rápida?',
+  'Te escucho. Es normal sentirse así. ¿Has dormido bien esta semana? El descanso es fundamental para el rendimiento académico.',
+  'Gracias por compartirlo conmigo. ¿Sabes que 5 minutos de meditación pueden reducir el cortisol hasta un 30%? ¿Te gustaría intentarlo?',
+  'Eso es totalmente válido. ¿Quieres que te recomiende alguna película relajante o música para desconectarte un rato?',
+  '¡Eso suena increíble! Me alegra que estés bien. Sigue así. ¿Hay algo en lo que te pueda ayudar hoy?',
 ];
 
-const getSounds = (tr: any) => [
-  { id: 1, name: tr('bienestar.sound_white'),    emoji: '🤍', category: tr('bienestar.sound_cat_relax'), freq: '432Hz',   audio: ruidoBlancoAudio },
-  { id: 2, name: tr('bienestar.sound_brown'),    emoji: '🟫', category: tr('bienestar.sound_cat_relax'), freq: '220Hz',   audio: ruidoMarronAudio },
-  { id: 3, name: tr('bienestar.sound_rain'),    emoji: '🌧️', category: tr('bienestar.sound_cat_nature'), freq: 'Natural', audio: lluviaAudio },
-  { id: 4, name: tr('bienestar.sound_forest'), emoji: '🌿', category: tr('bienestar.sound_cat_nature'), freq: 'Natural', audio: bosqueAudio },
-  { id: 5, name: tr('bienestar.sound_waves'),    emoji: '🌊', category: tr('bienestar.sound_cat_nature'), freq: 'Natural', audio: olasAudio },
+const SOUNDS = [
+  { id: 1, name: 'Ruido Blanco',    emoji: '🤍', category: 'Relajación', freq: '432Hz',   audio: ruidoBlancoAudio },
+  { id: 2, name: 'Ruido Marrón',    emoji: '🟫', category: 'Relajación', freq: '220Hz',   audio: ruidoMarronAudio },
+  { id: 3, name: 'Lluvia Suave',    emoji: '🌧️', category: 'Naturaleza', freq: 'Natural', audio: lluviaAudio },
+  { id: 4, name: 'Bosque Nocturno', emoji: '🌿', category: 'Naturaleza', freq: 'Natural', audio: bosqueAudio },
+  { id: 5, name: 'Olas del Mar',    emoji: '🌊', category: 'Naturaleza', freq: 'Natural', audio: olasAudio },
 ];
 
-const getMediaRecs = (tr: any) => [
-  { id: 1, title: 'Soul', type: tr('bienestar.media_type_movie'), platform: 'Disney+', genre: 'Animación', mood: 'Inspiración', emoji: '🎭', color: '#6C63FF', desc: tr('bienestar.media_1_desc') },
-  { id: 2, title: 'Ted Lasso', type: tr('bienestar.media_type_series'), platform: 'Apple TV+', genre: 'Comedia', mood: 'Alegría', emoji: '⚽', color: '#7FE7C4', desc: tr('bienestar.media_2_desc') },
-  { id: 3, title: 'The Queen\'s Gambit', type: tr('bienestar.media_type_series'), platform: 'Netflix', genre: 'Drama', mood: 'Motivación', emoji: '♟️', color: '#FFB347', desc: tr('bienestar.media_3_desc') },
-  { id: 4, title: 'Coco', type: tr('bienestar.media_type_movie'), platform: 'Disney+', genre: 'Animación', mood: 'Nostálgico', emoji: '🎸', color: '#FF6B9D', desc: tr('bienestar.media_4_desc') },
-  { id: 5, title: 'Severance', type: tr('bienestar.media_type_series'), platform: 'Apple TV+', genre: 'Thriller', mood: 'Evasión', emoji: '🚪', color: '#5BC8FF', desc: tr('bienestar.media_5_desc') },
-  { id: 6, title: 'Everything Everywhere', type: tr('bienestar.media_type_movie'), platform: 'Prime Video', genre: 'Ciencia Ficción', mood: 'Energía', emoji: '🌀', color: '#A78BFA', desc: tr('bienestar.media_6_desc') },
+const MEDIA_RECS = [
+  { id: 1, title: 'Soul', type: 'Película', platform: 'Disney+', genre: 'Animación', mood: 'Inspiración', emoji: '🎭', color: '#6C63FF', desc: 'Perfecta para reflexionar sobre tus metas' },
+  { id: 2, title: 'Ted Lasso', type: 'Serie', platform: 'Apple TV+', genre: 'Comedia', mood: 'Alegría', emoji: '⚽', color: '#7FE7C4', desc: 'El antidepresivo más efectivo de 2024' },
+  { id: 3, title: 'The Queen\'s Gambit', type: 'Serie', platform: 'Netflix', genre: 'Drama', mood: 'Motivación', emoji: '♟️', color: '#FFB347', desc: 'Para cuando necesitas recordar tu potencial' },
+  { id: 4, title: 'Coco', type: 'Película', platform: 'Disney+', genre: 'Animación', mood: 'Nostálgico', emoji: '🎸', color: '#FF6B9D', desc: 'Para conectar con tus raíces y familia' },
+  { id: 5, title: 'Severance', type: 'Serie', platform: 'Apple TV+', genre: 'Thriller', mood: 'Evasión', emoji: '🚪', color: '#5BC8FF', desc: 'Te hará olvidar los problemas por 1h' },
+  { id: 6, title: 'Everything Everywhere', type: 'Película', platform: 'Prime Video', genre: 'Ciencia Ficción', mood: 'Energía', emoji: '🌀', color: '#A78BFA', desc: 'Una explosión de creatividad y emoción' },
 ];
 
-const getSportsRecs = (tr: any) => [
-  { name: tr('bienestar.sport_1'), emoji: '🧘', duration: '15 min', cal: '60 kcal', level: tr('bienestar.sport_lvl_easy'), color: '#7FE7C4' },
-  { name: tr('bienestar.sport_2'), emoji: '🚶', duration: '20 min', cal: '80 kcal', level: tr('bienestar.sport_lvl_easy'), color: '#6C63FF' },
-  { name: tr('bienestar.sport_3'), emoji: '🏃', duration: '25 min', cal: '200 kcal', level: tr('bienestar.sport_lvl_med'), color: '#FFB347' },
-  { name: tr('bienestar.sport_4'), emoji: '🤸', duration: '10 min', cal: '30 kcal', level: tr('bienestar.sport_lvl_easy'), color: '#FF6B9D' },
+const SPORTS_RECS = [
+  { name: 'Yoga 15 min', emoji: '🧘', duration: '15 min', cal: '60 kcal', level: 'Fácil', color: '#7FE7C4' },
+  { name: 'Caminata campus', emoji: '🚶', duration: '20 min', cal: '80 kcal', level: 'Fácil', color: '#6C63FF' },
+  { name: 'HIIT básico', emoji: '🏃', duration: '25 min', cal: '200 kcal', level: 'Medio', color: '#FFB347' },
+  { name: 'Estiramientos', emoji: '🤸', duration: '10 min', cal: '30 kcal', level: 'Fácil', color: '#FF6B9D' },
 ];
 
-const getEmociones = (tr: any) => [
-  { emoji: '😊', label: tr('bienestar.emo_5'), color: '#7FE7C4', value: 5 },
-  { emoji: '🙂', label: tr('bienestar.emo_4'),   color: '#6C63FF', value: 4 },
-  { emoji: '😐', label: tr('bienestar.emo_3'),   color: '#FFB347', value: 3 },
-  { emoji: '😔', label: tr('bienestar.emo_2'),    color: '#FF6B9D', value: 2 },
-  { emoji: '😰', label: tr('bienestar.emo_1'), color: '#FF4D6A', value: 1 },
+const EMOCIONES = [
+  { emoji: '😊', label: 'Genial', color: '#7FE7C4', value: 5 },
+  { emoji: '🙂', label: 'Bien',   color: '#6C63FF', value: 4 },
+  { emoji: '😐', label: 'Okei',   color: '#FFB347', value: 3 },
+  { emoji: '😔', label: 'Mal',    color: '#FF6B9D', value: 2 },
+  { emoji: '😰', label: 'Estres', color: '#FF4D6A', value: 1 },
 ];
 
 interface DiaryEntry { isoDate: string; date: string; emotion: string; note: string; color: string }
@@ -92,8 +91,7 @@ function computeStreak(entries: DiaryEntry[]): number {
 }
 
 /** Últimos 7 días (L→D de la semana actual) con el valor de emoción registrado, o null si no hay entrada. */
-function computeWeekMoods(entries: DiaryEntry[], tr: any): (number | null)[] {
-  const EMOCIONES = getEmociones(tr);
+function computeWeekMoods(entries: DiaryEntry[]): (number | null)[] {
   const byDate = new Map(entries.map(e => [e.isoDate, EMOCIONES.find(em => em.emoji === e.emotion)?.value ?? null]));
   const today = new Date();
   const dow = (today.getDay() + 6) % 7; // 0 = lunes
@@ -106,48 +104,46 @@ function computeWeekMoods(entries: DiaryEntry[], tr: any): (number | null)[] {
   });
 }
 
-const getBreathingModes = (tr: any) => [
-  { id: '4-7-8',  name: tr('bienestar.breath_1_name'),         desc: tr('bienestar.breath_1_desc'),    phases: [{ label: tr('bienestar.breath_inhale'), duration: 4000 }, { label: tr('bienestar.breath_hold'), duration: 7000 }, { label: tr('bienestar.breath_exhale'), duration: 8000 }] },
-  { id: 'box',    name: tr('bienestar.breath_2_name'),    desc: tr('bienestar.breath_2_desc'),  phases: [{ label: tr('bienestar.breath_inhale'), duration: 4000 }, { label: tr('bienestar.breath_hold'), duration: 4000 }, { label: tr('bienestar.breath_exhale'), duration: 4000 }, { label: tr('bienestar.breath_hold'), duration: 4000 }] },
-  { id: 'diafrag',name: tr('bienestar.breath_3_name'), desc: tr('bienestar.breath_3_desc'), phases: [{ label: tr('bienestar.breath_inhale'), duration: 5000 }, { label: tr('bienestar.breath_exhale'), duration: 7000 }] },
+const BREATHING_MODES = [
+  { id: '4-7-8',  name: 'Técnica 4-7-8',         desc: 'Reduce ansiedad y facilita el sueño',    phases: [{ label: 'Inhala', duration: 4000 }, { label: 'Mantén', duration: 7000 }, { label: 'Exhala', duration: 8000 }] },
+  { id: 'box',    name: 'Respiración de Caja',    desc: 'Para concentración antes de un examen',  phases: [{ label: 'Inhala', duration: 4000 }, { label: 'Mantén', duration: 4000 }, { label: 'Exhala', duration: 4000 }, { label: 'Mantén', duration: 4000 }] },
+  { id: 'diafrag',name: 'Respiración Diafragmática', desc: 'Relajación profunda y manejo del estrés', phases: [{ label: 'Inhala', duration: 5000 }, { label: 'Exhala', duration: 7000 }] },
 ];
 
-const getDiaryPrompts = (tr: any) => [
-  tr('bienestar.prompt_1'),
-  tr('bienestar.prompt_2'),
-  tr('bienestar.prompt_3'),
-  tr('bienestar.prompt_4'),
-  tr('bienestar.prompt_5'),
-  tr('bienestar.prompt_6'),
+const DIARY_PROMPTS = [
+  '¿Qué fue lo mejor de tu día?',
+  '¿Algo que te preocupa esta semana?',
+  '¿Qué aprendiste hoy?',
+  '¿Cómo te sientes con tus estudios?',
+  '¿Algo por lo que estás agradecido/a?',
+  '¿Qué quieres mejorar mañana?',
 ];
 
-const getAiTips = (tr: any) => ({
-  5: { title: tr('bienestar.tip_5_title'), tip: tr('bienestar.tip_5_desc'), color: '#7FE7C4' },
-  4: { title: tr('bienestar.tip_4_title'), tip: tr('bienestar.tip_4_desc'), color: '#6C63FF' },
-  3: { title: tr('bienestar.tip_3_title'), tip: tr('bienestar.tip_3_desc'), color: '#FFB347' },
-  2: { title: tr('bienestar.tip_2_title'), tip: tr('bienestar.tip_2_desc'), color: '#FF6B9D' },
-  1: { title: tr('bienestar.tip_1_title'), tip: tr('bienestar.tip_1_desc'), color: '#FF4D6A' },
-} as Record<number, { title: string; tip: string; color: string }>);
+const AI_TIPS: Record<number, { title: string; tip: string; color: string }> = {
+  5: { title: '¡Excelente estado!', tip: 'Sigue así. Es un buen momento para ayudar a otros o avanzar en proyectos importantes.', color: '#7FE7C4' },
+  4: { title: 'Vas bien', tip: 'Un día tranquilo. Aprovecha para descansar y consolidar lo aprendido hoy.', color: '#6C63FF' },
+  3: { title: 'Día regular', tip: 'Está bien no estar al 100%. Intenta una respiración rápida o escuchar tu playlist favorita.', color: '#FFB347' },
+  2: { title: 'Ánimo', tip: 'Los días difíciles también pasan. Habla con alguien de confianza o prueba el chatbot de bienestar.', color: '#FF6B9D' },
+  1: { title: 'Te escuchamos', tip: 'Reconocer el estrés es valiente. Considera hablar con el equipo de bienestar ECI hoy.', color: '#FF4D6A' },
+};
 
 const TAB_IDS = ['chat', 'diario', 'sonidos', 'respira'] as const;
 
 export function BienestarView() {
-  const { t: tr } = useTranslation();
   const t = useTheme();
   const [tab, setTab] = useState<typeof TAB_IDS[number]>('chat');
   const TABS = [
-    { id: 'chat'    as const, label: tr('bienestar.tab_mono') },
-    { id: 'diario'  as const, label: tr('bienestar.tab_diary') },
-    { id: 'sonidos' as const, label: tr('bienestar.tab_sounds') },
-    { id: 'respira' as const, label: tr('bienestar.tab_breathe') },
+    { id: 'chat'    as const, label: 'Mono' },
+    { id: 'diario'  as const, label: 'Diario' },
+    { id: 'sonidos' as const, label: 'Sonidos' },
+    { id: 'respira' as const, label: 'Respira' },
   ];
-  const [msgs, setMsgs] = useState(getInitMsgs(tr));
+  const [msgs, setMsgs] = useState(INIT_MSGS);
   const [msg, setMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [playingSound, setPlayingSound] = useState<number | null>(null);
   const [volume, setVolume] = useState(70);
   const [muted, setMuted] = useState(false);
-  const BREATHING_MODES = getBreathingModes(tr);
   const [breathMode, setBreathMode] = useState(BREATHING_MODES[0]);
   const [breathActive, setBreathActive] = useState(false);
   const [breathPhase, setBreathPhase] = useState(0);
@@ -180,13 +176,13 @@ export function BienestarView() {
         audio.loop = true;
         audio.volume = muted ? 0 : volume / 100;
         audio.play().catch(() => {
-          addToast({ type: 'reporte', title: 'Error', message: tr('bienestar.toast_audio_error') });
+          addToast({ type: 'reporte', title: 'Error de audio', message: 'No se pudo reproducir el sonido. Intenta de nuevo.' });
           setPlayingSound(null);
         });
         audioRef.current = audio;
         setPlayingSound(id);
       } catch {
-        addToast({ type: 'reporte', title: 'Error', message: tr('bienestar.toast_audio_load') });
+        addToast({ type: 'reporte', title: 'Error de audio', message: 'No se pudo cargar el archivo de sonido.' });
       }
     }
   };
@@ -203,7 +199,7 @@ export function BienestarView() {
       const botMsg = { id: Date.now() + 1, from: 'bot', text: response };
       setMsgs(p => [...p, botMsg]);
     } catch {
-      const errMsg = { id: Date.now() + 1, from: 'bot', text: tr('bienestar.bot_error') };
+      const errMsg = { id: Date.now() + 1, from: 'bot', text: 'No pude conectarme en este momento. Intenta de nuevo en unos segundos.' };
       setMsgs(p => [...p, errMsg]);
     } finally {
       setIsLoading(false);
@@ -245,9 +241,8 @@ export function BienestarView() {
   useEffect(() => () => { audioRef.current?.pause(); }, []);
 
   const phaseInfo = breathMode.phases[breathPhase];
-  const expandedScale = phaseInfo?.label === tr('bienestar.breath_inhale') ? 1.45 : phaseInfo?.label === tr('bienestar.breath_exhale') ? 0.85 : 1.2;
+  const expandedScale = phaseInfo?.label === 'Inhala' ? 1.45 : phaseInfo?.label === 'Exhala' ? 0.85 : 1.2;
 
-  const EMOCIONES = getEmociones(tr);
   const selectedMoodVal = EMOCIONES.find(e => e.emoji === diaryEmotion)?.value || null;
 
   return (
@@ -255,8 +250,8 @@ export function BienestarView() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div className="min-w-0">
-          <h2 style={{ fontWeight: 700, fontSize: '1.3rem' }}>{tr('bienestar.title')}</h2>
-          <p style={{ fontSize: '0.85rem', color: t.textMuted }}>{tr('bienestar.subtitle')}</p>
+          <h2 style={{ fontWeight: 700, fontSize: '1.3rem' }}>Bienestar 24/7</h2>
+          <p style={{ fontSize: '0.85rem', color: t.textMuted }}>Tu espacio seguro en la ECI — siempre aquí para ti</p>
         </div>
         <div className="flex gap-2 flex-wrap sm:justify-end">
           {TABS.map(t => (
@@ -282,15 +277,15 @@ export function BienestarView() {
               <ImageWithFallback src={monoULinkImg} alt="Mono" className="w-full h-full object-contain" />
             </div>
             <div>
-              <p style={{ fontWeight: 700, fontSize: '0.95rem' }}>{tr('bienestar.bot_name')}</p>
+              <p style={{ fontWeight: 700, fontSize: '0.95rem' }}>Mono — Bienestar ECI</p>
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full" style={{ background: '#7FE7C4' }} />
-                <span style={{ fontSize: '0.7rem', color: '#7FE7C4' }}>{tr('bienestar.bot_status')}</span>
+                <span style={{ fontSize: '0.7rem', color: '#7FE7C4' }}>En línea · Responde al instante</span>
               </div>
             </div>
             <div className="ml-auto">
               <span className="px-2 py-1 rounded-full text-xs" style={{ background: 'rgba(127,231,196,0.1)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.2)' }}>
-                {tr('bienestar.bot_badge')}
+                IA Empática
               </span>
             </div>
           </div>
@@ -339,7 +334,7 @@ export function BienestarView() {
             <div className="flex gap-2">
               <input value={msg} onChange={e => setMsg(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && sendMsg()}
-                placeholder={tr('bienestar.input_placeholder')}
+                placeholder="Escribe cómo te sientes..."
                 className="flex-1 px-4 py-2.5 rounded-xl outline-none text-sm"
                 style={{ background: t.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text }} />
               <button onClick={sendMsg} className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#6C63FF' }}>
@@ -347,7 +342,7 @@ export function BienestarView() {
               </button>
             </div>
             <div className="flex gap-2 mt-2 flex-wrap">
-              {[tr('bienestar.q1'),tr('bienestar.q2'),tr('bienestar.q3'),tr('bienestar.q4')].map(q => (
+              {['Estoy estresado por parciales','Me siento solo/a','Necesito motivación','Quiero hablar con alguien'].map(q => (
                 <button key={q} onClick={() => setMsg(q)}
                   className="px-3 py-1 rounded-full text-xs transition-all hover:opacity-80"
                   style={{ background: 'rgba(108,99,255,0.1)', color: 'var(--p-muted)', border: '1px solid rgba(108,99,255,0.15)' }}>
@@ -380,9 +375,9 @@ export function BienestarView() {
               <div className="relative p-6 pr-6 sm:pr-36">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
                   <div>
-                    <p style={{ fontWeight: 800, fontSize: '1.05rem', color: t.darkMode ? '#F0EEFF' : '#1A1829' }}>{tr('bienestar.how_are_you')}</p>
+                    <p style={{ fontWeight: 800, fontSize: '1.05rem', color: t.darkMode ? '#F0EEFF' : '#1A1829' }}>¿Cómo te sientes hoy?</p>
                     <p style={{ fontSize: '0.78rem', color: t.darkMode ? '#8B85B0' : '#6B6490', marginTop: '2px' }}>
-                      {new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
+                      {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </p>
                   </div>
                   {computeStreak(diaryEntries) > 0 && (
@@ -390,7 +385,7 @@ export function BienestarView() {
                       style={{ background: 'rgba(255,179,71,0.15)', border: '1px solid rgba(255,179,71,0.3)' }}>
                       <span style={{ fontSize: '0.75rem' }}>🔥</span>
                       <span style={{ fontSize: '0.72rem', color: '#FFB347', fontWeight: 600 }}>
-                        {computeStreak(diaryEntries)} {computeStreak(diaryEntries) === 1 ? tr('bienestar.streak_day') : tr('bienestar.streak_days')}
+                        {computeStreak(diaryEntries)} día{computeStreak(diaryEntries) === 1 ? '' : 's'} seguidos
                       </span>
                     </div>
                   )}
@@ -426,14 +421,14 @@ export function BienestarView() {
                   {selectedMoodVal && (
                     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                       className="flex items-start gap-3 px-4 py-3 rounded-2xl"
-                      style={{ background: `${getAiTips(tr)[selectedMoodVal].color}12`, border: `1px solid ${getAiTips(tr)[selectedMoodVal].color}30` }}>
+                      style={{ background: `${AI_TIPS[selectedMoodVal].color}12`, border: `1px solid ${AI_TIPS[selectedMoodVal].color}30` }}>
                       <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>🤖</span>
                       <div>
-                        <p style={{ fontWeight: 700, fontSize: '0.82rem', color: getAiTips(tr)[selectedMoodVal].color }}>
-                          {getAiTips(tr)[selectedMoodVal].title}
+                        <p style={{ fontWeight: 700, fontSize: '0.82rem', color: AI_TIPS[selectedMoodVal].color }}>
+                          {AI_TIPS[selectedMoodVal].title}
                         </p>
                         <p style={{ fontSize: '0.78rem', color: '#C0BAE0', lineHeight: 1.6, marginTop: '2px' }}>
-                          {getAiTips(tr)[selectedMoodVal].tip}
+                          {AI_TIPS[selectedMoodVal].tip}
                         </p>
                       </div>
                     </motion.div>
@@ -444,11 +439,11 @@ export function BienestarView() {
 
             <div className="rounded-2xl border p-5" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
               <div className="flex items-center justify-between mb-3">
-                <p style={{ fontWeight: 700, fontSize: '0.95rem', color: t.text }}>{tr('bienestar.write_diary')}</p>
-                <button onClick={() => { setActivePrompt(p => (p + 1) % getDiaryPrompts(tr).length); setDiaryNote(''); }}
+                <p style={{ fontWeight: 700, fontSize: '0.95rem', color: t.text }}>Escribe en tu diario</p>
+                <button onClick={() => { setActivePrompt(p => (p + 1) % DIARY_PROMPTS.length); setDiaryNote(''); }}
                   className="px-3 py-1 rounded-xl text-xs transition-all hover:opacity-80"
                   style={{ background: 'rgba(108,99,255,0.1)', color: '#6C63FF', border: '1px solid rgba(108,99,255,0.2)' }}>
-                  {tr('bienestar.suggest_prompt')}
+                  Sugerir pregunta
                 </button>
               </div>
 
@@ -458,23 +453,23 @@ export function BienestarView() {
                   initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                   className="mb-3 px-3 py-2 rounded-xl"
                   style={{ fontSize: '0.82rem', color: '#6C63FF', background: 'rgba(108,99,255,0.08)', fontStyle: 'italic' }}>
-                  {getDiaryPrompts(tr)[activePrompt]}
+                  {DIARY_PROMPTS[activePrompt]}
                 </motion.p>
               </AnimatePresence>
 
               <textarea value={diaryNote} onChange={e => { setDiaryNote(e.target.value); setDiaryError(null); }}
-                placeholder={tr('bienestar.diary_placeholder')}
+                placeholder="Escribe libremente... este espacio es solo tuyo"
                 rows={5} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
                 style={{ background: t.inputBg, border: `1px solid ${diaryNote ? 'rgba(108,99,255,0.4)' : 'rgba(108,99,255,0.15)'}`, color: t.text, lineHeight: 1.7, transition: 'border-color 0.2s' }} />
 
               <div className="flex items-center justify-between mt-3">
                 <p style={{ fontSize: '0.7rem', color: t.textMuted }}>
-                  {diaryNote.length} {tr('bienestar.chars')}
+                  {diaryNote.length} caracteres
                 </p>
                 <motion.button
                   onClick={() => {
-                    if (!diaryEmotion) { setDiaryError(tr('bienestar.toast_diary_error')); return; }
-                    if (!diaryNote.trim()) { setDiaryError(tr('bienestar.toast_diary_empty')); return; }
+                    if (!diaryEmotion) { setDiaryError('Selecciona cómo te sientes antes de guardar.'); return; }
+                    if (!diaryNote.trim()) { setDiaryError('Escribe algo en tu diario antes de guardar.'); return; }
                     setDiaryError(null);
                     const color = EMOCIONES.find(e => e.emoji === diaryEmotion)?.color ?? '#6C63FF';
                     const entry: DiaryEntry = {
@@ -494,7 +489,7 @@ export function BienestarView() {
                   whileTap={{ scale: 0.97 }}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
                   style={{ background: '#6C63FF', color: 'white', boxShadow: '0 4px 14px rgba(108,99,255,0.35)' }}>
-                  {savedToday ? tr('bienestar.diary_update') : tr('bienestar.diary_save')}
+                  {savedToday ? 'Actualizar registro' : 'Guardar registro'}
                 </motion.button>
               </div>
 
@@ -515,7 +510,7 @@ export function BienestarView() {
                     className="mt-3 px-4 py-3 rounded-xl flex items-center gap-2"
                     style={{ background: 'rgba(127,231,196,0.1)', border: '1px solid rgba(127,231,196,0.25)' }}>
                     <span style={{ fontSize: '1rem' }}>✅</span>
-                    <p style={{ fontSize: '0.78rem', color: '#7FE7C4' }}>{tr('bienestar.diary_saved_msg')}</p>
+                    <p style={{ fontSize: '0.78rem', color: '#7FE7C4' }}>¡Registro del día guardado! Tu constancia vale mucho.</p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -527,9 +522,9 @@ export function BienestarView() {
 
             {/* Weekly mood chart */}
             <div className="rounded-2xl border p-4" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
-              <p style={{ fontWeight: 700, fontSize: '0.9rem', color: t.text, marginBottom: '14px' }}>{tr('bienestar.weekly_history')}</p>
+              <p style={{ fontWeight: 700, fontSize: '0.9rem', color: t.text, marginBottom: '14px' }}>Tu semana emocional</p>
               <div className="flex items-end gap-2" style={{ height: 90 }}>
-                {computeWeekMoods(diaryEntries, tr).map((val, i) => {
+                {computeWeekMoods(diaryEntries).map((val, i) => {
                   const em = EMOCIONES.find(e => e.value === val);
                   return (
                     <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
@@ -544,14 +539,14 @@ export function BienestarView() {
                 })}
               </div>
               {(() => {
-                const vals = computeWeekMoods(diaryEntries, tr).filter((v): v is number => v != null);
+                const vals = computeWeekMoods(diaryEntries).filter((v): v is number => v != null);
                 if (vals.length === 0) return null;
                 const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
                 const em = EMOCIONES.find(e => e.value === avg);
                 return (
                   <div className="mt-3 pt-3 border-t flex items-center justify-between"
                     style={{ borderColor: 'rgba(108,99,255,0.1)' }}>
-                    <span style={{ fontSize: '0.72rem', color: t.textMuted }}>{tr('bienestar.weekly_avg')}</span>
+                    <span style={{ fontSize: '0.72rem', color: t.textMuted }}>Promedio semanal</span>
                     <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#7FE7C4' }}>
                       {em?.emoji} {em?.label}
                     </span>
@@ -562,9 +557,9 @@ export function BienestarView() {
 
             {/* Past entries */}
             <div>
-              <p style={{ fontWeight: 700, fontSize: '0.9rem', color: t.text, marginBottom: '10px' }}>{tr('bienestar.past_entries')}</p>
+              <p style={{ fontWeight: 700, fontSize: '0.9rem', color: t.text, marginBottom: '10px' }}>Entradas anteriores</p>
               {diaryEntries.length === 0 ? (
-                <p style={{ fontSize: '0.78rem', color: t.textMuted }}>{tr('bienestar.no_entries')}</p>
+                <p style={{ fontSize: '0.78rem', color: t.textMuted }}>Aún no tienes entradas. Escribe tu primer registro arriba.</p>
               ) : (
                 <div className="space-y-2.5">
                   {diaryEntries.map((e, i) => (
@@ -613,7 +608,7 @@ export function BienestarView() {
               {playingSound ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   <p style={{ fontSize: '0.75rem', color: '#7FE7C4', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>
-                    ▶ {tr('bienestar.playing')}
+                    ▶ Reproduciendo
                   </p>
                   <p style={{ fontWeight: 800, fontSize: '1.2rem', color: '#F0EEFF', marginBottom: '4px' }}>
                     {SOUNDS.find(s => s.id === playingSound)?.name}
@@ -650,17 +645,17 @@ export function BienestarView() {
                       }}
                       className="px-3 py-1.5 rounded-xl text-xs font-medium"
                       style={{ background: 'rgba(255,77,106,0.15)', color: '#FF4D6A', border: '1px solid rgba(255,77,106,0.25)' }}>
-                      {tr('bienestar.breathe_stop')}
+                      Detener
                     </button>
                   </div>
                 </motion.div>
               ) : (
                 <div>
                   <p style={{ fontWeight: 800, fontSize: '1.2rem', color: t.darkMode ? '#F0EEFF' : '#1A1829', marginBottom: '6px' }}>
-                    {tr('bienestar.sounds_title')}
+                    Sonidos de bienestar
                   </p>
                   <p style={{ fontSize: '0.85rem', color: t.darkMode ? '#8B85B0' : '#6B6490', lineHeight: 1.6 }}>
-                    {tr('bienestar.sounds_choose')}
+                    Elige un sonido para relajarte, concentrarte o descansar mejor.
                   </p>
                 </div>
               )}
@@ -669,7 +664,7 @@ export function BienestarView() {
 
           {/* Sound grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {getSounds(tr).map(sound => {
+            {SOUNDS.map(sound => {
               const isPlaying = playingSound === sound.id;
               return (
                 <motion.button key={sound.id}
@@ -754,17 +749,17 @@ export function BienestarView() {
                 className="flex items-center gap-8 mt-4 mb-6 px-8 py-4 rounded-2xl border"
                 style={{ background: 'rgba(108,99,255,0.08)', borderColor: 'rgba(108,99,255,0.2)' }}>
                 <div className="text-center">
-                  <p style={{ fontSize: '0.7rem', color: 'var(--p-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{tr('bienestar.breathe_cycles')}</p>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--p-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ciclos</p>
                   <p style={{ fontSize: '2.2rem', fontWeight: 900, color: '#6C63FF', lineHeight: 1 }}>{breathCycles}</p>
                 </div>
                 <div className="w-px h-10" style={{ background: 'rgba(108,99,255,0.2)' }} />
                 <div className="text-center">
-                  <p style={{ fontSize: '0.7rem', color: 'var(--p-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{tr('bienestar.breathe_phase')}</p>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--p-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Fase</p>
                   <p style={{ fontSize: '1rem', fontWeight: 700, color: '#7FE7C4' }}>{phaseInfo?.label}</p>
                 </div>
                 <div className="w-px h-10" style={{ background: 'rgba(108,99,255,0.2)' }} />
                 <div className="text-center">
-                  <p style={{ fontSize: '0.7rem', color: 'var(--p-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{tr('bienestar.breathe_time')}</p>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--p-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Tiempo</p>
                   <p style={{ fontSize: '1rem', fontWeight: 700, color: '#FFB347' }}>{breathSecondsLeft}s</p>
                 </div>
               </motion.div>
@@ -776,19 +771,19 @@ export function BienestarView() {
                 whileTap={{ scale: 0.97 }}
                 className="mt-8 px-12 py-4 rounded-2xl font-bold text-lg transition-all"
                 style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)', color: 'white', boxShadow: '0 6px 24px rgba(108,99,255,0.35)' }}>
-                {tr('bienestar.breathe_start')} {breathMode.name}
+                Comenzar {breathMode.name}
               </motion.button>
             ) : (
               <button onClick={stopBreath} className="mt-8 px-8 py-3 rounded-2xl font-semibold transition-all hover:opacity-80"
                 style={{ background: 'rgba(255,77,106,0.1)', color: '#FF4D6A', border: '1.5px solid rgba(255,77,106,0.25)' }}>
-                {tr('bienestar.breathe_stop_session')}
+                Detener sesión
               </button>
             )}
           </div>
 
           {/* Right — mode selector cards */}
           <div className="w-72 flex-shrink-0 space-y-3 py-6">
-            <p style={{ fontWeight: 700, fontSize: '0.85rem', color: t.text, marginBottom: '4px' }}>{tr('bienestar.choose_technique')}</p>
+            <p style={{ fontWeight: 700, fontSize: '0.85rem', color: t.text, marginBottom: '4px' }}>Elige una técnica</p>
             {BREATHING_MODES.map(mode => (
               <motion.button key={mode.id}
                 onClick={() => { setBreathMode(mode); stopBreath(); setBreathPhase(0); }}
@@ -823,9 +818,9 @@ export function BienestarView() {
             {/* Tip */}
             <div className="rounded-2xl p-4 border mt-4"
               style={{ background: 'rgba(127,231,196,0.06)', borderColor: 'rgba(127,231,196,0.2)' }}>
-              <p style={{ fontSize: '0.75rem', color: '#7FE7C4', fontWeight: 600, marginBottom: '4px' }}>{tr('bienestar.breathe_tip_title')}</p>
+              <p style={{ fontSize: '0.75rem', color: '#7FE7C4', fontWeight: 600, marginBottom: '4px' }}>Consejo</p>
               <p style={{ fontSize: '0.75rem', color: t.textMuted, lineHeight: 1.6 }}>
-                {tr('bienestar.breathe_tip_desc')}
+                Practica al menos 3 ciclos para sentir los beneficios. Lo ideal es hacer esto antes de dormir o en momentos de estrés.
               </p>
             </div>
           </div>

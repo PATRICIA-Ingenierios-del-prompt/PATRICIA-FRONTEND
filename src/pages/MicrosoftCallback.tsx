@@ -3,7 +3,6 @@ import { authService } from '../services/authService';
 import { useAuth } from '../store/AuthContext';
 import { AnimatedBackground } from '../components/AnimatedBackground';
 import { friendlyError } from '../lib/errorMessages';
-import { useTranslation } from 'react-i18next';
 
 interface Props {
   onSuccess: (fromRegister: boolean) => void;
@@ -16,7 +15,6 @@ interface Props {
  * Sends the code to the Gateway → Auth Backend and stores the JWT tokens.
  */
 export function MicrosoftCallback({ onSuccess, onError, darkMode }: Props) {
-  const { t: tr } = useTranslation();
   const { login } = useAuth();
   const [status, setStatus]   = useState<'loading' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
@@ -27,7 +25,7 @@ export function MicrosoftCallback({ onSuccess, onError, darkMode }: Props) {
     const msError     = params.get('error');
 
     if (msError || !code) {
-      setErrorMsg(tr('microsoft_callback.ms_error'));
+      setErrorMsg('No pudimos completar el inicio de sesión con Microsoft. Intenta de nuevo.');
       setStatus('error');
       return;
     }
@@ -42,7 +40,7 @@ export function MicrosoftCallback({ onSuccess, onError, darkMode }: Props) {
         onSuccess();
       })
       .catch(err => {
-        setErrorMsg(friendlyError(err, tr('microsoft_callback.login_error')));
+        setErrorMsg(friendlyError(err, 'Error al iniciar sesión con Microsoft. Intenta de nuevo.'));
         setStatus('error');
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -66,10 +64,10 @@ export function MicrosoftCallback({ onSuccess, onError, darkMode }: Props) {
             <div className="w-16 h-16 rounded-full border-4 animate-spin mx-auto mb-6"
               style={{ borderColor: 'rgba(108,99,255,0.2)', borderTopColor: '#6C63FF' }} />
             <h2 style={{ fontWeight: 800, fontSize: '1.3rem', color: textCol, marginBottom: '8px' }}>
-              {tr('microsoft_callback.verifying')}
+              Verificando con Microsoft
             </h2>
             <p style={{ fontSize: '0.85rem', color: mutedCol, lineHeight: 1.6 }}>
-              {tr('microsoft_callback.validating')}
+              Validando tu cuenta institucional…
             </p>
           </>
         ) : (
@@ -79,7 +77,7 @@ export function MicrosoftCallback({ onSuccess, onError, darkMode }: Props) {
               <span style={{ fontSize: '2rem' }}>⚠️</span>
             </div>
             <h2 style={{ fontWeight: 800, fontSize: '1.2rem', color: '#FF4757', marginBottom: '8px' }}>
-              {tr('microsoft_callback.auth_error')}
+              Error de autenticación
             </h2>
             <p style={{ fontSize: '0.83rem', color: mutedCol, lineHeight: 1.6, marginBottom: '24px' }}>
               {errorMsg}
@@ -87,7 +85,7 @@ export function MicrosoftCallback({ onSuccess, onError, darkMode }: Props) {
             <button onClick={onError}
               className="w-full py-3 rounded-2xl font-semibold transition-all hover:opacity-90"
               style={{ background: 'linear-gradient(135deg, #6C63FF, #5250d0)', color: 'white', border: 'none', cursor: 'pointer' }}>
-              {tr('microsoft_callback.back_to_login')}
+              Volver al inicio de sesión
             </button>
           </>
         )}

@@ -16,12 +16,10 @@ import { friendlyError } from '../lib/errorMessages';
 export interface EnrolledEvent { eventId: UUID; name: string; category: EventCategory; }
 type PositionMap = Map<UUID, GeoBroadcastMessage>;
 
-import { useTranslation } from 'react-i18next';
-
-function timeAgo(iso: string, t: any): string {
+function timeAgo(iso: string): string {
   const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
-  if (s < 5) return t('home.just_now') || 'ahora'; // reusing home.just_now if available or just hardcoding fallback
-  if (s < 60) return `hace ${s}s`; // for brevity, let's keep it simple or use translation
+  if (s < 5) return 'ahora';
+  if (s < 60) return `hace ${s}s`;
   const m = Math.floor(s / 60);
   return m < 60 ? `hace ${m}m` : `hace ${Math.floor(m / 60)}h`;
 }
@@ -30,7 +28,6 @@ function timeAgo(iso: string, t: any): string {
 interface EventCard extends EnrolledEvent { started: boolean | null; center: { lat: number; lng: number } | null; loading: boolean; }
 
 function EnrolledList({ enrolled, onPick }: { enrolled: EnrolledEvent[]; onPick: (id: UUID, center: { lat: number; lng: number } | null, name: string) => void }) {
-  const { t: tr } = useTranslation();
   const t = useTheme();
   const [cards, setCards] = useState<EventCard[]>(() => enrolled.map(e => ({ ...e, started: null, center: null, loading: true })));
   useEffect(() => {
@@ -50,14 +47,14 @@ function EnrolledList({ enrolled, onPick }: { enrolled: EnrolledEvent[]; onPick:
   return (
     <div>
       <div className="mb-4">
-        <h2 style={{ fontWeight: 700, fontSize: '1.3rem', color: 'var(--p-text)' }}>{tr('location.title')}</h2>
-        <p style={{ fontSize: '0.85rem', color: t.textMuted }}>{tr('location.subtitle')}</p>
+        <h2 style={{ fontWeight: 700, fontSize: '1.3rem', color: 'var(--p-text)' }}>Ubicación en vivo</h2>
+        <p style={{ fontSize: '0.85rem', color: t.textMuted }}>Sigue en el mapa a los participantes de tus eventos en curso</p>
       </div>
       {enrolled.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-3 text-center py-16">
           <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: 'rgba(108,99,255,0.1)' }}><MapPin size={24} style={{ color: '#6C63FF' }} /></div>
-          <p style={{ fontSize: '0.9rem', color: 'var(--p-text)', fontWeight: 600 }}>{tr('location.no_events')}</p>
-          <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', maxWidth: 340, lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: tr('location.no_events_desc') }} />
+          <p style={{ fontSize: '0.9rem', color: 'var(--p-text)', fontWeight: 600 }}>Aún no sigues ningún evento</p>
+          <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', maxWidth: 340, lineHeight: 1.6 }}>Inscríbete a un evento en <b>Eventos</b> y, cuando empiece, verás aquí la ubicación en vivo de los participantes.</p>
         </div>
       )}
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
@@ -70,11 +67,11 @@ function EnrolledList({ enrolled, onPick }: { enrolled: EnrolledEvent[]; onPick:
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg" style={{ background: `${meta.color}18` }}>{meta.emoji}</div>
                 {c.loading ? <span className="px-2 py-0.5 rounded-full text-xs" style={{ background: 'var(--p-hover)', color: 'var(--p-muted)' }}>…</span>
-                  : canTrack ? <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: 'rgba(127,231,196,0.18)', color: '#7FE7C4' }}><Radio size={10} /> {tr('location.in_progress')}</span>
-                  : <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: 'var(--p-hover)', color: 'var(--p-muted)' }}><CalendarClock size={10} /> {tr('location.not_started')}</span>}
+                  : canTrack ? <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: 'rgba(127,231,196,0.18)', color: '#7FE7C4' }}><Radio size={10} /> En curso</span>
+                  : <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: 'var(--p-hover)', color: 'var(--p-muted)' }}><CalendarClock size={10} /> Aún no empieza</span>}
               </div>
               <p style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--p-text)' }}>{c.name}</p>
-              <p style={{ fontSize: '0.72rem', color: 'var(--p-muted)', marginTop: 4 }}>{canTrack ? tr('location.tap_to_view') : tr('location.available_when_started')}</p>
+              <p style={{ fontSize: '0.72rem', color: 'var(--p-muted)', marginTop: 4 }}>{canTrack ? 'Toca para ver el mapa en vivo' : 'Disponible cuando el evento comience'}</p>
             </button>
           );
         })}
@@ -85,11 +82,10 @@ function EnrolledList({ enrolled, onPick }: { enrolled: EnrolledEvent[]; onPick:
 
 /* ─────────── live map ─────────── */
 function LiveMap({ center, positions, nameFor }: { center: { lat: number; lng: number }; positions: PositionMap; nameFor: (id: UUID) => string }) {
-  const { t: tr } = useTranslation();
   const { darkMode } = useTheme();
   const { isLoaded } = useJsApiLoader({ id: GMAPS_LOADER_ID, googleMapsApiKey: GOOGLE_MAPS_KEY });
   if (!GOOGLE_MAPS_KEY) return <div className="flex items-center justify-center" style={{ height: 300, color: 'var(--p-muted)', fontSize: '0.8rem' }}>Configura VITE_GOOGLE_MAPS_API_KEY</div>;
-  if (!isLoaded) return <div className="flex items-center justify-center gap-2" style={{ height: 300 }}><div className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: '#6C63FF', borderTopColor: 'transparent' }} /><span style={{ fontSize: '0.8rem', color: 'var(--p-muted)' }}>{tr('location.loading_map')}</span></div>;
+  if (!isLoaded) return <div className="flex items-center justify-center gap-2" style={{ height: 300 }}><div className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: '#6C63FF', borderTopColor: 'transparent' }} /><span style={{ fontSize: '0.8rem', color: 'var(--p-muted)' }}>Cargando mapa…</span></div>;
   return (
     <GoogleMap mapContainerStyle={{ width: '100%', height: '100%', minHeight: 260 }} center={center} zoom={18}
       options={{ disableDefaultUI: true, zoomControl: true, styles: darkMode ? DARK_MAP_STYLES : [], clickableIcons: false } as any}>
@@ -103,13 +99,11 @@ function LiveMap({ center, positions, nameFor }: { center: { lat: number; lng: n
 }
 
 /* ─────────── incident report ─────────── */
-  const { t: tr } = useTranslation();
-  const REPORT_TYPES = useMemo(() => [
-    { value: 'MEDICAL_EMERGENCY', label: tr('location.types.medical') }, { value: 'ACCIDENT', label: tr('location.types.accident') },
-    { value: 'AGGRESSION', label: tr('location.types.aggression') }, { value: 'HARASSMENT', label: tr('location.types.harassment') }, { value: 'THEFT', label: tr('location.types.theft') },
-    { value: 'LOST_PERSON', label: tr('location.types.lost') }, { value: 'BAD_BEHAVIOUR', label: tr('location.types.bad_behavior') }, { value: 'OTHER', label: tr('location.types.other') },
-  ], [tr]);
-
+const REPORT_TYPES: { value: ReportType; label: string }[] = [
+  { value: 'MEDICAL_EMERGENCY', label: 'Emergencia médica' }, { value: 'ACCIDENT', label: 'Accidente' },
+  { value: 'AGGRESSION', label: 'Agresión' }, { value: 'HARASSMENT', label: 'Acoso' }, { value: 'THEFT', label: 'Robo' },
+  { value: 'LOST_PERSON', label: 'Persona perdida' }, { value: 'BAD_BEHAVIOUR', label: 'Mal comportamiento' }, { value: 'OTHER', label: 'Otro' },
+];
 function ReportModal({ eventId, onClose }: { eventId: UUID; onClose: () => void }) {
   const t = useTheme();
   const [type, setType] = useState<ReportType>('MEDICAL_EMERGENCY');
@@ -119,9 +113,9 @@ function ReportModal({ eventId, onClose }: { eventId: UUID; onClose: () => void 
     setSaving(true);
     try {
       await eventService.createReport(eventId, { reportType: type, description });
-      addToast({ type: 'reporte', title: tr('location.report_sent'), message: tr('location.report_sent_desc') });
+      addToast({ type: 'reporte', title: 'Reporte enviado', message: 'Se registró el incidente y se aseguró tu ubicación como evidencia.' });
       onClose();
-    } catch (e: any) { addToast({ type: 'reporte', title: tr('location.report_error'), message: friendlyError(e, tr('location.report_error_desc')) }); }
+    } catch (e: any) { addToast({ type: 'reporte', title: 'No se pudo reportar', message: friendlyError(e, 'No se pudo enviar el reporte. Intenta de nuevo.') }); }
     finally { setSaving(false); }
   };
   return (
@@ -131,17 +125,17 @@ function ReportModal({ eventId, onClose }: { eventId: UUID; onClose: () => void 
         <div className="p-6">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3"><div className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255,77,106,0.14)' }}><AlertTriangle size={20} style={{ color: '#FF4D6A' }} /></div>
-              <div><p style={{ fontWeight: 800, fontSize: '1.05rem', color: t.text }}>{tr('location.report_incident')}</p><p style={{ fontSize: '0.76rem', color: t.textMuted }}>{tr('location.report_desc')}</p></div></div>
+              <div><p style={{ fontWeight: 800, fontSize: '1.05rem', color: t.text }}>Reportar incidente</p><p style={{ fontSize: '0.76rem', color: t.textMuted }}>Tu ubicación actual quedará como evidencia</p></div></div>
             <button onClick={onClose} className="hover:opacity-60"><X size={18} style={{ color: t.textMuted }} /></button>
           </div>
-          <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 8, fontWeight: 600 }}>{tr('location.incident_type')}</p>
+          <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)', marginBottom: 8, fontWeight: 600 }}>Tipo de incidente</p>
           <div className="flex flex-wrap gap-2 mb-4">
             {REPORT_TYPES.map(r => { const on = type === r.value; return <button key={r.value} onClick={() => setType(r.value)} className="px-3 py-1.5 rounded-xl text-xs font-medium" style={{ background: on ? 'rgba(255,77,106,0.15)' : 'var(--p-input)', border: `1px solid ${on ? '#FF4D6A' : 'rgba(108,99,255,0.2)'}`, color: on ? '#FF4D6A' : 'var(--p-muted)' }}>{r.label}</button>; })}
           </div>
-          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder={tr('location.describe_happening')} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none mb-4" style={{ background: t.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text }} />
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Describe lo que está pasando..." className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none mb-4" style={{ background: t.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text }} />
           <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm" style={{ background: 'rgba(108,99,255,0.1)', color: 'var(--p-muted)' }}>{tr('location.cancel')}</button>
-            <button onClick={submit} disabled={saving} className="flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50" style={{ background: 'linear-gradient(135deg,#FF4D6A,#FF6B9D)', color: 'white' }}>{saving ? tr('location.sending') : tr('location.send_report')}</button>
+            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm" style={{ background: 'rgba(108,99,255,0.1)', color: 'var(--p-muted)' }}>Cancelar</button>
+            <button onClick={submit} disabled={saving} className="flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50" style={{ background: 'linear-gradient(135deg,#FF4D6A,#FF6B9D)', color: 'white' }}>{saving ? 'Enviando…' : 'Enviar reporte'}</button>
           </div>
         </div>
       </div>
@@ -151,7 +145,6 @@ function ReportModal({ eventId, onClose }: { eventId: UUID; onClose: () => void 
 
 /* ─────────── tracker (read-only) ─────────── */
 function Tracker({ eventId, presetCenter, name, onBack }: { eventId: UUID; presetCenter: { lat: number; lng: number } | null; name: string; onBack: () => void }) {
-  const { t: tr } = useTranslation();
   const [center, setCenter] = useState(presetCenter ?? ECI_CENTER);
   const [detail, setDetail] = useState<EventResponse | null>(null);
   const [positions, setPositions] = useState<PositionMap>(new Map());
@@ -176,15 +169,15 @@ function Tracker({ eventId, presetCenter, name, onBack }: { eventId: UUID; prese
         missing.forEach(id => {
           const p = perfiles[id];
           const fullName = p ? `${p.nombre ?? ''} ${p.apellidos ?? ''}`.trim() : '';
-          nameCache.current.set(id, fullName || `${tr('location.participant')} ${id.slice(0, 4)}`);
+          nameCache.current.set(id, fullName || `Participante ${id.slice(0, 4)}`);
         });
         setNames(new Map(nameCache.current));
       })
       .catch(() => { /* keep fallback labels; retry next time new ids appear */ })
       .finally(() => missing.forEach(id => pendingNames.current.delete(id)));
-  }, [positions, tr]);
+  }, [positions]);
 
-  const nameFor = useCallback((id: UUID) => (id === meId ? tr('location.you') : names.get(id) ?? `${tr('location.participant')} ${id.slice(0, 4)}`), [names, meId, tr]);
+  const nameFor = useCallback((id: UUID) => (id === meId ? 'Tú' : names.get(id) ?? `Participante ${id.slice(0, 4)}`), [names, meId]);
 
   useEffect(() => {
     let alive = true;
@@ -199,7 +192,7 @@ function Tracker({ eventId, presetCenter, name, onBack }: { eventId: UUID; prese
     const sock = new LocationSocket({
       onConnect: () => { setSocketState('up'); sock.subscribeToEvent(eventId, { onSnapshot: s => s.positions.forEach(upsert), onPosition: upsert }); },
       onDisconnect: () => setSocketState('down'),
-      onStompError: f => addToast({ type: 'reporte', title: tr('location.title'), message: f.headers['message'] ?? f.body }),
+      onStompError: f => addToast({ type: 'reporte', title: 'Ubicación', message: f.headers['message'] ?? f.body }),
     });
     socketRef.current = sock;
     sock.activate();
@@ -227,7 +220,7 @@ function Tracker({ eventId, presetCenter, name, onBack }: { eventId: UUID; prese
         },
         err => {
           if (err.code === err.PERMISSION_DENIED) {
-            addToast({ type: 'reporte', title: tr('location.title'), message: tr('location.location_denied') });
+            addToast({ type: 'reporte', title: 'Ubicación', message: 'Activa el permiso de ubicación para que los demás te vean en el mapa.' });
           }
         },
         { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
@@ -252,19 +245,19 @@ function Tracker({ eventId, presetCenter, name, onBack }: { eventId: UUID; prese
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h2 style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--p-text)' }}>{detail?.name ?? name}</h2>
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs whitespace-nowrap" style={{ background: `${stateColor}20`, color: stateColor }}><Radio size={10} /> {socketState === 'up' ? tr('location.live') : socketState === 'connecting' ? tr('location.connecting') : tr('location.offline')}</span>
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs whitespace-nowrap" style={{ background: `${stateColor}20`, color: stateColor }}><Radio size={10} /> {socketState === 'up' ? 'En vivo' : socketState === 'connecting' ? 'Conectando…' : 'Sin conexión'}</span>
           </div>
-          <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)' }}>{tr(people.length === 1 ? 'location.participants_count_one' : 'location.participants_count_other', { count: people.length })}</p>
+          <p style={{ fontSize: '0.8rem', color: 'var(--p-muted)' }}>{people.length} participante{people.length !== 1 ? 's' : ''} en el mapa</p>
         </div>
         <button onClick={() => setShowReport(true)} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 flex-shrink-0" style={{ background: 'linear-gradient(135deg,#FF4D6A,#FF6B9D)', color: 'white' }}>
           <AlertTriangle size={15} />
-          <span className="hidden sm:inline">{tr('location.report_incident')}</span>
-          <span className="sm:hidden">{tr('location.report_short')}</span>
+          <span className="hidden sm:inline">Reportar incidente</span>
+          <span className="sm:hidden">Reportar</span>
         </button>
       </div>
       <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl" style={{ background: 'rgba(127,231,196,0.08)', border: '1px solid rgba(127,231,196,0.2)' }}>
         <ShieldCheck size={14} style={{ color: '#7FE7C4', flexShrink: 0 }} />
-        <span style={{ fontSize: '0.74rem', color: 'var(--p-sub)' }}>{tr('location.location_disclaimer')}</span>
+        <span style={{ fontSize: '0.74rem', color: 'var(--p-sub)' }}>Las ubicaciones son efímeras y cifradas. Solo se muestran como puntos en el mapa durante el evento; nadie ve coordenadas exactas.</span>
       </div>
       {/* Mobile: map stacked above the list. Desktop (lg+): map wide, list as a side panel. */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-stretch">
@@ -272,15 +265,15 @@ function Tracker({ eventId, presetCenter, name, onBack }: { eventId: UUID; prese
           <LiveMap center={center} positions={positions} nameFor={nameFor} />
         </div>
         <div className="rounded-2xl border p-4 overflow-y-auto" style={{ background: 'var(--p-card)', borderColor: 'rgba(108,99,255,0.2)', maxHeight: 'clamp(280px, 55vh, 560px)' }}>
-          <div className="flex items-center gap-2 mb-3"><Users size={15} style={{ color: '#6C63FF' }} /><span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--p-text)' }}>{tr('location.participants')}</span></div>
-          {people.length === 0 && <p style={{ fontSize: '0.78rem', color: 'var(--p-muted)', lineHeight: 1.6 }}>{tr('location.no_positions')}</p>}
+          <div className="flex items-center gap-2 mb-3"><Users size={15} style={{ color: '#6C63FF' }} /><span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--p-text)' }}>Participantes</span></div>
+          {people.length === 0 && <p style={{ fontSize: '0.78rem', color: 'var(--p-muted)', lineHeight: 1.6 }}>Nadie está transmitiendo ubicación todavía. Aparecerán aquí en cuanto empiecen a moverse.</p>}
           <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(160px,1fr))] lg:grid-cols-1">
             {people.map(p => (
               <div key={p.userId} className="flex items-center gap-2.5 p-2 rounded-xl" style={{ background: 'var(--p-input)' }}>
                 <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: colorForUser(p.userId), boxShadow: `0 0 0 3px ${colorForUser(p.userId)}33` }} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate" style={{ fontSize: '0.78rem', color: 'var(--p-text)', fontWeight: 600 }}>{nameFor(p.userId)}</p>
-                  <p style={{ fontSize: '0.68rem', color: 'var(--p-muted)' }}>{tr('location.active_now', { time: timeAgo(p.recordedAt, tr) })}</p>
+                  <p style={{ fontSize: '0.68rem', color: 'var(--p-muted)' }}>Activo · {timeAgo(p.recordedAt)}</p>
                 </div>
               </div>
             ))}
