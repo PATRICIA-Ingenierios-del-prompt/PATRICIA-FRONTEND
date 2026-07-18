@@ -9,6 +9,7 @@ import { friendlyError } from '../lib/errorMessages';
 import { matchingService } from '../services/matchingService';
 import { userService, type PerfilResponse, type FranjaHoraria } from '../services/userService';
 import type { MatchResponse } from '../types/patricia';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Matching feed conectado a matching-service + Users.
@@ -124,6 +125,7 @@ function ProfileModal({ person, onClose, onAccept, onReject, showActions, isMatc
   showActions: boolean;
   isMatch: boolean;
 }) {
+  const { t: tr } = useTranslation();
   const t = useTheme();
 
   // Horario semanal real — solo se pide y se muestra para matches confirmados (amigos).
@@ -194,7 +196,7 @@ function ProfileModal({ person, onClose, onAccept, onReject, showActions, isMatc
           {/* Horario semanal — solo visible una vez hay match confirmado (amigos) */}
           {isMatch ? (
             <div className="mb-5">
-              <p style={{ fontWeight: 700, fontSize: '0.82rem', color: t.text, marginBottom: 8 }}>Disponibilidad semanal</p>
+              <p style={{ fontWeight: 700, fontSize: '0.82rem', color: t.text, marginBottom: 8 }}>{tr('matching.weekly_availability')}</p>
               {loadingSchedule ? (
                 <p style={{ fontSize: '0.78rem', color: t.textMuted }}>Cargando horario…</p>
               ) : friendSchedule && friendSchedule.size > 0 ? (
@@ -222,12 +224,12 @@ function ProfileModal({ person, onClose, onAccept, onReject, showActions, isMatc
                   </div>
                 </div>
               ) : (
-                <p style={{ fontSize: '0.78rem', color: t.textMuted }}>Aún no configuró su disponibilidad.</p>
+                <p style={{ fontSize: '0.78rem', color: t.textMuted }}>{tr('matching.no_availability')}</p>
               )}
             </div>
           ) : person.disponibilidad && (
             <div className="flex items-center gap-2 mb-5">
-              <span style={{ fontWeight: 700, fontSize: '0.82rem', color: t.text }}>Disponibilidad:</span>
+              <span style={{ fontWeight: 700, fontSize: '0.82rem', color: t.text }}>{tr('matching.availability')}</span>
               <span className="px-2.5 py-1 rounded-full text-xs font-semibold"
                 style={{ background: 'var(--p-divider)', color: '#6C63FF' }}>
                 {DISPONIBILIDAD_LABEL[person.disponibilidad] ?? person.disponibilidad}
@@ -240,12 +242,12 @@ function ProfileModal({ person, onClose, onAccept, onReject, showActions, isMatc
               <button onClick={onReject}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all hover:opacity-80"
                 style={{ color: '#FF4757', borderColor: 'rgba(255,71,87,0.3)', background: 'rgba(255,71,87,0.05)' }}>
-                <X size={14} className="inline mr-1" /> Rechazar
+                <X size={14} className="inline mr-1" /> {tr('matching.reject')}
               </button>
               <button onClick={onAccept}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
                 style={{ background: '#7FE7C4', color: '#0F0E1A' }}>
-                <Check size={14} className="inline mr-1" /> ¡Match!
+                <Check size={14} className="inline mr-1" /> {tr('matching.its_a_match')}
               </button>
             </div>
           )}
@@ -257,8 +259,10 @@ function ProfileModal({ person, onClose, onAccept, onReject, showActions, isMatc
 
 // Chat modal for matched users — NOTA: el chat real vive en el microservicio
 // de Comunicación (fuera del alcance de esta integración); esto sigue siendo
+// de Comunicación (fuera del alcance de esta integración); esto sigue siendo
 // una simulación local hasta que se conecte ese servicio.
 function ChatModal({ person, onClose }: { person: { name: string; avatar: string; gradient: string; foto?: string }; onClose: () => void }) {
+  const { t: tr } = useTranslation();
   const t = useTheme();
   const [msgs, setMsgs] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
@@ -284,7 +288,7 @@ function ChatModal({ person, onClose }: { person: { name: string; avatar: string
           </div>
           <div>
             <p style={{ fontWeight: 700, fontSize: '0.9rem', color: t.text }}>{person.name}</p>
-            <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full" style={{ background: '#7FE7C4' }} /><span style={{ fontSize: '0.65rem', color: '#7FE7C4' }}>En línea</span></div>
+            <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full" style={{ background: '#7FE7C4' }} /><span style={{ fontSize: '0.65rem', color: '#7FE7C4' }}>{tr('matching.online')}</span></div>
           </div>
         </div>
         {/* Messages */}
@@ -321,6 +325,7 @@ function ChatModal({ person, onClose }: { person: { name: string; avatar: string
 }
 
 export function MatchingView() {
+  const { t: tr } = useTranslation();
   const t = useTheme();
   const { userId } = useAuth();
   const navigate = useNavigate();
@@ -594,17 +599,17 @@ export function MatchingView() {
                 📸
               </div>
               <h2 style={{ fontWeight: 900, fontSize: '1.4rem', color: 'white', letterSpacing: '-0.02em', marginBottom: 8 }}>
-                Foto de perfil obligatoria
+                {tr('matching.photo_mandatory')}
               </h2>
               <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.78)', lineHeight: 1.6 }}>
-                Para usar Matching necesitas subir una foto real tuya. La verificamos automáticamente para garantizar una comunidad segura.
+                {tr('matching.photo_desc')}
               </p>
             </div>
           </div>
 
           <div className="p-6">
             <div className="flex flex-wrap gap-2 mb-6">
-              {['Foto privada y segura', 'Verificación automática con IA', 'Solo fotos de personas reales'].map(text => (
+              {[tr('matching.feature_private'), tr('matching.feature_ai'), tr('matching.feature_real')].map(text => (
                 <div key={text} className="flex items-center px-3 py-1.5 rounded-full"
                   style={{ background: 'rgba(108,99,255,0.1)', border: '1px solid rgba(108,99,255,0.2)' }}>
                   <span style={{ fontSize: '0.72rem', color: '#6C63FF', fontWeight: 600 }}>{text}</span>
@@ -633,17 +638,17 @@ export function MatchingView() {
                   {myPhotoUrl && photoPreview === myPhotoUrl ? (
                     <>
                       <p style={{ fontSize: '0.85rem', color: t.text, fontWeight: 600, marginBottom: 4 }}>
-                        Esta es tu foto de perfil actual
+                        {tr('matching.current_photo')}
                       </p>
                       <label htmlFor="matching-photo-input"
                         className="text-xs cursor-pointer hover:underline"
                         style={{ color: '#6C63FF' }}>
-                        Cambiar foto
+                        {tr('matching.change_photo')}
                       </label>
                     </>
                   ) : (
                     <p style={{ fontSize: '0.8rem', color: t.textMuted }}>
-                      Foto seleccionada. Al verificar, la guardamos como tu foto de perfil.
+                      {tr('matching.photo_selected')}
                     </p>
                   )}
                 </div>
@@ -654,8 +659,8 @@ export function MatchingView() {
                 style={{ borderColor: 'rgba(108,99,255,0.4)', background: 'rgba(108,99,255,0.05)' }}>
                 <span style={{ fontSize: '2.5rem' }}>📷</span>
                 <div className="text-center">
-                  <p style={{ fontWeight: 700, color: '#6C63FF', marginBottom: 4 }}>Subir mi foto</p>
-                  <p style={{ fontSize: '0.75rem', color: t.textMuted }}>JPG, PNG · Máx. 10 MB</p>
+                  <p style={{ fontWeight: 700, color: '#6C63FF', marginBottom: 4 }}>{tr('matching.upload_photo')}</p>
+                  <p style={{ fontSize: '0.75rem', color: t.textMuted }}>{tr('matching.upload_limits')}</p>
                 </div>
               </motion.label>
             )}
@@ -666,7 +671,7 @@ export function MatchingView() {
                 style={{ background: 'rgba(255,77,106,0.1)', border: '1px solid rgba(255,77,106,0.3)' }}>
                 <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>❌</span>
                 <div>
-                  <p style={{ fontSize: '0.82rem', color: '#FF4D6A', fontWeight: 600, marginBottom: 2 }}>Verificación fallida</p>
+                  <p style={{ fontSize: '0.82rem', color: '#FF4D6A', fontWeight: 600, marginBottom: 2 }}>{tr('matching.verify_failed')}</p>
                   <p style={{ fontSize: '0.78rem', color: '#FF4D6A', lineHeight: 1.5 }}>{verifyError}</p>
                 </div>
               </motion.div>
@@ -684,16 +689,16 @@ export function MatchingView() {
                 <span className="flex items-center justify-center gap-2">
                   <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
                     style={{ display: 'inline-block' }}>⟳</motion.span>
-                  Verificando que eres una persona real...
+                  {tr('matching.verifying')}
                 </span>
               ) : myPhotoUrl && photoPreview === myPhotoUrl
-                ? 'Acceder al Matching →'
-                : 'Verificar y acceder al Matching'
+                ? tr('matching.access_matching')
+                : tr('matching.verify_access')
               }
             </motion.button>
 
             <p className="text-center mt-4" style={{ fontSize: '0.72rem', color: t.textMuted, lineHeight: 1.5 }}>
-              Sin foto verificada no puedes ver ni conectar con otros usuarios. Puedes añadir más fotos después.
+              {tr('matching.photo_warning')}
             </p>
           </div>
         </motion.div>
@@ -722,22 +727,22 @@ export function MatchingView() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-0 justify-between mb-6">
         <div>
           <h2 style={{ fontWeight: 700, fontSize: '1.3rem', color: t.text }}>
-            {tab === 'discover' ? 'Descubre Tu Match Perfecto' : tab === 'requests' ? 'Solicitudes recibidas' : 'Tus Matches'}
+            {tab === 'discover' ? tr('matching.discover_title') : tab === 'requests' ? tr('matching.requests_title') : tr('matching.matches_title')}
           </h2>
-          <p style={{ fontSize: '0.82rem', color: t.textMuted }}>Conecta con estudiantes de la ECI</p>
+          <p style={{ fontSize: '0.82rem', color: t.textMuted }}>{tr('matching.subtitle')}</p>
         </div>
         <div className="flex gap-1 p-1 rounded-2xl border" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
           {([
-            { id: 'discover', label: 'Descubrir' },
-            { id: 'requests', label: `Solicitudes (${requests.length})` },
-            { id: 'matches', label: `Matches (${matches.length})` },
+            { id: 'discover', label: tr('matching.tab_discover') },
+            { id: 'requests', label: tr('matching.tab_requests', { count: requests.length }) },
+            { id: 'matches', label: tr('matching.tab_matches', { count: matches.length }) },
           ] as { id: TabId; label: string }[]).map(tb => (
             <button key={tb.id} onClick={() => setTab(tb.id)}
               className="text-xs sm:text-sm px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-all"
               style={{ background: tab === tb.id ? '#6C63FF' : 'transparent', color: tab === tb.id ? 'white' : t.textMuted }}>
-              {tb.id === 'discover' && 'Descubrir'}
-              {tb.id === 'requests' && (<><span>Solicitudes</span><span className="hidden sm:inline"> ({requests.length})</span></>)}
-              {tb.id === 'matches' && (<><span>Matches</span><span className="hidden sm:inline"> ({matches.length})</span></>)}
+              {tb.id === 'discover' && tr('matching.tab_discover')}
+              {tb.id === 'requests' && (<><span>{tr('matching.tab_requests', { count: '' }).replace('()', '').trim()}</span><span className="hidden sm:inline"> ({requests.length})</span></>)}
+              {tb.id === 'matches' && (<><span>{tr('matching.tab_matches', { count: '' }).replace('()', '').trim()}</span><span className="hidden sm:inline"> ({matches.length})</span></>)}
             </button>
           ))}
         </div>
@@ -749,19 +754,19 @@ export function MatchingView() {
           <div className="relative w-full max-w-sm mb-5">
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: t.textMuted }} />
             <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-              placeholder="Buscar usuarios por nombre o carrera..."
+              placeholder={tr('matching.search_placeholder')}
               className="w-full rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none"
               style={{ background: t.inputBg, border: `1px solid ${t.cardBorder}`, color: t.text }} />
           </div>
 
           {searchTerm.trim() ? (
             loadingSearch ? (
-              <p style={{ color: t.textMuted, fontSize: '0.85rem', padding: '48px 0' }}>Buscando...</p>
+              <p style={{ color: t.textMuted, fontSize: '0.85rem', padding: '48px 0' }}>{tr('matching.searching')}</p>
             ) : searchResults.length === 0 ? (
               <div className="text-center py-16 rounded-2xl border w-full max-w-sm" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
                 <Search size={32} style={{ color: t.textMuted, margin: '0 auto 12px' }} />
-                <p style={{ fontWeight: 600, color: t.text }}>Sin resultados para "{searchTerm}"</p>
-                <p style={{ fontSize: '0.82rem', color: t.textMuted, marginTop: '6px' }}>Prueba con otro nombre o carrera</p>
+                <p style={{ fontWeight: 600, color: t.text }}>{tr('matching.no_results', { query: searchTerm })}</p>
+                <p style={{ fontSize: '0.82rem', color: t.textMuted, marginTop: '6px' }}>{tr('matching.try_another')}</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-2xl">
@@ -804,12 +809,12 @@ export function MatchingView() {
               </div>
             )
           ) : loadingDiscover ? (
-            <p style={{ color: t.textMuted, fontSize: '0.85rem', padding: '48px 0' }}>Cargando sugerencias...</p>
+            <p style={{ color: t.textMuted, fontSize: '0.85rem', padding: '48px 0' }}>{tr('matching.loading_suggestions')}</p>
           ) : !current ? (
             <div className="text-center py-16 rounded-2xl border w-full max-w-sm" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
               <Heart size={40} style={{ color: t.textMuted, margin: '0 auto 12px' }} />
-              <p style={{ fontWeight: 600, color: t.text }}>No hay más sugerencias por ahora</p>
-              <p style={{ fontSize: '0.82rem', color: t.textMuted, marginTop: '6px' }}>Vuelve más tarde por nuevos candidatos</p>
+              <p style={{ fontWeight: 600, color: t.text }}>{tr('matching.no_more_suggestions')}</p>
+              <p style={{ fontSize: '0.82rem', color: t.textMuted, marginTop: '6px' }}>{tr('matching.come_back_later')}</p>
             </div>
           ) : (
             <>
@@ -882,7 +887,7 @@ export function MatchingView() {
                           style={{ background: 'rgba(127,231,196,0.15)' }}>
                           <div className="px-5 py-2.5 rounded-2xl border-4 -rotate-12"
                             style={{ borderColor: '#7FE7C4', color: '#7FE7C4', background: 'rgba(0,0,0,0.25)', fontSize: '1.5rem', fontWeight: 900, backdropFilter: 'blur(4px)' }}>
-                            SOLICITUD ❤️
+                            {tr('matching.swipe_like')}
                           </div>
                         </motion.div>
                       )}
@@ -892,7 +897,7 @@ export function MatchingView() {
                           style={{ background: 'rgba(255,71,87,0.15)' }}>
                           <div className="px-5 py-2.5 rounded-2xl border-4 rotate-12"
                             style={{ borderColor: '#FF4757', color: '#FF4757', background: 'rgba(0,0,0,0.25)', fontSize: '1.5rem', fontWeight: 900, backdropFilter: 'blur(4px)' }}>
-                            NOPE ✕
+                            {tr('matching.swipe_nope')}
                           </div>
                         </motion.div>
                       )}
@@ -927,7 +932,7 @@ export function MatchingView() {
               </div>
 
               <p style={{ fontSize: '0.7rem', color: t.textMuted, marginTop: '10px', textAlign: 'center' }}>
-                ✕ Pasar &nbsp;·&nbsp; ✓ Solicitud
+                {tr('matching.pass')} &nbsp;·&nbsp; {tr('matching.request')}
               </p>
             </>
           )}
@@ -938,7 +943,7 @@ export function MatchingView() {
       {tab === 'requests' && (
         <div className="max-w-2xl">
           {loadingRequests ? (
-            <p style={{ color: t.textMuted, fontSize: '0.85rem', padding: '48px 0' }}>Cargando solicitudes...</p>
+            <p style={{ color: t.textMuted, fontSize: '0.85rem', padding: '48px 0' }}>{tr('matching.loading_requests')}</p>
           ) : (
             <>
               {requests.length > 0 && (
@@ -947,7 +952,7 @@ export function MatchingView() {
                     style={{ background: 'linear-gradient(135deg, rgba(255,107,157,0.15), rgba(108,99,255,0.15))', border: '1px solid rgba(255,107,157,0.3)' }}>
                     <Heart size={14} fill="#FF6B9D" style={{ color: '#FF6B9D' }} />
                     <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#FF6B9D' }}>
-                      {requests.length} {requests.length === 1 ? 'persona' : 'personas'} te dieron solicitud
+                      {requests.length === 1 ? tr('matching.people_requested', { count: 1 }) : tr('matching.people_requested_plural', { count: requests.length })}
                     </span>
                   </div>
                 </div>
@@ -956,8 +961,8 @@ export function MatchingView() {
               {requests.length === 0 ? (
                 <div className="text-center py-16 rounded-2xl border" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
                   <Check size={40} style={{ color: '#7FE7C4', margin: '0 auto 12px' }} />
-                  <p style={{ fontWeight: 600, color: t.text }}>¡Todas las solicitudes revisadas!</p>
-                  <p style={{ fontSize: '0.82rem', color: t.textMuted, marginTop: '6px' }}>Sigue explorando en Descubrir</p>
+                  <p style={{ fontWeight: 600, color: t.text }}>{tr('matching.all_requests_reviewed')}</p>
+                  <p style={{ fontSize: '0.82rem', color: t.textMuted, marginTop: '6px' }}>{tr('matching.keep_exploring')}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -1020,12 +1025,12 @@ export function MatchingView() {
       {tab === 'matches' && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-2xl">
           {loadingMatches ? (
-            <p style={{ color: t.textMuted, fontSize: '0.85rem', padding: '48px 0', gridColumn: '1 / -1' }}>Cargando matches...</p>
+            <p style={{ color: t.textMuted, fontSize: '0.85rem', padding: '48px 0', gridColumn: '1 / -1' }}>{tr('matching.loading_matches')}</p>
           ) : matches.length === 0 ? (
             <div className="col-span-2 sm:col-span-3 text-center py-16 rounded-2xl border" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
               <Heart size={48} style={{ color: t.textMuted, margin: '0 auto 16px' }} />
-              <p style={{ fontWeight: 600, color: t.text }}>Aún no tienes matches</p>
-              <p style={{ fontSize: '0.82rem', color: t.textMuted, marginTop: '6px' }}>Empieza enviando solicitudes en Descubrir</p>
+              <p style={{ fontWeight: 600, color: t.text }}>{tr('matching.no_matches')}</p>
+              <p style={{ fontSize: '0.82rem', color: t.textMuted, marginTop: '6px' }}>{tr('matching.start_sending_requests')}</p>
             </div>
           ) : matches.map(m => (
             <motion.div key={m.matchId} whileHover={{ y: -4 }}
@@ -1048,12 +1053,12 @@ export function MatchingView() {
                 <button onClick={() => openChat({ id: m.id, name: m.nombre, avatar: m.avatar, gradient: m.gradient, foto: m.foto })}
                   className="mt-3 w-full py-2 rounded-xl text-sm flex items-center justify-center gap-1.5 transition-all hover:opacity-80"
                   style={{ background: '#6C63FF', color: 'white' }}>
-                  <MessageCircle size={14} /> Enviar mensaje
+                  <MessageCircle size={14} /> {tr('matching.send_message')}
                 </button>
                 <button onClick={() => { setViewProfile(m); setViewProfileIsMatch(true); }}
                   className="mt-2 w-full py-2 rounded-xl text-sm flex items-center justify-center gap-1.5 transition-all hover:opacity-80 border"
                   style={{ color: t.text, borderColor: t.cardBorder, background: 'transparent' }}>
-                  Ver perfil
+                  {tr('matching.view_profile')}
                 </button>
               </div>
             </motion.div>
