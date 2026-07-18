@@ -152,8 +152,13 @@ export const userService = {
   async necesitaOnboarding(userId: string): Promise<boolean> {
     try {
       const perfil = await userService.getPerfil(userId);
+      // DIAGNÓSTICO TEMPORAL — quitar una vez resuelto el bug de jurados que
+      // entran directo a la app sin onboarding. Revisa la consola del navegador.
+      console.log('[necesitaOnboarding] GET /perfil OK para', userId, '→', perfil);
       return !perfil.onboardingCompleto;
     } catch (err: any) {
+      // DIAGNÓSTICO TEMPORAL
+      console.error('[necesitaOnboarding] GET /perfil falló para', userId, '→ status:', err?.response?.status, 'body:', err?.response?.data);
       // 404 → usuario nuevo, necesita onboarding
       if (err?.response?.status === 404) return true;
       // Otro error de red → asumimos que no necesita (evitar bloquear el login)
