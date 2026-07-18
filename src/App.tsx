@@ -57,6 +57,21 @@ const NAV_ITEMS: { id: ViewId; label: string; icon: React.ComponentType<any>; ba
   { id: 'ajustes',       label: 'Ajustes',          icon: Settings },
 ];
 
+const NAV_TRANSLATION_KEYS: Record<ViewId, string> = {
+  home: 'nav.home',
+  matching: 'nav.matches',
+  parches: 'nav.parches',
+  chats: 'nav.chats',
+  eventos: 'nav.events',
+  ubicacion: 'nav.ubicacion',
+  bienestar: 'nav.bienestar',
+  album: 'nav.album',
+  notificaciones: 'nav.notificaciones',
+  ajustes: 'nav.ajustes',
+  perfil: 'nav.perfil',
+  admin: 'nav.admin',
+};
+
 const APP_VIEW_PATHS: Record<ViewId, string> = {
   home: '/app/home',
   matching: '/app/matching',
@@ -1152,24 +1167,24 @@ function AppCore() {
   const admin = isAdmin(roles);
   
   const TRANSLATED_NAV_ITEMS = NAV_ITEMS.map(item => {
-    const key = `nav.${item.id}`;
+    const key = NAV_TRANSLATION_KEYS[item.id];
     const translated = tr(key);
-    return { ...item, label: translated !== key ? translated : item.label };
+    return { ...item, label: translated && translated !== key ? translated : item.label };
   });
 
   const VIEW_LABELSTranslated: Record<ViewId, string> = {
-    home: tr('nav.home'),
-    matching: tr('nav.matches'),
-    parches: tr('nav.parches'),
-    chats: tr('nav.chats'),
-    eventos: tr('nav.events'),
-    ubicacion: tr('nav.ubicacion'),
-    bienestar: tr('nav.bienestar'),
-    album: tr('nav.album'),
-    notificaciones: tr('nav.notificaciones'),
-    ajustes: tr('nav.ajustes'),
-    perfil: tr('nav.perfil'),
-    admin: tr('nav.admin'),
+    home: tr(NAV_TRANSLATION_KEYS.home),
+    matching: tr(NAV_TRANSLATION_KEYS.matching),
+    parches: tr(NAV_TRANSLATION_KEYS.parches),
+    chats: tr(NAV_TRANSLATION_KEYS.chats),
+    eventos: tr(NAV_TRANSLATION_KEYS.eventos),
+    ubicacion: tr(NAV_TRANSLATION_KEYS.ubicacion),
+    bienestar: tr(NAV_TRANSLATION_KEYS.bienestar),
+    album: tr(NAV_TRANSLATION_KEYS.album),
+    notificaciones: tr(NAV_TRANSLATION_KEYS.notificaciones),
+    ajustes: tr(NAV_TRANSLATION_KEYS.ajustes),
+    perfil: tr(NAV_TRANSLATION_KEYS.perfil),
+    admin: tr(NAV_TRANSLATION_KEYS.admin),
   };
 
   const navItemsBase = TRANSLATED_NAV_ITEMS.map(item => item.id === 'matching' && pendingMatchCount > 0 ? { ...item, badge: pendingMatchCount } : item);
