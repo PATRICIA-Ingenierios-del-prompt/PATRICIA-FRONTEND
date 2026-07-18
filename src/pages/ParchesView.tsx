@@ -925,35 +925,35 @@ const realLeaveVoice = () => {
   return (
     <div className="h-full overflow-hidden flex relative" style={{ borderRadius:'16px', border:'1px solid rgba(108,99,255,0.15)', overflow:'hidden' }}>
 
-      {/* ── Mobile sidebar overlay backdrop ── */}
-      {isMobile && showSidebar && (
-        <div className="absolute inset-0 z-30" style={{ background:'rgba(0,0,0,0.5)' }}
-          onClick={()=>setShowSidebar(false)} />
-      )}
+        {/* ── Mobile sidebar overlay backdrop ── */}
+        {isMobile && showSidebar && (
+          <div className="absolute inset-0 z-40" style={{ background:'rgba(0,0,0,0.5)' }}
+            onClick={()=>setShowSidebar(false)} />
+        )}
 
-      {/* ── Parches Sidebar ──────────────────────────────────────────────── */}
-      {/* Desktop: always in flow. Mobile: absolute overlay, toggle via showSidebar */}
-      <div style={{
-        width: 256,
-        flexShrink: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        borderRight: '1px solid var(--p-divider)',
-        background: 'var(--p-card)',
-        backdropFilter: 'blur(16px)',
-        height: '100%',
-        ...(isMobile ? {
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          zIndex: 40,
-          transform: showSidebar ? 'translateX(0)' : 'translateX(-100%)',
-          transition: 'transform 0.3s ease',
-        } : {
-          position: 'relative',
-          transform: 'none',
-        }),
-      }}>
+        {/* ── Parches Sidebar ──────────────────────────────────────────────── */}
+        {/* Desktop: always in flow. Mobile: absolute overlay, toggle via showSidebar */}
+        <div style={{
+          width: 256,
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          borderRight: '1px solid var(--p-divider)',
+          background: 'var(--p-card)',
+          backdropFilter: 'blur(16px)',
+          height: '100%',
+          ...(isMobile ? {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            zIndex: 50,
+            transform: showSidebar ? 'translateX(0)' : 'translateX(-100%)',
+            transition: 'transform 0.3s ease',
+          } : {
+            position: 'relative',
+            transform: 'none',
+          }),
+        }}>
 
         {/* Header */}
         <div className="px-4 py-3 border-b" style={{ borderColor:'var(--p-divider)' }}>
@@ -1117,12 +1117,26 @@ const realLeaveVoice = () => {
         {/* Censor: pick-a-parche empty state, or locked until you join */}
         {!selectedParche.id ? (
           <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 text-center px-10" style={{ background:'rgba(13,11,30,0.9)' }}>
+            {isMobile && (
+              <button onClick={()=>setShowSidebar(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold mb-2"
+                style={{ background:'rgba(108,99,255,0.2)', color:'#6C63FF', border:'1px solid rgba(108,99,255,0.3)' }}>
+                <Users size={16} /> {tr('parches.explore')}
+              </button>
+            )}
             <div className="w-16 h-16 rounded-full flex items-center justify-center text-3xl" style={{ background:'rgba(108,99,255,0.12)' }}>🧭</div>
             <p style={{ fontWeight:700, fontSize:'1rem', color:'var(--p-text)' }}>{tr('parches.explore')}</p>
             <p style={{ fontSize:'0.82rem', color:'var(--p-muted)', maxWidth:360, lineHeight:1.6 }}>{scope === 'public' ? tr('parches.search_public') : tr('parches.search_private')}</p>
           </div>
         ) : !isMember(selectedParche) && (
           <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 text-center px-10" style={{ background:'rgba(13,11,30,0.86)', backdropFilter:'blur(7px)' }}>
+            {isMobile && (
+              <button onClick={()=>setShowSidebar(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+                style={{ background:'rgba(108,99,255,0.2)', color:'#6C63FF', border:'1px solid rgba(108,99,255,0.3)' }}>
+                <Users size={16} /> Ver otros parches
+              </button>
+            )}
             <ParcheAvatar parche={selectedParche} size={64} textSize="1.9rem" rounded="2xl" />
             <div>
               <p style={{ fontWeight:800, fontSize:'1.1rem', color:'var(--p-text)' }}>{selectedParche.name}</p>
@@ -1138,8 +1152,8 @@ const realLeaveVoice = () => {
         )}
 
         {/* Header */}
-        <div className="flex items-center justify-between px-3 sm:px-5 py-3 border-b flex-shrink-0"
-          style={{ borderColor:'var(--p-divider)', background:'var(--p-card)', backdropFilter:'blur(12px)' }}>
+        <div className="flex items-center justify-between px-3 sm:px-5 py-3 border-b flex-shrink-0 relative"
+          style={{ borderColor:'var(--p-divider)', background:'var(--p-card)', backdropFilter:'blur(12px)', zIndex: isMobile ? 45 : undefined }}>
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             {/* Hamburger — mobile only */}
             {isMobile && (

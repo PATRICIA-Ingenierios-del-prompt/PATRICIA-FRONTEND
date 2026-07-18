@@ -332,9 +332,8 @@ export function MatchingView() {
   const navigate = useNavigate();
 
   // ── Photo gate ──────────────────────────────────────────────────────────
-  // Verifica si el usuario ya tiene foto de perfil. Al subir una nueva se usa
-  // POST /api/v1/usuarios/{id}/foto/base64 que incluye detección de persona
-  // con red neuronal — si tienePersonaEnFoto===false se bloquea el acceso.
+  // Verifica si el usuario ya tiene foto de perfil. Sin foto no puede acceder
+  // al feed de matching.
   const [checkingPhoto, setCheckingPhoto] = useState(true);
   const [hasPhoto, setHasPhoto] = useState(false);
   // URL de la foto de perfil ya guardada (se usa para mostrar en el gate y en el feed)
@@ -396,14 +395,10 @@ export function MatchingView() {
     setVerifying(true);
     setVerifyError(null);
     try {
-      // Usamos el endpoint dedicado que incluye detección de persona con IA
       const [updated] = await Promise.all([
         userService.subirFotoPerfil(userId, photoPreview),
-        new Promise(r => setTimeout(r, 1200)), // deja ver el spinner un momento
+        new Promise(r => setTimeout(r, 1200)),
       ]);
-      // Decisión de equipo (2026-07-17): tienePersonaEnFoto se ignora — la
-      // detección da falsos negativos en pods fríos y no hay tiempo de
-      // arreglarlo; la foto queda subida a S3 igualmente.
       const url = updated.foto ?? photoPreview;
       setMyPhotoUrl(url);
       setPhotoPreview(url);
