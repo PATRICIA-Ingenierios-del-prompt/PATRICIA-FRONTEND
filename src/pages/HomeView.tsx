@@ -37,28 +37,28 @@ function getGreeting(t: (k: string) => string) {
 }
 
 const VIBRAS = [
-  { id: 'musica',      label: 'Música',      emoji: '🎵', color: '#FF6B9D', monoImg: monoMusica,    descKey: 'home.vibras.musica_desc' },
-  { id: 'estudio',     label: 'Estudio',     emoji: '📚', color: '#6C63FF', monoImg: monoEstudio,   descKey: 'home.vibras.estudio_desc' },
-  { id: 'aire-libre',  label: 'Aire Libre',  emoji: '🌿', color: '#7FE7C4', monoImg: monoAireLibre, descKey: 'home.vibras.aire_libre_desc' },
-  { id: 'gastronomia', label: 'Gastronomía', emoji: '🍕', color: '#FFB347', monoImg: monoComida,    descKey: 'home.vibras.gastronomia_desc' },
-  { id: 'videojuegos', label: 'Videojuegos', emoji: '🎮', color: '#5BC8FF', monoImg: monoJuegos,    descKey: 'home.vibras.videojuegos_desc' },
-  { id: 'arte',        label: 'Arte',        emoji: '🎨', color: '#A78BFA', monoImg: monoArte,      descKey: 'home.vibras.arte_desc' },
+  { id: 'musica',      label: 'home.vibras.musica',      emoji: '🎵', color: '#FF6B9D', monoImg: monoMusica,    descKey: 'home.vibras.musica_desc' },
+  { id: 'estudio',     label: 'home.vibras.estudio',     emoji: '📚', color: '#6C63FF', monoImg: monoEstudio,   descKey: 'home.vibras.estudio_desc' },
+  { id: 'aire-libre',  label: 'home.vibras.aire_libre',  emoji: '🌿', color: '#7FE7C4', monoImg: monoAireLibre, descKey: 'home.vibras.aire_libre_desc' },
+  { id: 'gastronomia', label: 'home.vibras.gastronomia', emoji: '🍕', color: '#FFB347', monoImg: monoComida,    descKey: 'home.vibras.gastronomia_desc' },
+  { id: 'videojuegos', label: 'home.vibras.videojuegos', emoji: '🎮', color: '#5BC8FF', monoImg: monoJuegos,    descKey: 'home.vibras.videojuegos_desc' },
+  { id: 'arte',        label: 'home.vibras.arte',        emoji: '🎨', color: '#A78BFA', monoImg: monoArte,      descKey: 'home.vibras.arte_desc' },
 ];
 
 const PARCHES_GRID = [
-  { id:1, name:'Cálculo III Survivors', members:23, desc:'El grupo de estudio más activo para Cálculo', color:'#6C63FF', emoji:'📐', bg:'linear-gradient(135deg,#6C63FF40,#6C63FF10)' },
-  { id:2, name:'Machine Learning ECI',  members:31, desc:'Aprende ML con casos reales de la industria', color:'#7FE7C4', emoji:'🤖', bg:'linear-gradient(135deg,#7FE7C440,#7FE7C410)' },
-  { id:3, name:'Fútbol Martes ECI',     members:18, desc:'Partidos amistosos cada martes a las 5pm',   color:'#FFB347', emoji:'⚽', bg:'linear-gradient(135deg,#FFB34740,#FFB34710)' },
-  { id:4, name:'Club Fotografía',       members:17, desc:'Salidas fotográficas y workshops semanales',  color:'#FF6B9D', emoji:'📷', bg:'linear-gradient(135deg,#FF6B9D40,#FF6B9D10)' },
-  { id:5, name:'IEEE Student Branch',   members:45, desc:'Eventos de robótica, IA y networking',        color:'#5BC8FF', emoji:'⚡', bg:'linear-gradient(135deg,#5BC8FF40,#5BC8FF10)' },
-  { id:6, name:'Gaming Night',          members:11, desc:'Torneos de Valorant, LoL y más cada viernes',color:'#A78BFA', emoji:'🎮', bg:'linear-gradient(135deg,#A78BFA40,#A78BFA10)' },
+  { id:1, name:'Cálculo III Survivors', members:23, desc:'home.parche_c_calculus', color:'#6C63FF', emoji:'📐', bg:'linear-gradient(135deg,#6C63FF40,#6C63FF10)' },
+  { id:2, name:'Machine Learning ECI',  members:31, desc:'home.parche_ml_eci', color:'#7FE7C4', emoji:'🤖', bg:'linear-gradient(135deg,#7FE7C440,#7FE7C410)' },
+  { id:3, name:'Fútbol Martes ECI',     members:18, desc:'home.parche_futbol_martes',   color:'#FFB347', emoji:'⚽', bg:'linear-gradient(135deg,#FFB34740,#FFB34710)' },
+  { id:4, name:'Club Fotografía',       members:17, desc:'home.parche_fotografia',  color:'#FF6B9D', emoji:'📷', bg:'linear-gradient(135deg,#FF6B9D40,#FF6B9D10)' },
+  { id:5, name:'IEEE Student Branch',   members:45, desc:'home.parche_ieee',        color:'#5BC8FF', emoji:'⚡', bg:'linear-gradient(135deg,#5BC8FF40,#5BC8FF10)' },
+  { id:6, name:'Gaming Night',          members:11, desc:'home.parche_gaming_night',color:'#A78BFA', emoji:'🎮', bg:'linear-gradient(135deg,#A78BFA40,#A78BFA10)' },
 ];
 
 const EVENTO_DESTACADO = {
-  title: 'Hackathon ECI 2026',
+  title: 'home.evento_destacado_title',
   emoji: '💻',
-  desc: '24 horas de innovación con premios de $5M COP. Temas: IA, sostenibilidad y smart cities. ¡Arma tu equipo!',
-  date: 'Sáb 20 Jun', time: '8:00 AM', location: 'Auditorio Principal',
+  desc: 'home.evento_destacado_desc',
+  date: 'home.evento_destacado_date', time: '8:00 AM', location: 'home.evento_destacado_location',
   color: '#6C63FF', participants: 156, capacity: 200,
 };
 
@@ -75,7 +75,7 @@ const STORIES = [
 /** Fallback cuando no hay ningún evento en curso ahora mismo. */
 const FALLBACK_LIVE_EVENT: LiveEvent = {
   id: 'fallback',
-  title: 'Presentación competencia All Stars en el auditorio principal',
+  title: 'home.fallback_live_event',
   time: '', location: '', emoji: '🎉', color: '#6C63FF',
 };
 
@@ -115,9 +115,9 @@ function VibraCard({ vibra, count, onNavigate, expanded, onToggle, supportsHover
           transition: 'opacity 0.3s ease, transform 0.35s ease',
           width: 130, height: 130,
         }}>
-        <ImageWithFallback
-          src={vibra.monoImg}
-          alt={`Mono ${vibra.label}`}
+          <ImageWithFallback
+            src={vibra.monoImg}
+            alt={t(vibra.label)}
           style={{ width: '100%', height: '100%', objectFit: 'contain',
             filter: isOpen ? 'drop-shadow(0 6px 20px rgba(0,0,0,0.2))' : 'none' }}
         />
@@ -129,7 +129,7 @@ function VibraCard({ vibra, count, onNavigate, expanded, onToggle, supportsHover
       <div className="p-5 h-full flex flex-col" style={{ position: 'relative', zIndex: 1 }}>
         <div className="flex items-center gap-2 mb-2">
           {/* Solo el nombre, sin emoji */}
-          <p style={{ fontWeight: 700, fontSize: '1.05rem', color: isOpen ? vibra.color : 'var(--p-text)' }}>{vibra.label}</p>
+          <p style={{ fontWeight: 700, fontSize: '1.05rem', color: isOpen ? vibra.color : 'var(--p-text)' }}>{t(vibra.label)}</p>
         </div>
 
         <AnimatePresence>
@@ -167,6 +167,7 @@ function VibraCard({ vibra, count, onNavigate, expanded, onToggle, supportsHover
 }
 
 function ParcheCard({ p, onJoin }: { p: typeof PARCHES_GRID[0]; onJoin: () => void }) {
+  const { t: tr } = useTranslation();
   return (
     <motion.div whileHover={{ scale: 1.04, y: -6, boxShadow: `0 16px 40px ${p.color}30` }}
       transition={{ type: 'spring', stiffness: 280 }}
@@ -184,13 +185,13 @@ function ParcheCard({ p, onJoin }: { p: typeof PARCHES_GRID[0]; onJoin: () => vo
       <div className="p-4">
         <p style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--p-text)', marginBottom: '4px' }}>{p.name}</p>
         <p style={{ fontSize: '0.72rem', color: 'var(--p-muted)', marginBottom: '2px' }}>
-          {p.members} miembros activos
+          {tr('home.members_active', { count: p.members })}
         </p>
-        <p className="line-clamp-1" style={{ fontSize: '0.75rem', color: 'var(--p-muted)', marginBottom: '12px' }}>{p.desc}</p>
+        <p className="line-clamp-1" style={{ fontSize: '0.75rem', color: 'var(--p-muted)', marginBottom: '12px' }}>{tr(p.desc)}</p>
         <button onClick={onJoin}
           className="w-full py-2 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
           style={{ background: '#7FE7C4', color: '#0F0E1A' }}>
-          Unirse al parche
+          {tr('home.join_group')}
         </button>
       </div>
     </motion.div>
@@ -234,7 +235,7 @@ function FeedSection({ events, loading }: { events: LiveEvent[]; loading: boolea
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <p style={{ fontSize: '0.85rem', color: t.text, lineHeight: 1.5, fontWeight: 600 }}>
-                  {item.title}
+                  {item.id === 'fallback' ? tr(item.title) : item.title}
                 </p>
                 {(item.time || item.location) && (
                   <p style={{ fontSize: '0.68rem', color: t.textMuted, marginTop: '2px' }}>
@@ -255,7 +256,7 @@ export function HomeView({ onNavigate, profileFoto }: HomeViewProps) {
   const { t: tr } = useTranslation();
   const greeting = getGreeting(tr);
   const { userName, userEmail, userId } = useAuth();
-  const firstName = (userName ?? userEmail ?? 'Explorador').split(' ')[0];
+  const firstName = (userName ?? userEmail ?? tr('home.explorer')).split(' ')[0];
   const initials  = (userName ?? userEmail ?? '?')
     .split(' ').filter(Boolean).slice(0, 2).map((w: string) => w[0].toUpperCase()).join('');
   const [joinedParches, setJoinedParches] = useState<number[]>([]);
@@ -267,9 +268,9 @@ export function HomeView({ onNavigate, profileFoto }: HomeViewProps) {
   const [misParchesCount, setMisParchesCount] = useState<number | null>(null);
   const [albumStats, setAlbumStats] = useState<{ unlocked: number; total: number; xp: number } | null>(null);
   const heroStats = [
-    { label: 'XP Total', value: albumStats != null ? String(albumStats.xp) : '—' },
-    { label: 'Parches',  value: misParchesCount != null ? String(misParchesCount) : '—' },
-    { label: 'Monas',    value: albumStats != null ? `${albumStats.unlocked}/${albumStats.total}` : '—' },
+    { label: tr('home.xp_total'), value: albumStats != null ? String(albumStats.xp) : '—' },
+    { label: tr('home.groups'),  value: misParchesCount != null ? String(misParchesCount) : '—' },
+    { label: tr('home.stickers'),    value: albumStats != null ? `${albumStats.unlocked}/${albumStats.total}` : '—' },
   ];
 
   useEffect(() => {

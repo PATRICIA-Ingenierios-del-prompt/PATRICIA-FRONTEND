@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { Edit2, Camera, X, Loader2, GraduationCap, BookOpen, MapPin, Mail, User, Save } from 'lucide-react';
 import { InteresesPicker, CATEGORIAS } from '../components/InteresesPicker';
@@ -28,13 +29,23 @@ const SLOTS = [
 const DAY_ENUM: FranjaHoraria['diaSemana'][] = [
   'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY',
 ];
-const CARRERAS = [
-  'Ingeniería Civil', 'Ingeniería Eléctrica', 'Ingeniería de Sistemas',
-  'Ingeniería Industrial', 'Ingeniería Electrónica', 'Economía',
-  'Administración de Empresas', 'Matemáticas', 'Ingeniería Mecánica',
-  'Ingeniería Biomédica', 'Ingeniería Ambiental', 'Ingeniería Estadística',
-  'Ingeniería de Inteligencia Artificial', 'Ingeniería de Ciberseguridad',
-  'Ingeniería en Biotecnología', 'Postgrado',
+const CARRERA_OPTIONS: { value: string; key: string }[] = [
+  { value: 'Ingeniería Civil', key: 'civil' },
+  { value: 'Ingeniería Eléctrica', key: 'electrical' },
+  { value: 'Ingeniería de Sistemas', key: 'systems' },
+  { value: 'Ingeniería Industrial', key: 'industrial' },
+  { value: 'Ingeniería Electrónica', key: 'electronic' },
+  { value: 'Economía', key: 'economics' },
+  { value: 'Administración de Empresas', key: 'business' },
+  { value: 'Matemáticas', key: 'mathematics' },
+  { value: 'Ingeniería Mecánica', key: 'mechanical' },
+  { value: 'Ingeniería Biomédica', key: 'biomedical' },
+  { value: 'Ingeniería Ambiental', key: 'environmental' },
+  { value: 'Ingeniería Estadística', key: 'statistical' },
+  { value: 'Ingeniería de Inteligencia Artificial', key: 'ai' },
+  { value: 'Ingeniería de Ciberseguridad', key: 'cybersecurity' },
+  { value: 'Ingeniería en Biotecnología', key: 'biotechnology' },
+  { value: 'Postgrado', key: 'postgrad' },
 ];
 const SEMESTRES = ['1','2','3','4','5','6','7','8','9','10'];
 
@@ -45,9 +56,9 @@ function getInitials(nombre?: string, apellidos?: string, email?: string): strin
     .map(w => w[0].toUpperCase()).join('');
 }
 
-function getSemestreLabel(s?: number | string): string {
+function getSemestreLabel(s?: number | string, tr?: (key: string) => string): string {
   if (!s) return '';
-  return `${s}mo semestre`;
+  return `${s}${tr ? tr('profile.semester_suffix') : 'mo semestre'}`;
 }
 
 // ── Edit Modal ────────────────────────────────────────────────────────────────
@@ -60,6 +71,7 @@ interface EditModalProps {
 
 function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
   const t = useTheme();
+  const { t: tr } = useTranslation();
   const { setUserName } = useAuth();
   const [tab, setTab] = useState<'datos' | 'intereses'>('datos');
   const [saving, setSaving] = useState(false);
@@ -79,7 +91,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
   const set = (k: keyof typeof form, v: string) => { setForm(f => ({ ...f, [k]: v })); setError(null); };
 
   const handleSave = async () => {
-    if (!form.nombre.trim()) { setError('El nombre no puede estar vacío.'); return; }
+    if (!form.nombre.trim()) { setError(tr('profile.name_empty')); return; }
     setSaving(true);
     setError(null);
     try {
@@ -93,10 +105,10 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
       const fullName = [form.nombre.trim(), form.apellidos.trim()].filter(Boolean).join(' ');
       setUserName(fullName);
       onSaved({ ...perfil, ...updated, nombre: form.nombre.trim(), apellidos: form.apellidos.trim(), intereses });
-      addToast({ type: 'info', title: 'Perfil actualizado', message: 'Tus cambios fueron guardados.' });
+      addToast({ type: 'info', title: tr('profile.toast_updated_title'), message: tr('profile.toast_updated_msg') });
       onClose();
     } catch (e: any) {
-      setError(friendlyError(e, 'No se pudieron guardar los cambios.'));
+      setError(friendlyError(e, tr('profile.toast_update_error')));
     } finally {
       setSaving(false);
     }
@@ -124,7 +136,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
 
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b flex-shrink-0" style={{ borderColor: t.divider }}>
-          <h3 style={{ fontWeight: 700, fontSize: '1.1rem', color: t.text }}>Editar Perfil</h3>
+          <h3 style={{ fontWeight: 700, fontSize: '1.1rem', color: t.text }}>{tr('profile.edit')}</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:opacity-70"
             style={{ background: 'rgba(108,99,255,0.1)' }}>
             <X size={15} style={{ color: t.textMuted }} />
@@ -137,7 +149,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
             <button key={k} onClick={() => setTab(k)}
               className="flex-1 py-2 rounded-lg text-sm font-medium transition-all"
               style={{ background: tab === k ? '#6C63FF' : 'transparent', color: tab === k ? 'white' : t.textMuted }}>
-              {k === 'datos' ? 'Datos' : 'Intereses'}
+              {k === 'datos' ? tr('profile.tab_data') : tr('profile.tab_interests')}
             </button>
           ))}
         </div>
@@ -147,30 +159,30 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label style={labelStyle}>Nombre</label>
-                  <input value={form.nombre} onChange={e => set('nombre', e.target.value)} style={inputStyle} placeholder="Tu nombre" />
+                  <label style={labelStyle}>{tr('profile.name_label')}</label>
+                  <input value={form.nombre} onChange={e => set('nombre', e.target.value)} style={inputStyle} placeholder={tr('profile.name_placeholder')} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Apellidos</label>
-                  <input value={form.apellidos} onChange={e => set('apellidos', e.target.value)} style={inputStyle} placeholder="Tus apellidos" />
+                  <label style={labelStyle}>{tr('profile.surname_label')}</label>
+                  <input value={form.apellidos} onChange={e => set('apellidos', e.target.value)} style={inputStyle} placeholder={tr('profile.surname_placeholder')} />
                 </div>
               </div>
               <div>
-                <label style={labelStyle}>Biografía</label>
+                <label style={labelStyle}>{tr('profile.bio_label')}</label>
                 <textarea value={form.bio} onChange={e => set('bio', e.target.value)}
-                  rows={3} placeholder="Cuéntanos sobre ti…"
+                  rows={3} placeholder={tr('profile.bio_placeholder')}
                   style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
               </div>
               <div>
-                <label style={labelStyle}>Carrera</label>
+                <label style={labelStyle}>{tr('profile.career_label')}</label>
                 <select value={form.carrera} onChange={e => set('carrera', e.target.value)}
                   style={{ ...inputStyle, appearance: 'none', cursor: 'pointer' }}>
-                  <option value="">Selecciona…</option>
-                  {CARRERAS.map(c => <option key={c} value={c}>{c}</option>)}
+                  <option value="">{tr('profile.career_select')}</option>
+                  {CARRERA_OPTIONS.map(c => <option key={c.value} value={c.value}>{tr(`profile.carrera.${c.key}`)}</option>)}
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Semestre</label>
+                <label style={labelStyle}>{tr('profile.semester_label')}</label>
                 <div className="grid grid-cols-5 gap-2">
                   {SEMESTRES.map(s => (
                     <button key={s} onClick={() => set('semestre', s)}
@@ -189,7 +201,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
               <button onClick={handleSave} disabled={saving}
                 className="w-full py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
                 style={{ background: 'linear-gradient(135deg,#6C63FF,#5250d0)', color: 'white' }}>
-                {saving ? <><Loader2 size={16} className="animate-spin" /> Guardando…</> : 'Guardar cambios'}
+                {saving ? <><Loader2 size={16} className="animate-spin" /> {tr('profile.saving')}</> : tr('profile.save')}
               </button>
             </>
           )}
@@ -199,7 +211,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
               <button onClick={handleSave} disabled={saving || intereses.length < 1}
                 className="w-full py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
                 style={{ background: '#7FE7C4', color: '#0F0E1A' }}>
-                {saving ? <><Loader2 size={16} className="animate-spin" /> Guardando…</> : 'Guardar intereses'}
+                {saving ? <><Loader2 size={16} className="animate-spin" /> {tr('profile.saving')}</> : tr('profile.save_interests')}
               </button>
             </>
           )}
@@ -212,6 +224,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
 // ── Main ProfileView ──────────────────────────────────────────────────────────
 export function ProfileView() {
   const t = useTheme();
+  const { t: tr } = useTranslation();
   const { userId, userEmail } = useAuth();
   const [perfil, setPerfil] = useState<PerfilResponse | null>(null);
   const [loadingPerfil, setLoadingPerfil] = useState(true);
@@ -334,9 +347,9 @@ export function ProfileView() {
   };
 
   const initials    = getInitials(perfil?.nombre, perfil?.apellidos, userEmail ?? undefined);
-  const fullName    = [perfil?.nombre, perfil?.apellidos].filter(Boolean).join(' ') || userEmail || 'Usuario';
+  const fullName    = [perfil?.nombre, perfil?.apellidos].filter(Boolean).join(' ') || userEmail || tr('profile.user_fallback');
   const carrera     = perfil?.carrera ?? '';
-  const semestre    = perfil?.semestre ? getSemestreLabel(perfil.semestre) : '';
+  const semestre    = perfil?.semestre ? getSemestreLabel(perfil.semestre, tr) : '';
   const bio         = perfil?.bio ?? '';
   const interesIds  = perfil?.intereses ?? [];
 
@@ -346,7 +359,7 @@ export function ProfileView() {
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 rounded-full border-4 animate-spin"
             style={{ borderColor: 'rgba(108,99,255,0.2)', borderTopColor: '#6C63FF' }} />
-          <p style={{ fontSize: '0.85rem', color: t.textMuted }}>Cargando perfil…</p>
+          <p style={{ fontSize: '0.85rem', color: t.textMuted }}>{tr('profile.loading')}</p>
         </div>
       </div>
     );
@@ -395,14 +408,14 @@ export function ProfileView() {
                   style={{ background: 'rgba(0,0,0,0.55)' }}>
                   <Loader2 size={22} color="white" className="animate-spin" />
                   <span style={{ fontSize: '0.55rem', color: 'white', fontWeight: 700, textAlign: 'center', lineHeight: 1.2, maxWidth: '60px' }}>
-                    Verificando…
+                    {tr('profile.verifying')}
                   </span>
                 </div>
               )}
               <input type="file" accept="image/*" id="profile-photo-input" className="hidden" onChange={handlePhotoChange} disabled={uploadingPhoto} />
               <label
                 htmlFor={uploadingPhoto ? undefined : 'profile-photo-input'}
-                title={uploadingPhoto ? 'Verificando foto…' : 'Cambiar foto de perfil'}
+                title={uploadingPhoto ? tr('profile.verifying_photo') : tr('profile.change_photo')}
                 className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center"
                 style={{
                   background: '#6C63FF',
@@ -421,7 +434,7 @@ export function ProfileView() {
             <button onClick={() => setShowEdit(true)}
               className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-semibold transition-all hover:opacity-90 mb-1"
               style={{ background: 'rgba(108,99,255,0.12)', color: '#6C63FF', border: '1px solid rgba(108,99,255,0.25)' }}>
-              <Edit2 size={14} /> Editar perfil
+              <Edit2 size={14} /> {tr('profile.edit_profile')}
             </button>
           </div>
 
@@ -441,7 +454,7 @@ export function ProfileView() {
           ) : (
             <button onClick={() => setShowEdit(true)}
               style={{ fontSize: '0.88rem', color: t.textMuted, marginBottom: '24px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-              + Añadir una biografía
+              {tr('profile.add_bio')}
             </button>
           )}
 

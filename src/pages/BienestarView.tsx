@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n from 'i18next';
 import { Send, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
@@ -18,47 +20,47 @@ import bosqueAudio      from '../assets/audio/bosque.mp3';
 import olasAudio        from '../assets/audio/olas.mp3';
 
 const INIT_MSGS = [
-  { id: 1, from: 'bot', text: '¡Hola! Soy Mono, tu compañero de bienestar. ¿Cómo te sientes hoy?' },
+  { id: 1, from: 'bot', text: i18n.t('bienestar.bot_greeting') },
 ];
 
 const BOT_RESPONSES = [
-  'Entiendo, los parciales pueden ser muy agotadores. Recuerda que el estrés es temporal. ¿Quieres practicar una respiración rápida?',
-  'Te escucho. Es normal sentirse así. ¿Has dormido bien esta semana? El descanso es fundamental para el rendimiento académico.',
-  'Gracias por compartirlo conmigo. ¿Sabes que 5 minutos de meditación pueden reducir el cortisol hasta un 30%? ¿Te gustaría intentarlo?',
-  'Eso es totalmente válido. ¿Quieres que te recomiende alguna película relajante o música para desconectarte un rato?',
-  '¡Eso suena increíble! Me alegra que estés bien. Sigue así. ¿Hay algo en lo que te pueda ayudar hoy?',
+  i18n.t('bienestar.bot_stress'),
+  i18n.t('bienestar.bot_lonely'),
+  i18n.t('bienestar.bot_meditation'),
+  i18n.t('bienestar.bot_movies'),
+  i18n.t('bienestar.bot_happy'),
 ];
 
 const SOUNDS = [
-  { id: 1, name: 'Ruido Blanco',    emoji: '🤍', category: 'Relajación', freq: '432Hz',   audio: ruidoBlancoAudio },
-  { id: 2, name: 'Ruido Marrón',    emoji: '🟫', category: 'Relajación', freq: '220Hz',   audio: ruidoMarronAudio },
-  { id: 3, name: 'Lluvia Suave',    emoji: '🌧️', category: 'Naturaleza', freq: 'Natural', audio: lluviaAudio },
-  { id: 4, name: 'Bosque Nocturno', emoji: '🌿', category: 'Naturaleza', freq: 'Natural', audio: bosqueAudio },
-  { id: 5, name: 'Olas del Mar',    emoji: '🌊', category: 'Naturaleza', freq: 'Natural', audio: olasAudio },
+  { id: 1, name: 'Ruido Blanco',    emoji: '🤍', category: i18n.t('bienestar.sounds_cat_relax'), freq: '432Hz',   audio: ruidoBlancoAudio },
+  { id: 2, name: 'Ruido Marrón',    emoji: '🟫', category: i18n.t('bienestar.sounds_cat_relax'), freq: '220Hz',   audio: ruidoMarronAudio },
+  { id: 3, name: 'Lluvia Suave',    emoji: '🌧️', category: i18n.t('bienestar.sounds_cat_nature'), freq: 'Natural', audio: lluviaAudio },
+  { id: 4, name: 'Bosque Nocturno', emoji: '🌿', category: i18n.t('bienestar.sounds_cat_nature'), freq: 'Natural', audio: bosqueAudio },
+  { id: 5, name: 'Olas del Mar',    emoji: '🌊', category: i18n.t('bienestar.sounds_cat_nature'), freq: 'Natural', audio: olasAudio },
 ];
 
 const MEDIA_RECS = [
-  { id: 1, title: 'Soul', type: 'Película', platform: 'Disney+', genre: 'Animación', mood: 'Inspiración', emoji: '🎭', color: '#6C63FF', desc: 'Perfecta para reflexionar sobre tus metas' },
-  { id: 2, title: 'Ted Lasso', type: 'Serie', platform: 'Apple TV+', genre: 'Comedia', mood: 'Alegría', emoji: '⚽', color: '#7FE7C4', desc: 'El antidepresivo más efectivo de 2024' },
-  { id: 3, title: 'The Queen\'s Gambit', type: 'Serie', platform: 'Netflix', genre: 'Drama', mood: 'Motivación', emoji: '♟️', color: '#FFB347', desc: 'Para cuando necesitas recordar tu potencial' },
-  { id: 4, title: 'Coco', type: 'Película', platform: 'Disney+', genre: 'Animación', mood: 'Nostálgico', emoji: '🎸', color: '#FF6B9D', desc: 'Para conectar con tus raíces y familia' },
-  { id: 5, title: 'Severance', type: 'Serie', platform: 'Apple TV+', genre: 'Thriller', mood: 'Evasión', emoji: '🚪', color: '#5BC8FF', desc: 'Te hará olvidar los problemas por 1h' },
-  { id: 6, title: 'Everything Everywhere', type: 'Película', platform: 'Prime Video', genre: 'Ciencia Ficción', mood: 'Energía', emoji: '🌀', color: '#A78BFA', desc: 'Una explosión de creatividad y emoción' },
+  { id: 1, title: 'Soul', type: i18n.t('bienestar.media_movie'), platform: 'Disney+', genre: i18n.t('bienestar.media_animacion'), mood: i18n.t('bienestar.media_inspiracion'), emoji: '🎭', color: '#6C63FF', desc: 'Perfecta para reflexionar sobre tus metas' },
+  { id: 2, title: 'Ted Lasso', type: i18n.t('bienestar.media_series'), platform: 'Apple TV+', genre: i18n.t('bienestar.media_comedy'), mood: i18n.t('bienestar.media_alegria'), emoji: '⚽', color: '#7FE7C4', desc: 'El antidepresivo más efectivo de 2024' },
+  { id: 3, title: 'The Queen\'s Gambit', type: i18n.t('bienestar.media_series'), platform: 'Netflix', genre: i18n.t('bienestar.media_drama'), mood: i18n.t('bienestar.media_motivacion'), emoji: '♟️', color: '#FFB347', desc: 'Para cuando necesitas recordar tu potencial' },
+  { id: 4, title: 'Coco', type: i18n.t('bienestar.media_movie'), platform: 'Disney+', genre: i18n.t('bienestar.media_animacion'), mood: i18n.t('bienestar.media_nostalgico'), emoji: '🎸', color: '#FF6B9D', desc: 'Para conectar con tus raíces y familia' },
+  { id: 5, title: 'Severance', type: i18n.t('bienestar.media_series'), platform: 'Apple TV+', genre: i18n.t('bienestar.media_thriller'), mood: i18n.t('bienestar.media_evasion'), emoji: '🚪', color: '#5BC8FF', desc: 'Te hará olvidar los problemas por 1h' },
+  { id: 6, title: 'Everything Everywhere', type: i18n.t('bienestar.media_movie'), platform: 'Prime Video', genre: i18n.t('bienestar.media_scifi'), mood: i18n.t('bienestar.media_energia'), emoji: '🌀', color: '#A78BFA', desc: 'Una explosión de creatividad y emoción' },
 ];
 
 const SPORTS_RECS = [
-  { name: 'Yoga 15 min', emoji: '🧘', duration: '15 min', cal: '60 kcal', level: 'Fácil', color: '#7FE7C4' },
-  { name: 'Caminata campus', emoji: '🚶', duration: '20 min', cal: '80 kcal', level: 'Fácil', color: '#6C63FF' },
-  { name: 'HIIT básico', emoji: '🏃', duration: '25 min', cal: '200 kcal', level: 'Medio', color: '#FFB347' },
-  { name: 'Estiramientos', emoji: '🤸', duration: '10 min', cal: '30 kcal', level: 'Fácil', color: '#FF6B9D' },
+  { name: 'Yoga 15 min', emoji: '🧘', duration: '15 min', cal: '60 kcal', level: i18n.t('bienestar.sport_easy'), color: '#7FE7C4' },
+  { name: 'Caminata campus', emoji: '🚶', duration: '20 min', cal: '80 kcal', level: i18n.t('bienestar.sport_easy'), color: '#6C63FF' },
+  { name: 'HIIT básico', emoji: '🏃', duration: '25 min', cal: '200 kcal', level: i18n.t('bienestar.sport_medium'), color: '#FFB347' },
+  { name: 'Estiramientos', emoji: '🤸', duration: '10 min', cal: '30 kcal', level: i18n.t('bienestar.sport_easy'), color: '#FF6B9D' },
 ];
 
 const EMOCIONES = [
-  { emoji: '😊', label: 'Genial', color: '#7FE7C4', value: 5 },
-  { emoji: '🙂', label: 'Bien',   color: '#6C63FF', value: 4 },
-  { emoji: '😐', label: 'Okei',   color: '#FFB347', value: 3 },
-  { emoji: '😔', label: 'Mal',    color: '#FF6B9D', value: 2 },
-  { emoji: '😰', label: 'Estres', color: '#FF4D6A', value: 1 },
+  { emoji: '😊', label: i18n.t('bienestar.emotion_great'), color: '#7FE7C4', value: 5 },
+  { emoji: '🙂', label: i18n.t('bienestar.emotion_ok'),   color: '#6C63FF', value: 4 },
+  { emoji: '😐', label: i18n.t('bienestar.emotion_meh'),   color: '#FFB347', value: 3 },
+  { emoji: '😔', label: i18n.t('bienestar.emotion_bad'),    color: '#FF6B9D', value: 2 },
+  { emoji: '😰', label: i18n.t('bienestar.emotion_stressed'), color: '#FF4D6A', value: 1 },
 ];
 
 interface DiaryEntry { isoDate: string; date: string; emotion: string; note: string; color: string }
@@ -105,38 +107,39 @@ function computeWeekMoods(entries: DiaryEntry[]): (number | null)[] {
 }
 
 const BREATHING_MODES = [
-  { id: '4-7-8',  name: 'Técnica 4-7-8',         desc: 'Reduce ansiedad y facilita el sueño',    phases: [{ label: 'Inhala', duration: 4000 }, { label: 'Mantén', duration: 7000 }, { label: 'Exhala', duration: 8000 }] },
-  { id: 'box',    name: 'Respiración de Caja',    desc: 'Para concentración antes de un examen',  phases: [{ label: 'Inhala', duration: 4000 }, { label: 'Mantén', duration: 4000 }, { label: 'Exhala', duration: 4000 }, { label: 'Mantén', duration: 4000 }] },
-  { id: 'diafrag',name: 'Respiración Diafragmática', desc: 'Relajación profunda y manejo del estrés', phases: [{ label: 'Inhala', duration: 5000 }, { label: 'Exhala', duration: 7000 }] },
+  { id: '4-7-8',  name: i18n.t('bienestar.breath_mode1_name'),         desc: i18n.t('bienestar.breath_mode1_desc'),    phases: [{ label: i18n.t('bienestar.breath_mode1_phas1'), duration: 4000 }, { label: i18n.t('bienestar.breath_mode1_phas2'), duration: 7000 }, { label: i18n.t('bienestar.breath_mode1_phas3'), duration: 8000 }] },
+  { id: 'box',    name: i18n.t('bienestar.breath_mode2_name'),    desc: i18n.t('bienestar.breath_mode2_desc'),  phases: [{ label: i18n.t('bienestar.breath_mode2_phas1'), duration: 4000 }, { label: i18n.t('bienestar.breath_mode2_phas2'), duration: 4000 }, { label: i18n.t('bienestar.breath_mode2_phas3'), duration: 4000 }, { label: i18n.t('bienestar.breath_mode2_phas4'), duration: 4000 }] },
+  { id: 'diafrag',name: i18n.t('bienestar.breath_mode3_name'), desc: i18n.t('bienestar.breath_mode3_desc'), phases: [{ label: i18n.t('bienestar.breath_mode3_phas1'), duration: 5000 }, { label: i18n.t('bienestar.breath_mode3_phas2'), duration: 7000 }] },
 ];
 
 const DIARY_PROMPTS = [
-  '¿Qué fue lo mejor de tu día?',
-  '¿Algo que te preocupa esta semana?',
-  '¿Qué aprendiste hoy?',
-  '¿Cómo te sientes con tus estudios?',
-  '¿Algo por lo que estás agradecido/a?',
-  '¿Qué quieres mejorar mañana?',
+  i18n.t('bienestar.diary_prompts_q1'),
+  i18n.t('bienestar.diary_prompts_q2'),
+  i18n.t('bienestar.diary_prompts_q3'),
+  i18n.t('bienestar.diary_prompts_q4'),
+  i18n.t('bienestar.diary_prompts_q5'),
+  i18n.t('bienestar.diary_prompts_q6'),
 ];
 
 const AI_TIPS: Record<number, { title: string; tip: string; color: string }> = {
-  5: { title: '¡Excelente estado!', tip: 'Sigue así. Es un buen momento para ayudar a otros o avanzar en proyectos importantes.', color: '#7FE7C4' },
-  4: { title: 'Vas bien', tip: 'Un día tranquilo. Aprovecha para descansar y consolidar lo aprendido hoy.', color: '#6C63FF' },
-  3: { title: 'Día regular', tip: 'Está bien no estar al 100%. Intenta una respiración rápida o escuchar tu playlist favorita.', color: '#FFB347' },
-  2: { title: 'Ánimo', tip: 'Los días difíciles también pasan. Habla con alguien de confianza o prueba el chatbot de bienestar.', color: '#FF6B9D' },
-  1: { title: 'Te escuchamos', tip: 'Reconocer el estrés es valiente. Considera hablar con el equipo de bienestar ECI hoy.', color: '#FF4D6A' },
+  5: { title: i18n.t('bienestar.tip1_title'), tip: i18n.t('bienestar.tip1_tip'), color: '#7FE7C4' },
+  4: { title: i18n.t('bienestar.tip2_title'), tip: i18n.t('bienestar.tip2_tip'), color: '#6C63FF' },
+  3: { title: i18n.t('bienestar.tip3_title'), tip: i18n.t('bienestar.tip3_tip'), color: '#FFB347' },
+  2: { title: i18n.t('bienestar.tip4_title'), tip: i18n.t('bienestar.tip4_tip'), color: '#FF6B9D' },
+  1: { title: i18n.t('bienestar.tip5_title'), tip: i18n.t('bienestar.tip5_tip'), color: '#FF4D6A' },
 };
 
 const TAB_IDS = ['chat', 'diario', 'sonidos', 'respira'] as const;
 
 export function BienestarView() {
-  const t = useTheme();
+  const th = useTheme();
+  const { t: tr } = useTranslation();
   const [tab, setTab] = useState<typeof TAB_IDS[number]>('chat');
   const TABS = [
-    { id: 'chat'    as const, label: 'Mono' },
-    { id: 'diario'  as const, label: 'Diario' },
-    { id: 'sonidos' as const, label: 'Sonidos' },
-    { id: 'respira' as const, label: 'Respira' },
+    { id: 'chat'    as const, label: tr('bienestar.tab_mono') },
+    { id: 'diario'  as const, label: tr('bienestar.tab_diary') },
+    { id: 'sonidos' as const, label: tr('bienestar.tab_sounds') },
+    { id: 'respira' as const, label: tr('bienestar.tab_breathe') },
   ];
   const [msgs, setMsgs] = useState(INIT_MSGS);
   const [msg, setMsg] = useState('');
@@ -251,7 +254,7 @@ export function BienestarView() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div className="min-w-0">
           <h2 style={{ fontWeight: 700, fontSize: '1.3rem' }}>Bienestar 24/7</h2>
-          <p style={{ fontSize: '0.85rem', color: t.textMuted }}>Tu espacio seguro en la ECI — siempre aquí para ti</p>
+          <p style={{ fontSize: '0.85rem', color: th.textMuted }}>Tu espacio seguro en la ECI — siempre aquí para ti</p>
         </div>
         <div className="flex gap-2 flex-wrap sm:justify-end">
           {TABS.map(t => (
@@ -270,7 +273,7 @@ export function BienestarView() {
 
       {/* ── CHAT ── */}
       {tab === 'chat' && (
-        <div className="rounded-2xl border overflow-hidden flex flex-col" style={{ background: t.cardBg, borderColor: t.cardBorder, height: '520px' }}>
+        <div className="rounded-2xl border overflow-hidden flex flex-col" style={{ background: th.cardBg, borderColor: th.cardBorder, height: '520px' }}>
           <div className="px-5 py-3 border-b flex items-center gap-3"
             style={{ borderColor: 'var(--p-divider)', background: 'rgba(108,99,255,0.06)' }}>
             <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0" style={{ background: 'linear-gradient(135deg, #6C63FF, #7FE7C4)' }}>
@@ -336,7 +339,7 @@ export function BienestarView() {
                 onKeyDown={e => e.key === 'Enter' && sendMsg()}
                 placeholder="Escribe cómo te sientes..."
                 className="flex-1 px-4 py-2.5 rounded-xl outline-none text-sm"
-                style={{ background: t.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text }} />
+                style={{ background: th.inputBg, border: '1px solid rgba(108,99,255,0.2)', color: t.text }} />
               <button onClick={sendMsg} className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#6C63FF' }}>
                 <Send size={15} color="white" />
               </button>
@@ -437,7 +440,7 @@ export function BienestarView() {
               </div>
             </div>
 
-            <div className="rounded-2xl border p-5" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
+            <div className="rounded-2xl border p-5" style={{ background: th.cardBg, borderColor: th.cardBorder }}>
               <div className="flex items-center justify-between mb-3">
                 <p style={{ fontWeight: 700, fontSize: '0.95rem', color: t.text }}>Escribe en tu diario</p>
                 <button onClick={() => { setActivePrompt(p => (p + 1) % DIARY_PROMPTS.length); setDiaryNote(''); }}
@@ -460,10 +463,10 @@ export function BienestarView() {
               <textarea value={diaryNote} onChange={e => { setDiaryNote(e.target.value); setDiaryError(null); }}
                 placeholder="Escribe libremente... este espacio es solo tuyo"
                 rows={5} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none"
-                style={{ background: t.inputBg, border: `1px solid ${diaryNote ? 'rgba(108,99,255,0.4)' : 'rgba(108,99,255,0.15)'}`, color: t.text, lineHeight: 1.7, transition: 'border-color 0.2s' }} />
+                style={{ background: th.inputBg, border: `1px solid ${diaryNote ? 'rgba(108,99,255,0.4)' : 'rgba(108,99,255,0.15)'}`, color: t.text, lineHeight: 1.7, transition: 'border-color 0.2s' }} />
 
               <div className="flex items-center justify-between mt-3">
-                <p style={{ fontSize: '0.7rem', color: t.textMuted }}>
+                <p style={{ fontSize: '0.7rem', color: th.textMuted }}>
                   {diaryNote.length} caracteres
                 </p>
                 <motion.button
@@ -521,7 +524,7 @@ export function BienestarView() {
           <div className="w-full lg:w-72 lg:flex-shrink-0 flex flex-col gap-4 lg:overflow-y-auto pb-4">
 
             {/* Weekly mood chart */}
-            <div className="rounded-2xl border p-4" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
+            <div className="rounded-2xl border p-4" style={{ background: th.cardBg, borderColor: th.cardBorder }}>
               <p style={{ fontWeight: 700, fontSize: '0.9rem', color: t.text, marginBottom: '14px' }}>Tu semana emocional</p>
               <div className="flex items-end gap-2" style={{ height: 90 }}>
                 {computeWeekMoods(diaryEntries).map((val, i) => {
@@ -533,7 +536,7 @@ export function BienestarView() {
                         transition={{ duration: 0.8, delay: i * 0.08, ease: 'easeOut' }}
                         style={{ background: val ? `linear-gradient(180deg, ${em?.color || '#6C63FF'}, ${em?.color || '#6C63FF'}40)` : 'var(--p-divider)', minHeight: 6 }} />
                       <span style={{ fontSize: '0.88rem' }}>{em?.emoji ?? '—'}</span>
-                      <span style={{ fontSize: '0.58rem', color: t.textMuted }}>{['L','M','X','J','V','S','D'][i]}</span>
+                      <span style={{ fontSize: '0.58rem', color: th.textMuted }}>{['L','M','X','J','V','S','D'][i]}</span>
                     </div>
                   );
                 })}
@@ -546,7 +549,7 @@ export function BienestarView() {
                 return (
                   <div className="mt-3 pt-3 border-t flex items-center justify-between"
                     style={{ borderColor: 'rgba(108,99,255,0.1)' }}>
-                    <span style={{ fontSize: '0.72rem', color: t.textMuted }}>Promedio semanal</span>
+                    <span style={{ fontSize: '0.72rem', color: th.textMuted }}>Promedio semanal</span>
                     <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#7FE7C4' }}>
                       {em?.emoji} {em?.label}
                     </span>
@@ -559,14 +562,14 @@ export function BienestarView() {
             <div>
               <p style={{ fontWeight: 700, fontSize: '0.9rem', color: t.text, marginBottom: '10px' }}>Entradas anteriores</p>
               {diaryEntries.length === 0 ? (
-                <p style={{ fontSize: '0.78rem', color: t.textMuted }}>Aún no tienes entradas. Escribe tu primer registro arriba.</p>
+                <p style={{ fontSize: '0.78rem', color: th.textMuted }}>Aún no tienes entradas. Escribe tu primer registro arriba.</p>
               ) : (
                 <div className="space-y-2.5">
                   {diaryEntries.map((e, i) => (
                     <motion.div key={e.isoDate}
                       initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 }}
                       className="rounded-2xl border overflow-hidden cursor-pointer hover:shadow-md transition-all"
-                      style={{ background: t.cardBg, borderColor: `${e.color}25` }}>
+                      style={{ background: th.cardBg, borderColor: `${e.color}25` }}>
                       <div className="h-1" style={{ background: `linear-gradient(90deg, ${e.color}, ${e.color}60)` }} />
                       <div className="flex items-start gap-3 p-3">
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -574,7 +577,7 @@ export function BienestarView() {
                           {e.emotion}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p style={{ fontSize: '0.7rem', color: t.textMuted, marginBottom: '2px' }}>{e.date}</p>
+                          <p style={{ fontSize: '0.7rem', color: th.textMuted, marginBottom: '2px' }}>{e.date}</p>
                           <p className="line-clamp-2" style={{ fontSize: '0.78rem', color: t.textSub, lineHeight: 1.5 }}>{e.note}</p>
                         </div>
                       </div>
@@ -673,15 +676,15 @@ export function BienestarView() {
                   onClick={() => toggleSound(sound.id, sound.audio)}
                   className="rounded-2xl border flex flex-col items-center text-center p-4 relative overflow-hidden transition-all"
                   style={{
-                    background: isPlaying ? 'linear-gradient(135deg, rgba(108,99,255,0.25), rgba(127,231,196,0.12))' : t.cardBg,
-                    borderColor: isPlaying ? '#6C63FF' : t.cardBorder,
+                    background: isPlaying ? 'linear-gradient(135deg, rgba(108,99,255,0.25), rgba(127,231,196,0.12))' : th.cardBg,
+                    borderColor: isPlaying ? '#6C63FF' : th.cardBorder,
                     boxShadow: isPlaying ? '0 0 20px rgba(108,99,255,0.2)' : 'none',
                   }}>
                   {/* Active glow */}
                   {isPlaying && <div className="absolute inset-0 opacity-10" style={{ background: 'radial-gradient(circle at 50% 30%, #6C63FF, transparent 70%)' }} />}
                   <span style={{ fontSize: '2.2rem', marginBottom: '8px', position: 'relative' }}>{sound.emoji}</span>
                   <p style={{ fontWeight: 600, fontSize: '0.8rem', marginBottom: '3px', color: isPlaying ? '#F0EEFF' : t.text }}>{sound.name}</p>
-                  <p style={{ fontSize: '0.62rem', color: isPlaying ? '#7FE7C4' : t.textMuted }}>{sound.category} · {sound.freq}</p>
+                  <p style={{ fontSize: '0.62rem', color: isPlaying ? '#7FE7C4' : th.textMuted }}>{sound.category} · {sound.freq}</p>
                   {isPlaying && (
                     <div className="flex gap-0.5 mt-2">
                       {[1,2,3].map(b => (
@@ -790,8 +793,8 @@ export function BienestarView() {
                 whileHover={{ x: 4 }}
                 className="w-full px-4 py-4 rounded-2xl text-left transition-all border"
                 style={{
-                  background: breathMode.id === mode.id ? 'linear-gradient(135deg, rgba(108,99,255,0.2), rgba(127,231,196,0.08))' : t.cardBg,
-                  borderColor: breathMode.id === mode.id ? '#6C63FF' : t.cardBorder,
+                  background: breathMode.id === mode.id ? 'linear-gradient(135deg, rgba(108,99,255,0.2), rgba(127,231,196,0.08))' : th.cardBg,
+                  borderColor: breathMode.id === mode.id ? '#6C63FF' : th.cardBorder,
                   boxShadow: breathMode.id === mode.id ? '0 4px 16px rgba(108,99,255,0.2)' : 'none',
                 }}>
                 <div className="flex items-center gap-2 mb-2">
@@ -802,13 +805,13 @@ export function BienestarView() {
                     {mode.name}
                   </p>
                 </div>
-                <p style={{ fontSize: '0.75rem', color: t.textMuted, lineHeight: 1.5 }}>{mode.desc}</p>
+                <p style={{ fontSize: '0.75rem', color: th.textMuted, lineHeight: 1.5 }}>{mode.desc}</p>
                 {/* Phase preview */}
                 <div className="flex gap-2 mt-3">
                   {mode.phases.map((p, i) => (
                     <div key={i} className="flex flex-col items-center gap-1">
                       <div className="w-6 h-1.5 rounded-full" style={{ background: breathMode.id === mode.id ? '#6C63FF' : 'rgba(108,99,255,0.2)' }} />
-                      <span style={{ fontSize: '0.55rem', color: t.textMuted }}>{p.label.slice(0,3)}</span>
+                      <span style={{ fontSize: '0.55rem', color: th.textMuted }}>{p.label.slice(0,3)}</span>
                     </div>
                   ))}
                 </div>
@@ -819,7 +822,7 @@ export function BienestarView() {
             <div className="rounded-2xl p-4 border mt-4"
               style={{ background: 'rgba(127,231,196,0.06)', borderColor: 'rgba(127,231,196,0.2)' }}>
               <p style={{ fontSize: '0.75rem', color: '#7FE7C4', fontWeight: 600, marginBottom: '4px' }}>Consejo</p>
-              <p style={{ fontSize: '0.75rem', color: t.textMuted, lineHeight: 1.6 }}>
+              <p style={{ fontSize: '0.75rem', color: th.textMuted, lineHeight: 1.6 }}>
                 Practica al menos 3 ciclos para sentir los beneficios. Lo ideal es hacer esto antes de dormir o en momentos de estrés.
               </p>
             </div>

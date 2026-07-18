@@ -3,6 +3,7 @@
  * The API key is public by design (baked into the bundle) — restrict it by HTTP
  * referrer + API in the Google Cloud console.
  */
+import i18n from 'i18next';
 import type { EventCategory } from '../types/patricia';
 
 export const GOOGLE_MAPS_KEY = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string) ?? '';
@@ -22,15 +23,14 @@ export const DARK_MAP_STYLES = [
   { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#263c3f' }] },
 ];
 
-/** Backend category enum → Spanish label + brand colour + emoji. */
 export const CATEGORY_META: Record<EventCategory, { label: string; color: string; emoji: string }> = {
-  SPORT: { label: 'Deporte', color: '#FFB347', emoji: '⚽' },
-  ENTERTAINMENT: { label: 'Entretenimiento', color: '#FF6B9D', emoji: '🎉' },
-  MUSIC: { label: 'Música', color: '#A78BFA', emoji: '🎵' },
-  ART: { label: 'Arte', color: '#5BC8FF', emoji: '🎨' },
-  TECHNOLOGY: { label: 'Tecnología', color: '#6C63FF', emoji: '💻' },
-  STUDY: { label: 'Estudio', color: '#7FE7C4', emoji: '📚' },
-  VARIETY: { label: 'Variedad', color: '#FF9F45', emoji: '✨' },
+  SPORT: { label: i18n.t('event_categories.SPORT'), color: '#FFB347', emoji: '⚽' },
+  ENTERTAINMENT: { label: i18n.t('event_categories.ENTERTAINMENT'), color: '#FF6B9D', emoji: '🎉' },
+  MUSIC: { label: i18n.t('event_categories.MUSIC'), color: '#A78BFA', emoji: '🎵' },
+  ART: { label: i18n.t('event_categories.ART'), color: '#5BC8FF', emoji: '🎨' },
+  TECHNOLOGY: { label: i18n.t('event_categories.TECHNOLOGY'), color: '#6C63FF', emoji: '💻' },
+  STUDY: { label: i18n.t('event_categories.STUDY'), color: '#7FE7C4', emoji: '📚' },
+  VARIETY: { label: i18n.t('event_categories.VARIETY'), color: '#FF9F45', emoji: '✨' },
 };
 export const ALL_CATEGORIES = Object.keys(CATEGORY_META) as EventCategory[];
 

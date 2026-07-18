@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../store/ThemeContext';
 import { useParquesGame, FrontendPiece } from '../hooks/useParquesGame';
 
@@ -101,6 +102,7 @@ export function ParquesBoard({ gameId, userId, userName }: ParquesBoardProps) {
   const themeColors = useTheme();
   const isDark = themeColors.darkMode;
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const { t: tr } = useTranslation();
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -215,7 +217,7 @@ export function ParquesBoard({ gameId, userId, userName }: ParquesBoardProps) {
   const renderCorner = (pi: number) => {
     const meta = cornerThemesMeta[pi];
     const col = P_COLORS[pi];
-    const name = playerNames[pi] ?? `Jugador ${pi + 1}`;
+    const name = playerNames[pi] ?? tr('parques.player', { num: pi + 1 });
     const img = P_MONKEYS[pi];
     const isActive = currentPlayer === pi;
     const playerJailedPieces = pieces.filter(p => p.player === pi && p.trackPos === -1);
@@ -282,7 +284,7 @@ export function ParquesBoard({ gameId, userId, userName }: ParquesBoardProps) {
             zIndex: 5
           }}>
             <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#fff', animation: 'pulseDot 1.3s infinite' }} />
-            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '.5px', color: '#fff' }}>SU TURNO</span>
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '.5px', color: '#fff' }}>{tr('parques.your_turn')}</span>
           </div>
         )}
 
@@ -448,11 +450,11 @@ export function ParquesBoard({ gameId, userId, userName }: ParquesBoardProps) {
 
   // Status bar text
   const statusText = (() => {
-    if (gameStatus === 'WAITING_FOR_PLAYERS') return isShared ? '👥 Sala abierta — esperando jugadores' : '⏳ Preparando la partida…';
-    if (winner !== null) return `${playerNames[winner]} ganó`;
-    if (!isMyTurn) return `Turno de ${playerNames[currentPlayer] ?? '?'}…`;
-    if (hasDiced) return `Click en ficha para mover ${diceSum}`;
-    return 'Tú — tira los dados';
+    if (gameStatus === 'WAITING_FOR_PLAYERS') return isShared ? `👥 ${tr('parques.waiting')}` : `⏳ ${tr('parques.preparing')}`;
+    if (winner !== null) return tr('parques.won', { name: playerNames[winner] });
+    if (!isMyTurn) return tr('parques.turn_of', { name: playerNames[currentPlayer] ?? '?' });
+    if (hasDiced) return tr('parques.click_to_move', { sum: diceSum });
+    return tr('parques.roll_dice');
   })();
 
   // ── Shared side-panel content (dice + buttons + optional log) ──────────
@@ -465,7 +467,7 @@ export function ParquesBoard({ gameId, userId, userName }: ParquesBoardProps) {
           <DiceFace v={dice[0]} rolling={rolling} color={P_COLORS[currentPlayer]} isDark={isDark} />
           <DiceFace v={dice[1]} rolling={rolling} color={P_COLORS[currentPlayer]} isDark={isDark} />
         </div>
-        {isDouble && hasDiced && <p className="text-center mb-2" style={{ fontSize: '0.7rem', color: '#FFB347', fontWeight: 700 }}>¡Doble! +1 turno</p>}
+        {isDouble && hasDiced && <p className="text-center mb-2" style={{ fontSize: '0.7rem', color: '#FFB347', fontWeight: 700 }}>{tr('parques.double_bonus')}</p>}
         <motion.button onClick={rollDice}
           disabled={rolling || !isMyTurn || hasDiced || winner !== null || gameStatus !== 'IN_PROGRESS'}
           whileHover={!rolling && isMyTurn && !hasDiced ? { scale: 1.03 } : {}}
@@ -478,18 +480,18 @@ export function ParquesBoard({ gameId, userId, userName }: ParquesBoardProps) {
             color: isMyTurn && !hasDiced && winner === null && gameStatus === 'IN_PROGRESS' ? 'white' : 'var(--p-muted)',
             border: isMyTurn && !hasDiced && winner === null && gameStatus === 'IN_PROGRESS' ? 'none' : '1px solid var(--p-divider)',
           }}>
-          {rolling ? '🎲 Tirando…' : hasDiced && isMyTurn ? '✓ Tirado' : '🎲 Tirar dados'}
+          {rolling ? tr('parques.rolling') : hasDiced && isMyTurn ? tr('parques.rolled') : tr('parques.roll_dice_btn')}
         </motion.button>
         {canExitJail && winner === null && (
           <button onClick={exitJail} className="w-full py-1.5 rounded-xl text-xs font-semibold mb-1.5 transition-all hover:opacity-95"
             style={{ background: 'rgba(127,231,196,0.15)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.35)' }}>
-            🔓 Sacar fichas de la cárcel
+            🔓 {tr('parques.exit_jail')}
           </button>
         )}
         {isMyTurn && hasDiced && winner === null && (
           <button onClick={skipTurn} className="w-full py-1.5 rounded-xl text-xs transition-all hover:opacity-95"
             style={{ background: 'rgba(255,179,71,0.12)', color: '#FFB347', border: '1px solid rgba(255,179,71,0.25)' }}>
-            Pasar turno →
+            {tr('parques.skip_turn')}
           </button>
         )}
       </div>
@@ -497,7 +499,7 @@ export function ParquesBoard({ gameId, userId, userName }: ParquesBoardProps) {
       {/* Log — desktop only */}
       {!mobile && (
         <div className="rounded-2xl p-3 border overflow-hidden flex flex-col" style={{ background: 'var(--p-card)', borderColor: 'var(--p-divider)' }}>
-          <p style={{ fontWeight: 600, fontSize: '0.75rem', marginBottom: '6px', color: 'var(--p-muted)' }}>Historial</p>
+          <p style={{ fontWeight: 600, fontSize: '0.75rem', marginBottom: '6px', color: 'var(--p-muted)' }}>{tr('parques.history')}</p>
           <div className="overflow-y-auto space-y-1" style={{ maxHeight: 180 }}>
             {log.map((m, i) => (
               <p key={i} style={{
@@ -513,12 +515,12 @@ export function ParquesBoard({ gameId, userId, userName }: ParquesBoardProps) {
       {/* Buttons */}
       <button onClick={resetGame} className={`py-2 rounded-xl text-sm font-medium ${mobile ? 'flex-1' : 'w-full'}`}
         style={{ background: winner !== null ? '#7FE7C4' : 'rgba(108,99,255,0.1)', color: winner !== null ? '#0F0E1A' : 'var(--p-muted)', minWidth: mobile ? 100 : 'auto' }}>
-        Nueva
+        {tr('parques.new_game')}
       </button>
 
       <button onClick={() => setShowRules(true)} className={`py-2 rounded-xl text-sm font-medium ${mobile ? 'flex-1' : 'w-full'}`}
         style={{ background: 'rgba(127,231,196,0.12)', color: '#7FE7C4', border: '1px solid rgba(127,231,196,0.25)', minWidth: mobile ? 100 : 'auto' }}>
-        Reglas
+        {tr('parques.rules')}
       </button>
     </>
   );
