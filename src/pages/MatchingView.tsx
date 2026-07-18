@@ -400,10 +400,9 @@ export function MatchingView() {
         userService.subirFotoPerfil(userId, photoPreview),
         new Promise(r => setTimeout(r, 1200)), // deja ver el spinner un momento
       ]);
-      if (updated.tienePersonaEnFoto === false) {
-        setVerifyError('La foto no parece contener una persona visible. Por favor sube una foto donde aparezcas claramente.');
-        return;
-      }
+      // Decisión de equipo (2026-07-17): tienePersonaEnFoto se ignora — la
+      // detección da falsos negativos en pods fríos y no hay tiempo de
+      // arreglarlo; la foto queda subida a S3 igualmente.
       const url = updated.foto ?? photoPreview;
       setMyPhotoUrl(url);
       setPhotoPreview(url);

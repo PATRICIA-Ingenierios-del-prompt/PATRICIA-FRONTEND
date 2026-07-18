@@ -177,12 +177,10 @@ function StepPerfil({ data, setData, onNext, onBack, dark, userId }: {
   const [focused, setFocused] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [verifyingPhoto, setVerifyingPhoto] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const set = (k: keyof FormData, v: string) => setData(d => ({ ...d, [k]: v }));
 
   const handleFile = useCallback(async (file: File) => {
-    setPhotoError(null);
     const reader = new FileReader();
     reader.onload = async (e) => {
       const dataUrl = e.target?.result as string;
@@ -192,10 +190,9 @@ function StepPerfil({ data, setData, onNext, onBack, dark, userId }: {
         setVerifyingPhoto(true);
         try {
           const result = await userService.subirFotoPerfil(userId, dataUrl);
-          if (result.tienePersonaEnFoto === false) {
-            setPhotoError('La foto no parece contener una persona visible. Por favor sube una foto donde aparezcas claramente.');
-            return;
-          }
+          // Decisión de equipo (2026-07-17): tienePersonaEnFoto se ignora — la
+          // detección da falsos negativos en pods fríos y no hay tiempo de
+          // arreglarlo; la foto queda subida a S3 igualmente.
           // Guardamos la URL ya subida al backend (o el dataUrl como fallback)
           set('foto', result.foto ?? dataUrl);
         } catch {
@@ -320,7 +317,7 @@ function StepPerfil({ data, setData, onNext, onBack, dark, userId }: {
           onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f && !verifyingPhoto) handleFile(f); }}
           className="relative rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-all overflow-hidden"
           style={{
-            borderColor: photoError ? '#FF4757' : dragOver ? '#00D9FF' : 'rgba(108,99,255,0.25)',
+            borderColor: dragOver ? '#00D9FF' : 'rgba(108,99,255,0.25)',
             background: dragOver ? 'rgba(0,217,255,0.05)' : idleBg,
             height: data.foto ? 120 : 90,
             cursor: verifyingPhoto ? 'default' : 'pointer',
@@ -345,9 +342,6 @@ function StepPerfil({ data, setData, onNext, onBack, dark, userId }: {
             </>
           )}
         </div>
-        {photoError && (
-          <p style={{ fontSize: '0.75rem', color: '#FF4757', marginTop: '6px', lineHeight: 1.4 }}>{photoError}</p>
-        )}
         <input ref={fileRef} type="file" accept="image/*" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
       </div>

@@ -319,16 +319,9 @@ export function ProfileView() {
         // Usamos el endpoint dedicado de foto de perfil que incluye detección de persona
         const updated = await userService.subirFotoPerfil(userId, dataUrl);
 
-        // La red neuronal puede tardar 2-5 seg; la respuesta ya viene con el resultado
-        if (updated.tienePersonaEnFoto === false) {
-          addToast({
-            type: 'reporte',
-            title: 'Foto no válida',
-            message: 'La foto no parece contener una persona visible. Por favor sube una foto donde aparezcas claramente.',
-          });
-          return; // No actualizar la foto en el estado
-        }
-
+        // Decisión de equipo (2026-07-17): tienePersonaEnFoto se ignora — la
+        // detección da falsos negativos en pods fríos y no hay tiempo de
+        // arreglarlo; la foto queda subida a S3 igualmente.
         setPerfil(prev => ({ ...prev, ...updated, foto: updated.foto ?? dataUrl }));
         addToast({ type: 'info', title: 'Foto actualizada', message: 'Tu foto de perfil fue guardada.' });
       } catch (err) {
