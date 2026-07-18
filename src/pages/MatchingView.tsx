@@ -63,6 +63,7 @@ interface DisplayCandidate {
   scorePct?: number; // 0-100, solo disponible en feed "discover" y "matches"
   avatar: string;
   gradient: string;
+  hasPendingRequest?: boolean; // true si este usuario ya le dio LIKE al actual
 }
 
 function toDisplayCandidate(id: string, perfil: PerfilResponse | undefined, scoreTotal?: number): DisplayCandidate {
@@ -422,9 +423,16 @@ export function MatchingView() {
   const loadDiscover = useCallback(async () => {
     setLoadingDiscover(true);
     try {
-      const sugerencias = await matchingService.obtenerSugerencias(20);
+      const [sugerencias, solicitudIds] = await Promise.all([
+        matchingService.obtenerSugerencias(20),
+        matchingService.solicitudesRecibidas(),
+      ]);
+      const solicitudSet = new Set(solicitudIds);
       const display = await hydrate(sugerencias.map(s => ({ id: s.candidatoId, scoreTotal: s.scoreTotal })));
-      setCandidates(display);
+      setCandidates(display.map(c => ({
+        ...c,
+        hasPendingRequest: solicitudSet.has(c.id),
+      })));
     } catch (e) {
       addToast({ type: 'info', title: 'No se pudo cargar el feed', message: friendlyError(e, 'Intenta de nuevo más tarde.') });
     } finally {
@@ -450,13 +458,17 @@ export function MatchingView() {
           matchingService.solicitudesRecibidas(),
           matchingService.listarMatches(),
         ]);
+        const solicitudSet = new Set(solicitudIds);
         const entries = new Map<string, { id: string; scoreTotal?: number }>();
         sugerencias.forEach(s => entries.set(s.candidatoId, { id: s.candidatoId, scoreTotal: s.scoreTotal }));
         solicitudIds.forEach(id => { if (!entries.has(id)) entries.set(id, { id }); });
         matchesRaw.forEach(m => { if (!entries.has(m.otroUsuarioId)) entries.set(m.otroUsuarioId, { id: m.otroUsuarioId, scoreTotal: m.scoreTotal }); });
 
         const display = await hydrate(Array.from(entries.values()));
-        setSearchPool(display);
+        setSearchPool(display.map(c => ({
+          ...c,
+          hasPendingRequest: solicitudSet.has(c.id),
+        })));
       } catch (e) {
         addToast({ type: 'info', title: 'No se pudo buscar', message: friendlyError(e, 'Intenta de nuevo más tarde.') });
       } finally {
@@ -477,6 +489,9 @@ export function MatchingView() {
       setSearchSentTo(prev => new Set(prev).add(person.id));
       if (res.matchConfirmado) {
         addToast({ type: 'match', title: '¡Es un Match!', message: `Tú y ${person.nombre} ahora son matches`, duration: 5000 });
+      } else if (person.hasPendingRequest) {
+        addToast({ type: 'info', title: 'Solicitud aceptada ✓', message: `Aceptaste la solicitud de ${person.nombre}` });
+        setRequests(prev => prev.filter(r => r.id !== person.id));
       } else {
         addToast({ type: 'info', title: 'Solicitud enviada ✓', message: `Le enviaste una solicitud a ${person.nombre}` });
       }
@@ -543,6 +558,13 @@ export function MatchingView() {
       const res = await matchingService.decidir(current.id, decision);
       if (res.matchConfirmado) {
         addToast({ type: 'match', title: '¡Es un Match!', message: `Tú y ${current.nombre} ahora son matches`, duration: 5000 });
+      } else if (current.hasPendingRequest) {
+        if (dir === 'right') {
+          addToast({ type: 'info', title: 'Solicitud aceptada ✓', message: `Aceptaste la solicitud de ${current.nombre}` });
+        } else {
+          addToast({ type: 'info', title: 'Solicitud rechazada', message: `Rechazaste la solicitud de ${current.nombre}` });
+        }
+        setRequests(prev => prev.filter(r => r.id !== current.id));
       } else if (dir === 'right') {
         addToast({ type: 'info', title: 'Solicitud enviada ✓', message: `Le enviaste una solicitud a ${current.nombre}` });
       }
@@ -799,7 +821,9 @@ export function MatchingView() {
                           className="w-full py-1.5 rounded-xl flex items-center justify-center gap-1.5 transition-all hover:scale-105 disabled:opacity-60"
                           style={{ background: sent ? 'rgba(127,231,196,0.15)' : 'rgba(127,231,196,0.3)', border: '1px solid rgba(127,231,196,0.6)' }}>
                           <Heart size={12} fill="#7FE7C4" style={{ color: '#7FE7C4' }} />
-                          <span style={{ fontSize: '0.7rem', color: '#7FE7C4', fontWeight: 600 }}>{sent ? 'Enviada' : 'Solicitud'}</span>
+                          <span style={{ fontSize: '0.7rem', color: '#7FE7C4', fontWeight: 600 }}>
+                            {sent ? 'Enviada' : person.hasPendingRequest ? 'Aceptar solicitud' : 'Solicitud'}
+                          </span>
                         </button>
                       </div>
                     </div>
@@ -851,6 +875,14 @@ export function MatchingView() {
                       <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full z-10"
                         style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)' }}>
                         <span style={{ fontSize: '0.72rem', color: '#7FE7C4', fontWeight: 700 }}>{current.scorePct}% match</span>
+                      </div>
+                    )}
+
+                    {current.hasPendingRequest && (
+                      <div className="absolute top-4 left-4 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full z-10"
+                        style={{ background: 'rgba(255,107,157,0.85)', backdropFilter: 'blur(8px)' }}>
+                        <Heart size={11} fill="white" style={{ color: 'white' }} />
+                        <span style={{ fontSize: '0.72rem', color: 'white', fontWeight: 700 }}>Solicitud pendiente</span>
                       </div>
                     )}
 
