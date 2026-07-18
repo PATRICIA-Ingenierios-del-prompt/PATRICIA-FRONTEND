@@ -15,7 +15,9 @@ import { friendlyError } from '../lib/errorMessages';
 type LoginStep = 'main' | 'email' | 'otp' | 'jurado';
 
 interface LoginViewProps {
-  onLogin: () => void;
+  /** `jurado: true` cuando el login fue por el flujo de jurado externo — App
+   *  usa el flag para mandar al onboarding reducido en vez del de estudiante. */
+  onLogin: (opts?: { jurado?: boolean }) => void;
   onGoRegister: () => void;
   darkMode: boolean;
   setDarkMode: (v: boolean) => void;
@@ -162,7 +164,7 @@ export function LoginView({ onLogin, onGoRegister, darkMode = true, setDarkMode 
     try {
       const tokens = await authService.loginJurado(trimmedEmail, juradoPassword);
       login(tokens.accessToken, tokens.refreshToken);
-      onLogin();
+      onLogin({ jurado: true });
     } catch (e: any) {
       const status = e?.response?.status;
       if (status === 401) setError('Correo o contraseña incorrectos');

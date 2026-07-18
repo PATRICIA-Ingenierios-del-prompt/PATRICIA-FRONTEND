@@ -16,6 +16,7 @@ import { LoginView } from './pages/LoginView';
 import { RegisterView } from './pages/RegisterView';
 import { LandingPage } from './pages/LandingPage';
 import { OnboardingView } from './pages/OnboardingView';
+import { JuradoOnboardingView } from './pages/JuradoOnboardingView';
 import { MicrosoftCallback } from './pages/MicrosoftCallback';
 import { AdminView } from './pages/AdminView';
 import { AuthProvider, useAuth } from './store/AuthContext';
@@ -41,7 +42,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 
-type AuthState = 'login' | 'loginform' | 'register' | 'callback' | 'onboarding' | 'app';
+type AuthState = 'login' | 'loginform' | 'register' | 'callback' | 'onboarding' | 'onboarding-jurado' | 'app';
 type ViewId = 'home' | 'matching' | 'parches' | 'chats' | 'eventos' | 'ubicacion' | 'bienestar' | 'album' | 'notificaciones' | 'ajustes' | 'perfil' | 'admin';
 
 
@@ -1122,7 +1123,7 @@ function AppCore() {
   const isAppRoute = currentPath === '/app' || currentPath.startsWith('/app/');
 
   // Auth — name derived from JWT email claim (karol.estupinan-v@ → "Karol Estupinan")
-  const { userName, userEmail, userId, roles } = useAuth();
+  const { userName, userEmail, userId, roles, logout } = useAuth();
   const { t: tr } = useTranslation();
   const displayName = userName ?? userEmail ?? 'Usuario';
   const initials = displayName
@@ -1195,7 +1196,7 @@ function AppCore() {
     navigate(APP_VIEW_PATHS[view]);
   };
 
-  const handleLoginSuccess = async (fromRegister = false) => {
+  const handleLoginSuccess = async (fromRegister = false, jurado = false) => {
     window.localStorage.setItem(AUTH_STORAGE_KEY, 'true');
     // Leer el userId directo del token — React puede no haber re-renderizado aún
     const uid = userId ?? tokenManager.getUserIdFromToken();
@@ -1203,7 +1204,9 @@ function AppCore() {
       try {
         const necesita = await userService.necesitaOnboarding(uid);
         if (necesita) {
-          setAuthState('onboarding');
+          // Los jurados externos tienen un onboarding reducido (T&C + nombre +
+          // intereses) — sin carrera/semestre/foto, que no aplican para ellos.
+          setAuthState(jurado ? 'onboarding-jurado' : 'onboarding');
           return;
         }
         // Cuenta existente intentando registrarse de nuevo → aviso y entra al app
@@ -1293,13 +1296,26 @@ function AppCore() {
   if (authState === 'login')
     return <LandingPage onLogin={() => setLandingTarget('login')} onRegister={() => setLandingTarget('register')} darkMode={darkMode} setDarkMode={setDarkMode} />;
   if (authState === 'loginform')
-    return <LoginView onLogin={() => handleLoginSuccess(false)} onGoRegister={() => setAuthState('register')} darkMode={darkMode} setDarkMode={setDarkMode} />;
+    return <LoginView onLogin={(opts) => handleLoginSuccess(false, opts?.jurado === true)} onGoRegister={() => setAuthState('register')} darkMode={darkMode} setDarkMode={setDarkMode} />;
   if (authState === 'register')
     return <RegisterView onRegister={() => handleLoginSuccess(true)} onGoLogin={() => setAuthState('loginform')} onDecline={() => setAuthState('login')} darkMode={darkMode} setDarkMode={setDarkMode} />;
   if (authState === 'onboarding')
     return (
       <OnboardingView
         onComplete={() => { setAuthState('app'); navigate('/app/home', { replace: true }); }}
+        darkMode={darkMode}
+      />
+    );
+  if (authState === 'onboarding-jurado')
+    return (
+      <JuradoOnboardingView
+        onComplete={() => { setAuthState('app'); navigate('/app/home', { replace: true }); }}
+        onDecline={() => {
+          // Rechazó los T&C: cerrar sesión (tokens fuera) y volver al login.
+          void logout();
+          window.localStorage.removeItem(AUTH_STORAGE_KEY);
+          setAuthState('loginform');
+        }}
         darkMode={darkMode}
       />
     );

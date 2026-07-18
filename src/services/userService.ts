@@ -96,6 +96,28 @@ export const userService = {
     const { data } = await apiClient.put<PerfilResponse>(BASE + '/' + userId + '/perfil', payload);
     return { ...data, foto: data.foto ?? data.urlFotoPerfil };
   },
+  /**
+   * Catálogo de intereses — GET /api/v1/intereses/catalogo.
+   * Respuesta real: [{ categoria, etiqueta, intereses: [{ codigo, etiqueta }] }].
+   * El perfil guarda las ETIQUETAS (p.ej. "Conciertos en vivo"), no los códigos,
+   * así que aquí se normaliza a grupos de etiquetas listos para el PUT /perfil.
+   * Nota: aunque el catálogo es conceptualmente público, el gateway exige JWT
+   * en /api/** — se llama ya autenticado, así que apiClient adjunta el token.
+   */
+  async getCatalogoIntereses(): Promise<{ categoria: string; intereses: string[] }[]> {
+    const { data } = await apiClient.get<unknown>('/api/v1/intereses/catalogo');
+    if (!Array.isArray(data)) return [];
+    return data
+      .map((cat: any) => ({
+        categoria: String(cat?.etiqueta ?? cat?.categoria ?? ''),
+        intereses: Array.isArray(cat?.intereses)
+          ? cat.intereses
+              .map((i: any) => typeof i === 'string' ? i : String(i?.etiqueta ?? i?.codigo ?? ''))
+              .filter((s: string) => s.length > 0)
+          : [],
+      }))
+      .filter(cat => cat.intereses.length > 0);
+  },
   async getIntereses(userId: string): Promise<string[]> {
     const { data } = await apiClient.get<string[]>(BASE + '/' + userId + '/intereses');
     return data;
