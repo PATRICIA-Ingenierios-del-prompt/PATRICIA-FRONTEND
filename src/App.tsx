@@ -39,8 +39,10 @@ import logoNuevoOscuroImg from './assets/logoNuevoOscuro.png';
 import logoNuevoClaroImg from './assets/logoNuevoClaro.png';
 import { useLocation, useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTranslation } from 'react-i18next';
+
 type AuthState = 'login' | 'loginform' | 'register' | 'callback' | 'onboarding' | 'app';
-type ViewId = 'home' | 'matching' | 'parches' | 'chats' | 'eventos' | 'bienestar' | 'album' | 'notificaciones' | 'ajustes' | 'perfil' | 'admin';
+type ViewId = 'home' | 'matching' | 'parches' | 'chats' | 'eventos' | 'ubicacion' | 'bienestar' | 'album' | 'notificaciones' | 'ajustes' | 'perfil' | 'admin';
 
 
 const NAV_ITEMS: { id: ViewId; label: string; icon: React.ComponentType<any>; badge?: number }[] = [
@@ -837,6 +839,7 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
   setDyslexiaMode: (v: boolean) => void;
 }) {
   const t = useTheme();
+  const { t: tr, i18n } = useTranslation();
   const { userId } = useAuth();
   const [notifToggles, setNotifToggles] = useState({ matches: true, parches: true, eventos: false });
   const [legalModal, setLegalModal] = useState<LegalModalType>(null);
@@ -906,6 +909,7 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
   const handleLanguageChange = (lang: 'es' | 'en' | 'fr') => {
     setLanguage(lang);
     localStorage.setItem('ulink-language', lang);
+    i18n.changeLanguage(lang);
   };
 
   return (
@@ -931,9 +935,9 @@ function AjustesView({ onLogout, onEditProfile, visionMode, setVisionMode, dysle
       <div className="flex gap-1 mb-5 p-1 rounded-2xl border xl:hidden overflow-x-auto"
         style={{ background: t.cardBg, borderColor: t.cardBorder }}>
         {([
-          { id: 'privacidad', label: 'Privacidad' },
-          { id: 'notificaciones', label: 'Notifs' },
-          { id: 'mas', label: 'Más' },
+          { id: 'privacidad', label: tr('settings.privacidad') },
+          { id: 'notificaciones', label: tr('settings.notifs') },
+          { id: 'mas', label: tr('settings.mas') },
         ] as const).map(s => (
           <button key={s.id} onClick={() => setActiveSection(s.id)}
             className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
@@ -1119,14 +1123,23 @@ function AppCore() {
 
   // Auth — name derived from JWT email claim (karol.estupinan-v@ → "Karol Estupinan")
   const { userName, userEmail, userId, roles } = useAuth();
+  const { t: tr } = useTranslation();
   const displayName = userName ?? userEmail ?? 'Usuario';
   const initials = displayName
     .split(' ').filter(Boolean).slice(0, 2)
     .map((w: string) => w[0].toUpperCase()).join('');
   const [profileFoto, setProfileFoto] = useState<string | undefined>(undefined);
   const admin = isAdmin(roles);
-  const navItemsBase = NAV_ITEMS.map(item => item.id === 'matching' && pendingMatchCount > 0 ? { ...item, badge: pendingMatchCount } : item);
-  const navItems = admin ? [...navItemsBase, { id: 'admin' as ViewId, label: 'Admin', icon: ShieldCheck }] : navItemsBase;
+  
+  const TRANSLATED_NAV_ITEMS = NAV_ITEMS.map(item => {
+    // try to translate from nav namespace
+    const key = `nav.${item.id}`;
+    const translated = tr(key);
+    return { ...item, label: translated !== key ? translated : item.label };
+  });
+
+  const navItemsBase = TRANSLATED_NAV_ITEMS.map(item => item.id === 'matching' && pendingMatchCount > 0 ? { ...item, badge: pendingMatchCount } : item);
+  const navItems = admin ? [...navItemsBase, { id: 'admin' as ViewId, label: tr('nav.admin') !== 'nav.admin' ? tr('nav.admin') : 'Admin', icon: ShieldCheck }] : navItemsBase;
 
   const setLandingTarget = (target: 'login' | 'register') => {
     setAuthState(target === 'login' ? 'loginform' : 'register');
