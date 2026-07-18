@@ -11,6 +11,7 @@ import monoArte      from '../assets/monoArteN.png';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../store/ThemeContext';
 import { useAuth } from '../store/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { eventService } from '../services/eventService';
 import { parcheService } from '../services/parcheService';
 import { logrosService } from '../services/logrosService';
@@ -28,20 +29,20 @@ const VIBRA_CATEGORY: Record<string, EventCategory> = {
 
 interface LiveEvent { id: string; title: string; time: string; location: string; emoji: string; color: string; }
 
-function getGreeting() {
+function getGreeting(t: (k: string) => string) {
   const h = new Date().getHours();
-  if (h >= 6 && h < 12)  return { text: 'Buenos días',   emoji: '🌅' };
-  if (h >= 12 && h < 18) return { text: 'Buenas tardes', emoji: '☀️' };
-  return                         { text: 'Buenas noches', emoji: '🌙' };
+  if (h >= 6 && h < 12)  return { text: t('home.greeting_morning'),   emoji: '🌅' };
+  if (h >= 12 && h < 18) return { text: t('home.greeting_afternoon'), emoji: '☀️' };
+  return                         { text: t('home.greeting_evening'),   emoji: '🌙' };
 }
 
 const VIBRAS = [
-  { id: 'musica',      label: 'Música',      emoji: '🎵', color: '#FF6B9D', monoImg: monoMusica,    desc: 'Comparte ritmos, playlists y encuentra tu banda perfecta' },
-  { id: 'estudio',     label: 'Estudio',     emoji: '📚', color: '#6C63FF', monoImg: monoEstudio,   desc: 'Grupos de estudio, tutorías y parches académicos ECI' },
-  { id: 'aire-libre',  label: 'Aire Libre',  emoji: '🌿', color: '#7FE7C4', monoImg: monoAireLibre, desc: 'Senderismo, parques, deporte y naturaleza cerca del campus' },
-  { id: 'gastronomia', label: 'Gastronomía', emoji: '🍕', color: '#FFB347', monoImg: monoComida,    desc: 'Descubre sabores, recetas y los mejores spots de Bogotá' },
-  { id: 'videojuegos', label: 'Videojuegos', emoji: '🎮', color: '#5BC8FF', monoImg: monoJuegos,    desc: 'Gaming competitivo, torneos y esports universitarios' },
-  { id: 'arte',        label: 'Arte',        emoji: '🎨', color: '#A78BFA', monoImg: monoArte,      desc: 'Creación, diseño gráfico, fotografía y expresión libre' },
+  { id: 'musica',      label: 'Música',      emoji: '🎵', color: '#FF6B9D', monoImg: monoMusica,    descKey: 'home.vibras.musica_desc' },
+  { id: 'estudio',     label: 'Estudio',     emoji: '📚', color: '#6C63FF', monoImg: monoEstudio,   descKey: 'home.vibras.estudio_desc' },
+  { id: 'aire-libre',  label: 'Aire Libre',  emoji: '🌿', color: '#7FE7C4', monoImg: monoAireLibre, descKey: 'home.vibras.aire_libre_desc' },
+  { id: 'gastronomia', label: 'Gastronomía', emoji: '🍕', color: '#FFB347', monoImg: monoComida,    descKey: 'home.vibras.gastronomia_desc' },
+  { id: 'videojuegos', label: 'Videojuegos', emoji: '🎮', color: '#5BC8FF', monoImg: monoJuegos,    descKey: 'home.vibras.videojuegos_desc' },
+  { id: 'arte',        label: 'Arte',        emoji: '🎨', color: '#A78BFA', monoImg: monoArte,      descKey: 'home.vibras.arte_desc' },
 ];
 
 const PARCHES_GRID = [
@@ -87,6 +88,7 @@ function VibraCard({ vibra, count, onNavigate, expanded, onToggle, supportsHover
   supportsHover: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
+  const { t } = useTranslation();
   const isOpen = supportsHover ? hovered : expanded;
   return (
     <motion.div
@@ -135,21 +137,21 @@ function VibraCard({ vibra, count, onNavigate, expanded, onToggle, supportsHover
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
               transition={{ duration: 0.2 }} className="flex-1 flex flex-col justify-between">
               <p style={{ fontSize: '0.82rem', color: 'var(--p-sub)', lineHeight: 1.6, marginBottom: '12px' }}>
-                {vibra.desc}
+                {t(vibra.descKey)}
               </p>
               <div className="flex items-center justify-between">
                 {count > 0 ? (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
                     style={{ background: `${vibra.color}18` }}>
                     <span style={{ fontSize: '0.72rem', color: vibra.color, fontWeight: 600 }}>
-                      {count} evento{count === 1 ? '' : 's'} disponible{count === 1 ? '' : 's'}
+                      {t('home.events_available', { count })}
                     </span>
                   </div>
                 ) : <div />}
                 <button onClick={(e) => { e.stopPropagation(); onNavigate('eventos'); }}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105"
                   style={{ background: '#7FE7C4', color: '#0F0E1A' }}>
-                  Explorar <ArrowRight size={14} />
+                  {t('home.explore')} <ArrowRight size={14} />
                 </button>
               </div>
             </motion.div>
@@ -157,7 +159,7 @@ function VibraCard({ vibra, count, onNavigate, expanded, onToggle, supportsHover
         </AnimatePresence>
 
         {!isOpen && count > 0 && (
-          <p style={{ fontSize: '0.75rem', color: 'var(--p-muted)' }}>{count} disponible{count === 1 ? '' : 's'}</p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--p-muted)' }}>{t('home.available', { count })}</p>
         )}
       </div>
     </motion.div>
@@ -197,6 +199,7 @@ function ParcheCard({ p, onJoin }: { p: typeof PARCHES_GRID[0]; onJoin: () => vo
 
 function FeedSection({ events, loading }: { events: LiveEvent[]; loading: boolean }) {
   const t = useTheme();
+  const { t: tr } = useTranslation();
   const items = events.length > 0 ? events : [FALLBACK_LIVE_EVENT];
 
   return (
@@ -204,10 +207,10 @@ function FeedSection({ events, loading }: { events: LiveEvent[]; loading: boolea
       <div className="flex items-end justify-between mb-4">
         <div>
           <p style={{ fontSize: '0.75rem', color: '#FF6B9D', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>
-            En vivo
+            {tr('home.live')}
           </p>
           <h2 style={{ fontWeight: 800, fontSize: '1.4rem', color: t.text }}>
-            Lo que pasa ahora
+            {tr('home.happening_now')}
           </h2>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full" style={{ background: 'rgba(255,77,106,0.1)' }}>
@@ -216,7 +219,7 @@ function FeedSection({ events, loading }: { events: LiveEvent[]; loading: boolea
         </div>
       </div>
       {loading ? (
-        <p style={{ fontSize: '0.82rem', color: t.textMuted }}>Cargando…</p>
+        <p style={{ fontSize: '0.82rem', color: t.textMuted }}>{tr('home.loading')}</p>
       ) : (
         <div className="space-y-3">
           {items.map((item, i) => (
@@ -249,7 +252,8 @@ function FeedSection({ events, loading }: { events: LiveEvent[]; loading: boolea
 
 export function HomeView({ onNavigate, profileFoto }: HomeViewProps) {
   const t = useTheme();
-  const greeting = getGreeting();
+  const { t: tr } = useTranslation();
+  const greeting = getGreeting(tr);
   const { userName, userEmail, userId } = useAuth();
   const firstName = (userName ?? userEmail ?? 'Explorador').split(' ')[0];
   const initials  = (userName ?? userEmail ?? '?')
@@ -381,12 +385,12 @@ export function HomeView({ onNavigate, profileFoto }: HomeViewProps) {
               <button onClick={() => onNavigate('perfil')}
                 className="px-4 py-2 rounded-xl text-sm font-medium border transition-all hover:opacity-80"
                 style={{ borderColor: '#6C63FF', color: '#6C63FF', background: 'transparent' }}>
-                Ver perfil
+                {tr('home.see_profile')}
               </button>
               <button onClick={() => onNavigate('parches')}
                 className="px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
                 style={{ background: '#7FE7C4', color: '#0F0E1A' }}>
-                Ir a Parches →
+                {tr('home.go_parches')}
               </button>
             </div>
           </div>
@@ -401,10 +405,10 @@ export function HomeView({ onNavigate, profileFoto }: HomeViewProps) {
           <div className="flex items-end justify-between mb-5">
             <div>
               <p style={{ fontSize: '0.75rem', color: '#6C63FF', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>
-                Vibras
+                {tr('home.vibras_label')}
               </p>
               <h2 style={{ fontWeight: 800, fontSize: '1.5rem', color: t.text }}>
-                Explora Tu Vibra
+                {tr('home.vibras_title')}
               </h2>
             </div>
           </div>
