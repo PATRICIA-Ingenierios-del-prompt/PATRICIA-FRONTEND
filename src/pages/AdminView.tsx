@@ -6,6 +6,7 @@ import { useReports, type UserReport } from '../store/ReportsContext';
 import { useSupport } from '../store/SupportContext';
 import { isAdmin } from '../lib/admin';
 import { adminService } from '../services/adminService';
+import { useTranslation } from 'react-i18next';
 import type { AdminDashboardResponse, AdminParcheStatsResponse } from '../types/patricia';
 
 type AdminTab = 'resumen' | 'reportes' | 'soporte';
@@ -30,6 +31,7 @@ function formatDate(iso: string) {
 }
 
 export function AdminView() {
+  const { t: tr } = useTranslation();
   const t = useTheme();
   const { roles } = useAuth();
   const { reports, resolveReport } = useReports();
@@ -52,7 +54,7 @@ export function AdminView() {
       })
       .catch((e: any) => {
         if (!cancelled) {
-          setError(e?.response?.data?.message || e?.message || 'Error cargando el panel');
+          setError(e?.response?.data?.message || e?.message || tr('admin.load_error'));
         }
       })
       .finally(() => {
@@ -66,8 +68,8 @@ export function AdminView() {
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <ShieldAlert size={32} style={{ color: '#FF4D6A', margin: '0 auto 12px' }} />
-          <p style={{ fontWeight: 700, color: t.text }}>Acceso restringido</p>
-          <p style={{ fontSize: '0.85rem', color: t.textMuted, marginTop: 4 }}>Esta sección es solo para administradores.</p>
+          <p style={{ fontWeight: 700, color: t.text }}>{tr('admin.restricted')}</p>
+          <p style={{ fontSize: '0.85rem', color: t.textMuted, marginTop: 4 }}>{tr('admin.restricted_desc')}</p>
         </div>
       </div>
     );
@@ -89,15 +91,15 @@ export function AdminView() {
   return (
     <div className="h-full overflow-y-auto pb-10">
       <div className="mb-5">
-        <h2 style={{ fontWeight: 700, fontSize: '1.3rem', color: t.text }}>Panel de Administrador</h2>
-        <p style={{ fontSize: '0.85rem', color: t.textMuted, marginTop: 2 }}>Reportes de la comunidad y estadísticas generales de U•link</p>
+        <h2 style={{ fontWeight: 700, fontSize: '1.3rem', color: t.text }}>{tr('admin.title')}</h2>
+        <p style={{ fontSize: '0.85rem', color: t.textMuted, marginTop: 2 }}>{tr('admin.subtitle')}</p>
       </div>
 
       <div className="flex gap-1 mb-6 p-1 rounded-2xl border w-fit" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
         {([
-          { id: 'resumen' as AdminTab, label: 'Resumen' },
-          { id: 'reportes' as AdminTab, label: `Reportes${pendingCount ? ` (${pendingCount})` : ''}` },
-          { id: 'soporte' as AdminTab, label: `Soporte${pendingSupportCount ? ` (${pendingSupportCount})` : ''}` },
+          { id: 'resumen' as AdminTab, label: tr('admin.tab_summary') },
+          { id: 'reportes' as AdminTab, label: `${tr('admin.tab_reports')}${pendingCount ? ` (${pendingCount})` : ''}` },
+          { id: 'soporte' as AdminTab, label: `${tr('admin.tab_support')}${pendingSupportCount ? ` (${pendingSupportCount})` : ''}` },
         ]).map(s => (
           <button key={s.id} onClick={() => setTab(s.id)}
             className="px-4 py-1.5 rounded-xl text-sm font-medium transition-all"
@@ -116,14 +118,14 @@ export function AdminView() {
       {tab === 'resumen' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatTile label="Usuarios registrados" value={(dashboard?.totalUsuarios ?? 0).toLocaleString('es-CO')} loading={loading} />
-            <StatTile label="Parches activos" value={(parcheStats?.totalParches ?? 0).toLocaleString('es-CO')} loading={loading} />
-            <StatTile label="Reportes pendientes" value={pendingCount} loading={false} />
+            <StatTile label={tr('admin.stat_users')} value={(dashboard?.totalUsuarios ?? 0).toLocaleString()} loading={loading} />
+            <StatTile label={tr('admin.stat_parches')} value={(parcheStats?.totalParches ?? 0).toLocaleString()} loading={loading} />
+            <StatTile label={tr('admin.stat_reports')} value={pendingCount} loading={false} />
           </div>
 
           <div className="rounded-2xl p-5 border" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
-            <p style={{ fontWeight: 700, fontSize: '0.95rem', color: t.text, marginBottom: 4 }}>Usuarios por carrera</p>
-            <p style={{ fontSize: '0.78rem', color: t.textMuted, marginBottom: 18 }}>Distribución de los {(dashboard?.totalUsuarios ?? 0).toLocaleString('es-CO')} usuarios registrados</p>
+            <p style={{ fontWeight: 700, fontSize: '0.95rem', color: t.text, marginBottom: 4 }}>{tr('admin.users_by_career')}</p>
+            <p style={{ fontSize: '0.78rem', color: t.textMuted, marginBottom: 18 }}>{tr('admin.users_distribution', { count: (dashboard?.totalUsuarios ?? 0).toLocaleString() })}</p>
             <div className="space-y-3">
               {carreraBreakdown.map(c => (
                 <div key={c.carrera} title={`${c.carrera}: ${c.count} usuarios`}>
@@ -140,13 +142,13 @@ export function AdminView() {
                 </div>
               ))}
               {carreraBreakdown.length === 0 && !loading && (
-                <p style={{ fontSize: '0.85rem', color: t.textMuted }}>No hay datos de carrera disponibles.</p>
+                <p style={{ fontSize: '0.85rem', color: t.textMuted }}>{tr('admin.no_career_data')}</p>
               )}
             </div>
           </div>
 
           <div className="rounded-2xl p-5 border" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
-            <p style={{ fontWeight: 700, fontSize: '0.95rem', color: t.text, marginBottom: 12 }}>Altas recientes</p>
+            <p style={{ fontWeight: 700, fontSize: '0.95rem', color: t.text, marginBottom: 12 }}>{tr('admin.recent_signups')}</p>
             <div className="space-y-2">
               {(dashboard?.recentSignups ?? []).map(s => (
                 <div key={s.id} className="flex items-center justify-between py-2 border-b last:border-0" style={{ borderColor: 'var(--p-divider)' }}>
@@ -158,7 +160,7 @@ export function AdminView() {
                 </div>
               ))}
               {(dashboard?.recentSignups ?? []).length === 0 && !loading && (
-                <p style={{ fontSize: '0.85rem', color: t.textMuted }}>No hay altas recientes.</p>
+                <p style={{ fontSize: '0.85rem', color: t.textMuted }}>{tr('admin.no_recent_signups')}</p>
               )}
             </div>
           </div>
@@ -168,7 +170,7 @@ export function AdminView() {
       {tab === 'reportes' && (
         <div className="space-y-3">
           {sortedReports.length === 0 && (
-            <p style={{ fontSize: '0.85rem', color: t.textMuted }}>No hay reportes registrados.</p>
+            <p style={{ fontSize: '0.85rem', color: t.textMuted }}>{tr('admin.no_reports')}</p>
           )}
           {sortedReports.map(r => (
             <div key={r.id} className="rounded-2xl p-5 border" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
@@ -179,7 +181,7 @@ export function AdminView() {
                 </div>
                 <span className="px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0"
                   style={{ background: `${STATUS_COLOR[r.status]}22`, color: STATUS_COLOR[r.status] }}>
-                  {r.status === 'pendiente' ? 'Pendiente' : 'Resuelto'}
+                  {r.status === 'pendiente' ? tr('admin.pending') : tr('admin.resolved')}
                 </span>
               </div>
               <span className="inline-block px-2.5 py-1 rounded-full text-xs font-medium mb-2"
@@ -191,7 +193,7 @@ export function AdminView() {
                 <button onClick={() => resolveReport(r.id)}
                   className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-90"
                   style={{ background: 'rgba(127,231,196,0.15)', color: '#0D9D74' }}>
-                  <CheckCircle2 size={13} /> Marcar como resuelto
+                  <CheckCircle2 size={13} /> {tr('admin.mark_resolved')}
                 </button>
               )}
             </div>
@@ -202,18 +204,18 @@ export function AdminView() {
       {tab === 'soporte' && (
         <div className="space-y-3">
           {sortedMessages.length === 0 && (
-            <p style={{ fontSize: '0.85rem', color: t.textMuted }}>No hay mensajes de soporte.</p>
+            <p style={{ fontSize: '0.85rem', color: t.textMuted }}>{tr('admin.no_support_msgs')}</p>
           )}
           {sortedMessages.map(m => (
             <div key={m.id} className="rounded-2xl p-5 border" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div>
                   <p style={{ fontWeight: 700, fontSize: '0.92rem', color: t.text }}>{m.name}</p>
-                  <p style={{ fontSize: '0.75rem', color: t.textMuted }}>{m.email || 'Sin correo'} · {formatDate(m.date)}</p>
+                  <p style={{ fontSize: '0.75rem', color: t.textMuted }}>{m.email || tr('admin.no_email')} · {formatDate(m.date)}</p>
                 </div>
                 <span className="px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0"
                   style={{ background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status] }}>
-                  {m.status === 'pendiente' ? 'Pendiente' : 'Resuelto'}
+                  {m.status === 'pendiente' ? tr('admin.pending') : tr('admin.resolved')}
                 </span>
               </div>
               <p style={{ fontSize: '0.85rem', color: t.textSub, lineHeight: 1.5 }}>{m.message}</p>
@@ -221,7 +223,7 @@ export function AdminView() {
                 <button onClick={() => resolveMessage(m.id)}
                   className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-90"
                   style={{ background: 'rgba(127,231,196,0.15)', color: '#0D9D74' }}>
-                  <CheckCircle2 size={13} /> Marcar como resuelto
+                  <CheckCircle2 size={13} /> {tr('admin.mark_resolved')}
                 </button>
               )}
             </div>
