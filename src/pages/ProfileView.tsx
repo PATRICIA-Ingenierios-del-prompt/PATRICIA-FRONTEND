@@ -10,9 +10,10 @@ import { matchingService } from '../services/matchingService';
 import { parcheService } from '../services/parcheService';
 import { addToast } from '../components/ToastSystem';
 import { friendlyError } from '../lib/errorMessages';
+import { useTranslation } from 'react-i18next';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const DAYS  = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+const getDays = (tr: any) => [tr('profile.days.mon'), tr('profile.days.tue'), tr('profile.days.wed'), tr('profile.days.thu'), tr('profile.days.fri'), tr('profile.days.sat')];
 const SLOTS = [
   { start: '7:00 AM',  end: '8:30 AM',  horaInicio: '07:00', horaFin: '08:30' },
   { start: '9:00 AM',  end: '10:30 AM', horaInicio: '09:00', horaFin: '10:30' },
@@ -59,6 +60,7 @@ interface EditModalProps {
 }
 
 function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
+  const { t: tr } = useTranslation();
   const t = useTheme();
   const { setUserName } = useAuth();
   const [tab, setTab] = useState<'datos' | 'intereses'>('datos');
@@ -79,7 +81,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
   const set = (k: keyof typeof form, v: string) => { setForm(f => ({ ...f, [k]: v })); setError(null); };
 
   const handleSave = async () => {
-    if (!form.nombre.trim()) { setError('El nombre no puede estar vacío.'); return; }
+    if (!form.nombre.trim()) { setError(tr('profile.name_empty')); return; }
     setSaving(true);
     setError(null);
     try {
@@ -93,10 +95,10 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
       const fullName = [form.nombre.trim(), form.apellidos.trim()].filter(Boolean).join(' ');
       setUserName(fullName);
       onSaved({ ...perfil, ...updated, nombre: form.nombre.trim(), apellidos: form.apellidos.trim(), intereses });
-      addToast({ type: 'info', title: 'Perfil actualizado', message: 'Tus cambios fueron guardados.' });
+      addToast({ type: 'info', title: tr('profile.saved_title'), message: tr('profile.saved_msg') });
       onClose();
     } catch (e: any) {
-      setError(friendlyError(e, 'No se pudieron guardar los cambios.'));
+      setError(friendlyError(e, tr('profile.save_error_title')));
     } finally {
       setSaving(false);
     }
@@ -124,7 +126,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
 
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b flex-shrink-0" style={{ borderColor: t.divider }}>
-          <h3 style={{ fontWeight: 700, fontSize: '1.1rem', color: t.text }}>Editar Perfil</h3>
+          <h3 style={{ fontWeight: 700, fontSize: '1.1rem', color: t.text }}>{tr('profile.title')}</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:opacity-70"
             style={{ background: 'rgba(108,99,255,0.1)' }}>
             <X size={15} style={{ color: t.textMuted }} />
@@ -137,7 +139,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
             <button key={k} onClick={() => setTab(k)}
               className="flex-1 py-2 rounded-lg text-sm font-medium transition-all"
               style={{ background: tab === k ? '#6C63FF' : 'transparent', color: tab === k ? 'white' : t.textMuted }}>
-              {k === 'datos' ? 'Datos' : 'Intereses'}
+              {k === 'datos' ? tr('profile.tab_data') : tr('profile.tab_interests')}
             </button>
           ))}
         </div>
@@ -147,30 +149,30 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label style={labelStyle}>Nombre</label>
-                  <input value={form.nombre} onChange={e => set('nombre', e.target.value)} style={inputStyle} placeholder="Tu nombre" />
+                  <label style={labelStyle}>{tr('profile.name_label')}</label>
+                  <input value={form.nombre} onChange={e => set('nombre', e.target.value)} style={inputStyle} placeholder={tr('profile.name_placeholder')} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Apellidos</label>
-                  <input value={form.apellidos} onChange={e => set('apellidos', e.target.value)} style={inputStyle} placeholder="Tus apellidos" />
+                  <label style={labelStyle}>{tr('profile.lastname_label')}</label>
+                  <input value={form.apellidos} onChange={e => set('apellidos', e.target.value)} style={inputStyle} placeholder={tr('profile.lastname_placeholder')} />
                 </div>
               </div>
               <div>
-                <label style={labelStyle}>Biografía</label>
+                <label style={labelStyle}>{tr('profile.bio_label')}</label>
                 <textarea value={form.bio} onChange={e => set('bio', e.target.value)}
-                  rows={3} placeholder="Cuéntanos sobre ti…"
+                  rows={3} placeholder={tr('profile.bio_placeholder')}
                   style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
               </div>
               <div>
-                <label style={labelStyle}>Carrera</label>
+                <label style={labelStyle}>{tr('profile.career_label')}</label>
                 <select value={form.carrera} onChange={e => set('carrera', e.target.value)}
                   style={{ ...inputStyle, appearance: 'none', cursor: 'pointer' }}>
-                  <option value="">Selecciona…</option>
+                  <option value="">{tr('profile.select_placeholder')}</option>
                   {CARRERAS.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Semestre</label>
+                <label style={labelStyle}>{tr('profile.semester_label')}</label>
                 <div className="grid grid-cols-5 gap-2">
                   {SEMESTRES.map(s => (
                     <button key={s} onClick={() => set('semestre', s)}
@@ -189,7 +191,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
               <button onClick={handleSave} disabled={saving}
                 className="w-full py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
                 style={{ background: 'linear-gradient(135deg,#6C63FF,#5250d0)', color: 'white' }}>
-                {saving ? <><Loader2 size={16} className="animate-spin" /> Guardando…</> : 'Guardar cambios'}
+                {saving ? <><Loader2 size={16} className="animate-spin" /> {tr('profile.saving')}</> : tr('profile.save_changes')}
               </button>
             </>
           )}
@@ -199,7 +201,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
               <button onClick={handleSave} disabled={saving || intereses.length < 1}
                 className="w-full py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
                 style={{ background: '#7FE7C4', color: '#0F0E1A' }}>
-                {saving ? <><Loader2 size={16} className="animate-spin" /> Guardando…</> : 'Guardar intereses'}
+                {saving ? <><Loader2 size={16} className="animate-spin" /> {tr('profile.saving')}</> : tr('profile.save_interests')}
               </button>
             </>
           )}
@@ -211,6 +213,7 @@ function EditModal({ perfil, onClose, onSaved, userId }: EditModalProps) {
 
 // ── Main ProfileView ──────────────────────────────────────────────────────────
 export function ProfileView() {
+  const { t: tr } = useTranslation();
   const t = useTheme();
   const { userId, userEmail } = useAuth();
   const [perfil, setPerfil] = useState<PerfilResponse | null>(null);
@@ -291,9 +294,9 @@ export function ProfileView() {
       });
       await userService.guardarDisponibilidad(userId, franjas);
       setScheduleChanged(false);
-      addToast({ type: 'info', title: 'Disponibilidad guardada', message: `${franjas.length} franja${franjas.length !== 1 ? 's' : ''} guardada${franjas.length !== 1 ? 's' : ''}.` });
+      addToast({ type: 'info', title: tr('profile.schedule_saved_title'), message: franjas.length === 1 ? tr('profile.schedule_saved_msg', { count: 1 }) : tr('profile.schedule_saved_msg_plural', { count: franjas.length }) });
     } catch (err) {
-      addToast({ type: 'reporte', title: 'Error al guardar', message: friendlyError(err, 'No se pudo guardar la disponibilidad.') });
+      addToast({ type: 'reporte', title: tr('profile.schedule_save_error_title'), message: friendlyError(err, tr('profile.schedule_save_error_msg')) });
     } finally {
       setSavingSchedule(false);
     }
@@ -304,11 +307,11 @@ export function ProfileView() {
     e.target.value = '';
     if (!file || !userId) return;
     if (!file.type.startsWith('image/')) {
-      addToast({ type: 'reporte', title: 'Archivo inválido', message: 'El archivo debe ser una imagen (JPG, PNG, etc.)' });
+      addToast({ type: 'reporte', title: tr('profile.invalid_file_title'), message: tr('profile.invalid_file_msg') });
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      addToast({ type: 'reporte', title: 'Imagen muy grande', message: 'El máximo es 10 MB.' });
+      addToast({ type: 'reporte', title: tr('profile.file_too_large_title'), message: tr('profile.file_too_large_msg') });
       return;
     }
     const reader = new FileReader();
@@ -323,16 +326,16 @@ export function ProfileView() {
         if (updated.tienePersonaEnFoto === false) {
           addToast({
             type: 'reporte',
-            title: 'Foto no válida',
-            message: 'La foto no parece contener una persona visible. Por favor sube una foto donde aparezcas claramente.',
+            title: tr('profile.invalid_photo_title'),
+            message: tr('profile.invalid_photo_msg'),
           });
           return; // No actualizar la foto en el estado
         }
 
         setPerfil(prev => ({ ...prev, ...updated, foto: updated.foto ?? dataUrl }));
-        addToast({ type: 'info', title: 'Foto actualizada', message: 'Tu foto de perfil fue guardada.' });
+        addToast({ type: 'info', title: tr('profile.photo_updated_title'), message: tr('profile.photo_updated_msg') });
       } catch (err) {
-        addToast({ type: 'reporte', title: 'No se pudo subir la foto', message: friendlyError(err, 'Intenta de nuevo.') });
+        addToast({ type: 'reporte', title: tr('profile.photo_upload_error_title'), message: friendlyError(err, tr('profile.photo_upload_error_title')) });
       } finally {
         setUploadingPhoto(false);
       }
@@ -353,7 +356,7 @@ export function ProfileView() {
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 rounded-full border-4 animate-spin"
             style={{ borderColor: 'rgba(108,99,255,0.2)', borderTopColor: '#6C63FF' }} />
-          <p style={{ fontSize: '0.85rem', color: t.textMuted }}>Cargando perfil…</p>
+          <p style={{ fontSize: '0.85rem', color: t.textMuted }}>{tr('profile.loading_profile')}</p>
         </div>
       </div>
     );
@@ -402,14 +405,14 @@ export function ProfileView() {
                   style={{ background: 'rgba(0,0,0,0.55)' }}>
                   <Loader2 size={22} color="white" className="animate-spin" />
                   <span style={{ fontSize: '0.55rem', color: 'white', fontWeight: 700, textAlign: 'center', lineHeight: 1.2, maxWidth: '60px' }}>
-                    Verificando…
+                    {tr('profile.verifying_photo')}
                   </span>
                 </div>
               )}
               <input type="file" accept="image/*" id="profile-photo-input" className="hidden" onChange={handlePhotoChange} disabled={uploadingPhoto} />
               <label
                 htmlFor={uploadingPhoto ? undefined : 'profile-photo-input'}
-                title={uploadingPhoto ? 'Verificando foto…' : 'Cambiar foto de perfil'}
+                title={uploadingPhoto ? tr('profile.verifying_photo') : tr('profile.change_photo')}
                 className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center"
                 style={{
                   background: '#6C63FF',
@@ -428,7 +431,7 @@ export function ProfileView() {
             <button onClick={() => setShowEdit(true)}
               className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-semibold transition-all hover:opacity-90 mb-1"
               style={{ background: 'rgba(108,99,255,0.12)', color: '#6C63FF', border: '1px solid rgba(108,99,255,0.25)' }}>
-              <Edit2 size={14} /> Editar perfil
+              <Edit2 size={14} /> {tr('profile.edit_profile')}
             </button>
           </div>
 
@@ -448,16 +451,16 @@ export function ProfileView() {
           ) : (
             <button onClick={() => setShowEdit(true)}
               style={{ fontSize: '0.88rem', color: t.textMuted, marginBottom: '24px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-              + Añadir una biografía
+              {tr('profile.add_bio')}
             </button>
           )}
 
           {/* Stats */}
           <div className="flex gap-7">
             {[
-              { label: 'Conexiones', value: conexionesCount != null ? String(conexionesCount) : '—', color: '#6C63FF' },
-              { label: 'Parches',    value: parchesCount    != null ? String(parchesCount)    : '—', color: '#7FE7C4' },
-              { label: 'Disponible', value: schedule.size > 0 ? `${(schedule.size * 1.5).toFixed(schedule.size % 2 === 0 ? 0 : 1)}h` : '—', color: '#FFB347' },
+              { label: tr('profile.connections'), value: conexionesCount != null ? String(conexionesCount) : '—', color: '#6C63FF' },
+              { label: tr('profile.patches'),    value: parchesCount    != null ? String(parchesCount)    : '—', color: '#7FE7C4' },
+              { label: tr('profile.available'), value: schedule.size > 0 ? `${(schedule.size * 1.5).toFixed(schedule.size % 2 === 0 ? 0 : 1)}h` : '—', color: '#FFB347' },
             ].map(s => (
               <div key={s.label}>
                 <p style={{ fontWeight: 900, fontSize: '1.3rem', color: s.color, lineHeight: 1 }}>{s.value}</p>
@@ -476,11 +479,11 @@ export function ProfileView() {
 
           {/* Sobre mí */}
           <div className="rounded-2xl border p-6" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
-            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text, marginBottom: '16px' }}>Sobre mí</h3>
+            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text, marginBottom: '16px' }}>{tr('profile.about_me')}</h3>
             <div className="space-y-3">
               {carrera   && <div className="flex items-center gap-3"><GraduationCap size={15} style={{ color: t.textMuted }} /><span style={{ fontSize: '0.87rem', color: t.textSub }}>{carrera}</span></div>}
               {semestre  && <div className="flex items-center gap-3"><BookOpen size={15} style={{ color: t.textMuted }} /><span style={{ fontSize: '0.87rem', color: t.textSub }}>{semestre}</span></div>}
-              <div className="flex items-center gap-3"><MapPin size={15} style={{ color: t.textMuted }} /><span style={{ fontSize: '0.87rem', color: t.textSub }}>Escuela Colombiana de Ingeniería</span></div>
+              <div className="flex items-center gap-3"><MapPin size={15} style={{ color: t.textMuted }} /><span style={{ fontSize: '0.87rem', color: t.textSub }}>{tr('profile.university')}</span></div>
               {userEmail && <div className="flex items-center gap-3"><Mail size={15} style={{ color: t.textMuted }} /><span style={{ fontSize: '0.87rem', color: t.textSub }}>{userEmail}</span></div>}
               {perfil?.genero && perfil.genero !== 'nd' && (
                 <div className="flex items-center gap-3"><User size={15} style={{ color: t.textMuted }} /><span style={{ fontSize: '0.87rem', color: t.textSub, textTransform: 'capitalize' }}>{perfil.genero}</span></div>
@@ -491,11 +494,11 @@ export function ProfileView() {
           {/* Intereses */}
           <div className="rounded-2xl border p-6" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
             <div className="flex items-center justify-between mb-4">
-              <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text }}>Intereses</h3>
+              <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text }}>{tr('profile.tab_interests')}</h3>
               <button onClick={() => setShowEdit(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium hover:opacity-80 transition-all"
                 style={{ background: t.inputBg, color: '#6C63FF', border: '1px solid rgba(108,99,255,0.2)' }}>
-                <Edit2 size={12} /> Editar
+                <Edit2 size={12} /> {tr('profile.edit')}
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -522,7 +525,7 @@ export function ProfileView() {
                 <button onClick={() => setShowEdit(true)}
                   className="px-4 py-2 rounded-xl text-sm border-dashed border-2 hover:opacity-70"
                   style={{ color: t.textMuted, borderColor: 'rgba(108,99,255,0.3)' }}>
-                  + Añadir intereses
+                  {tr('profile.add_interests')}
                 </button>
               )}
             </div>
@@ -534,8 +537,8 @@ export function ProfileView() {
           <div className="rounded-2xl border overflow-hidden" style={{ background: t.cardBg, borderColor: t.cardBorder }}>
             <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: t.divider }}>
               <div>
-                <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text }}>Disponibilidad semanal</h3>
-                <p style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '2px' }}>Toca una franja para marcarla como disponible</p>
+                <h3 style={{ fontWeight: 700, fontSize: '1rem', color: t.text }}>{tr('profile.weekly_availability')}</h3>
+                <p style={{ fontSize: '0.72rem', color: t.textMuted, marginTop: '2px' }}>{tr('profile.availability_help')}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-3 py-1 rounded-full text-xs font-semibold"
@@ -549,8 +552,8 @@ export function ProfileView() {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-90 disabled:opacity-50"
                     style={{ background: 'linear-gradient(135deg,#6C63FF,#5250d0)', color: 'white' }}>
                     {savingSchedule
-                      ? <><Loader2 size={12} className="animate-spin" /> Guardando…</>
-                      : <><Save size={12} /> Guardar</>
+                      ? <><Loader2 size={12} className="animate-spin" /> {tr('profile.saving')}</>
+                      : <><Save size={12} /> {tr('profile.save_changes').split(' ')[0]}</>
                     }
                   </button>
                 )}
@@ -559,7 +562,7 @@ export function ProfileView() {
             <div className="p-4">
               <div className="grid mb-1" style={{ gridTemplateColumns: '64px repeat(6, 1fr)', gap: '4px' }}>
                 <div />
-                {DAYS.map(d => (
+                {getDays(tr).map(d => (
                   <div key={d} className="text-center py-2">
                     <span style={{ fontSize: '0.72rem', fontWeight: 700, color: t.textMuted, letterSpacing: '0.06em' }}>{d}</span>
                   </div>
@@ -572,7 +575,7 @@ export function ProfileView() {
                       <p style={{ fontSize: '0.6rem', color: t.textMuted, lineHeight: 1.3 }}>{slot.start}</p>
                       <p style={{ fontSize: '0.6rem', color: t.textMuted, lineHeight: 1.3, opacity: 0.6 }}>{slot.end}</p>
                     </div>
-                    {DAYS.map((_, di) => {
+                    {getDays(tr).map((_, di) => {
                       const key = `${di}-${si}`;
                       const active = schedule.has(key);
                       return (
@@ -590,11 +593,11 @@ export function ProfileView() {
               <div className="flex items-center gap-4 mt-4 pt-4 border-t" style={{ borderColor: t.divider }}>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded" style={{ background: 'linear-gradient(135deg,#6C63FF,#A78BFA)' }} />
-                  <span style={{ fontSize: '0.72rem', color: t.textMuted }}>Disponible</span>
+                  <span style={{ fontSize: '0.72rem', color: t.textMuted }}>{tr('profile.available')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded border" style={{ background: t.darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)', borderColor: t.divider }} />
-                  <span style={{ fontSize: '0.72rem', color: t.textMuted }}>No disponible</span>
+                  <span style={{ fontSize: '0.72rem', color: t.textMuted }}>{tr('profile.unavailable')}</span>
                 </div>
               </div>
             </div>

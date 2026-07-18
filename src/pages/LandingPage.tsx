@@ -20,6 +20,7 @@ import monoEstudioFImg   from '../assets/monoEstudiosoN.png';
 import monoCoderNewImg   from '../assets/monoCoderNew.png';
 import { motion, AnimatePresence } from 'motion/react';
 import { LegalModals, type LegalModalType } from '../components/LegalContent';
+import { useTranslation } from 'react-i18next';
 
 interface LandingPageProps {
   onLogin: () => void;
@@ -28,31 +29,32 @@ interface LandingPageProps {
   setDarkMode: (v: boolean) => void;
 }
 
-const FEATURES = [
-  { img: monoSocialFImg,    icon: Users,    color: '#6C63FF', title: 'Parches Virtuales',    desc: 'Grupos por intereses con chat, voz, lienzo colaborativo y juegos como Parqués integrados.' },
-  { img: monoCulturaFImg,   icon: Heart,    color: '#FF6B9D', title: 'Matching Inteligente', desc: 'Encuentra estudiantes con tu misma vibra académica. Algoritmo basado en intereses y carrera.' },
-  { img: monoMusicaFImg,    icon: Calendar, color: '#7FE7C4', title: 'Eventos del Campus',   desc: 'Hackathones, charlas empresariales, torneos y actividades con geolocalización en tiempo real.' },
-  { img: monoTranquiloFImg, icon: Smile,    color: '#FFB347', title: 'Bienestar 24/7',       desc: 'Chatbot de apoyo, diario emocional con IA, respiración guiada y sonidos de relajación.' },
-  { img: monoCoderFImg,     icon: Zap,      color: '#A78BFA', title: 'Álbum de Monas',       desc: '12 personajes coleccionables con 4 rarezas. Gana XP participando y sube en el ranking.' },
-  { img: monoEstudioFImg,   icon: Shield,   color: '#00D9FF', title: 'Solo para la ECI',     desc: 'Verificación con correo institucional. Tu comunidad privada y segura.' },
+const getFeatures = (tr: any) => [
+  { img: monoSocialFImg,    icon: Users,    color: '#6C63FF', title: tr('landing.f_patches_title'),    desc: tr('landing.f_patches_desc') },
+  { img: monoCulturaFImg,   icon: Heart,    color: '#FF6B9D', title: tr('landing.f_matching_title'), desc: tr('landing.f_matching_desc') },
+  { img: monoMusicaFImg,    icon: Calendar, color: '#7FE7C4', title: tr('landing.f_events_title'),   desc: tr('landing.f_events_desc') },
+  { img: monoTranquiloFImg, icon: Smile,    color: '#FFB347', title: tr('landing.f_wellness_title'),       desc: tr('landing.f_wellness_desc') },
+  { img: monoCoderFImg,     icon: Zap,      color: '#A78BFA', title: tr('landing.f_album_title'),       desc: tr('landing.f_album_desc') },
+  { img: monoEstudioFImg,   icon: Shield,   color: '#00D9FF', title: tr('landing.f_exclusive_title'),     desc: tr('landing.f_exclusive_desc') },
 ];
 
-const STEPS = [
-  { color: '#6C63FF', icon: '✉️', title: 'Regístrate con tu correo ECI', desc: 'Solo @mail.escuelaing.edu.co. Verificación automática e instantánea.' },
-  { color: '#7FE7C4', icon: '🏷️', title: 'Elige tus intereses',          desc: 'Selecciona de 11 categorías y más de 70 intereses para personalizar todo.' },
-  { color: '#FFB347', icon: '🎪', title: 'Únete a parches y eventos',    desc: 'Conecta con compañeros afines, asiste a eventos y sube tu XP en la comunidad.' },
+const getSteps = (tr: any) => [
+  { color: '#6C63FF', icon: '✉️', title: tr('landing.s1_title'), desc: tr('landing.s1_desc') },
+  { color: '#7FE7C4', icon: '🏷️', title: tr('landing.s2_title'), desc: tr('landing.s2_desc') },
+  { color: '#FFB347', icon: '🎪', title: tr('landing.s3_title'), desc: tr('landing.s3_desc') },
 ];
 
-const GALLERY = [
-  { img: lp1,         label: 'Comunidad',  desc: 'Parches y grupos de interés',   color: '#6C63FF', info: 'Encuentra tu gente: parches de estudio, deporte, arte y más, siempre activos en el campus.' },
-  { img: lp3,         label: 'Innovación', desc: 'Hackathones y proyectos',        color: '#FFB347', info: 'Hackathones, retos de innovación y proyectos colaborativos entre distintas carreras de la ECI.' },
-  { img: concurso1Img,label: 'Concursos',  desc: 'Talento y competencias ECI',    color: '#FF6B9D', info: 'Concursos y competencias donde la comunidad ECI muestra su talento académico y creativo.' },
-  { img: lp2,         label: 'Campus',     desc: 'Tu ECI en digital',              color: '#7FE7C4', info: 'Toda la vida del campus, ahora también en digital: eventos, espacios y actividades al alcance de un clic.' },
-  { img: lp4,         label: 'Identidad',  desc: 'Orgullosamente ECI',             color: '#A78BFA', info: 'Una comunidad orgullosa de su identidad, construida por y para estudiantes de la Escuela.' },
-  { img: concurso2Img,label: 'Vida ECI',   desc: 'Eventos y vida universitaria',   color: '#5BC8FF', info: 'Eventos, celebraciones y momentos que hacen parte del día a día de la vida universitaria en la ECI.' },
+const getGallery = (tr: any) => [
+  { img: lp1,         label: tr('landing.g1_lbl'),  desc: tr('landing.g1_desc'),   color: '#6C63FF', info: tr('landing.g1_info') },
+  { img: lp3,         label: tr('landing.g2_lbl'), desc: tr('landing.g2_desc'),        color: '#FFB347', info: tr('landing.g2_info') },
+  { img: concurso1Img,label: tr('landing.g3_lbl'),  desc: tr('landing.g3_desc'),    color: '#FF6B9D', info: tr('landing.g3_info') },
+  { img: lp2,         label: tr('landing.g4_lbl'),     desc: tr('landing.g4_desc'),              color: '#7FE7C4', info: tr('landing.g4_info') },
+  { img: lp4,         label: tr('landing.g5_lbl'),  desc: tr('landing.g5_desc'),             color: '#A78BFA', info: tr('landing.g5_info') },
+  { img: concurso2Img,label: tr('landing.g6_lbl'),   desc: tr('landing.g6_desc'),   color: '#5BC8FF', info: tr('landing.g6_info') },
 ];
 
 export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: LandingPageProps) {
+  const { t: tr } = useTranslation();
   const [featureIdx, setFeatureIdx] = useState(0);
   const [galleryOrder, setGalleryOrder] = useState([0, 1, 2, 3, 4, 5]);
   const [mobileExpandedIdx, setMobileExpandedIdx] = useState<number | null>(null);
@@ -67,6 +69,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
   };
 
   useEffect(() => {
+    const FEATURES = getFeatures(tr);
     const t = setInterval(() => setFeatureIdx(i => (i + 1) % FEATURES.length), 7000);
     return () => clearInterval(t);
   }, []);
@@ -90,7 +93,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
           <ImageWithFallback src={dark ? logoNuevoOscuroImg : logoNuevoClaroImg} alt="U•link" className="object-contain" style={{ height: 44 }} />
         </div>
         <div className="hidden md:flex items-center gap-7">
-          {[{ label: 'Funcionalidades', id: 'funcionalidades' }, { label: '¿Cómo funciona?', id: 'como-funciona' }].map(({ label, id }) => (
+          {[{ label: tr('landing.nav_features'), id: 'funcionalidades' }, { label: tr('landing.nav_how_it_works'), id: 'como-funciona' }].map(({ label, id }) => (
             <button key={id} onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })}
               className="text-sm font-medium transition-colors hover:opacity-70" style={{ color: textS, background: 'none', border: 'none' }}>
               {label}
@@ -107,20 +110,20 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
           <button onClick={onLogin}
             className="hidden sm:flex px-4 py-2 rounded-xl text-sm font-medium border transition-all hover:opacity-80"
             style={{ borderColor: '#6C63FF', color: '#6C63FF', background: 'transparent' }}>
-            Iniciar sesión
+            {tr('landing.nav_login')}
           </button>
           {/* Compact login icon for mobile */}
           <button onClick={onLogin}
             className="sm:hidden w-9 h-9 rounded-xl flex items-center justify-center border transition-all hover:opacity-80"
-            title="Iniciar sesión"
+            title={tr('landing.nav_login')}
             style={{ borderColor: '#6C63FF', color: '#6C63FF', background: 'transparent', fontSize: '1rem' }}>
             →
           </button>
           <motion.button onClick={onRegister} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
             className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap"
             style={{ background: 'linear-gradient(135deg,#6C63FF,#8B7FFF)', color: 'white', boxShadow: '0 4px 14px rgba(108,99,255,0.35)' }}>
-            <span className="hidden sm:inline">Registrarse</span>
-            <span className="sm:hidden">Registro</span>
+            <span className="hidden sm:inline">{tr('landing.nav_register')}</span>
+            <span className="sm:hidden">{tr('landing.nav_register_short')}</span>
             <ArrowRight size={14} />
           </motion.button>
         </div>
@@ -158,7 +161,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
               style={{ background:'rgba(108,99,255,0.14)', border:'1px solid rgba(108,99,255,0.32)' }}>
               <div className="w-2 h-2 rounded-full animate-pulse" style={{ background:'#7FE7C4' }} />
               <span style={{ fontSize:'0.72rem', color:'#7FE7C4', fontWeight:700, letterSpacing:'0.06em' }}>
-                EXCLUSIVO · Escuela Colombiana de Ingeniería
+                {tr('landing.hero_badge')}
               </span>
             </div>
 
@@ -168,14 +171,14 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
               </span>
             </div>
             <h1 style={{ fontWeight:900, fontSize:'clamp(1.9rem,3.5vw,3rem)', lineHeight:1.1, color:'white', marginBottom:'22px', textShadow:'0 2px 16px rgba(0,0,0,0.35)' }}>
-              Conecta, aprende y<br />
+              {tr('landing.hero_title')}<br />
               <span style={{ background:'linear-gradient(135deg,#A89BFF,#7FE7C4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
-                crece juntos
+                {tr('landing.hero_title_highlight')}
               </span>
             </h1>
 
             <p style={{ fontSize:'1.05rem', color:'rgba(255,255,255,0.82)', lineHeight:1.78, marginBottom:'36px', maxWidth:460, textShadow:'0 1px 8px rgba(0,0,0,0.4)' }}>
-              La plataforma social construida 100% para estudiantes de la ECI. Parches, matching inteligente, eventos y bienestar, todo en un lugar.
+              {tr('landing.hero_desc')}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 mb-8">
@@ -183,18 +186,18 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                 whileHover={{ scale:1.04, boxShadow:'0 14px 40px rgba(108,99,255,0.65)' }} whileTap={{ scale:0.97 }}
                 className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-base"
                 style={{ background:'linear-gradient(135deg,#6C63FF,#8B7FFF)', color:'white', boxShadow:'0 4px 24px rgba(108,99,255,0.48)' }}>
-                Crear cuenta gratis <ArrowRight size={18} />
+                {tr('landing.cta_create_account')} <ArrowRight size={18} />
               </motion.button>
               <button onClick={onLogin}
                 className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-semibold text-base transition-all"
                 style={{ border:'2px solid rgba(255,255,255,0.55)', color:'white', background:'rgba(255,255,255,0.12)', backdropFilter:'blur(8px)' }}>
-                Ya tengo cuenta
+                {tr('landing.cta_have_account')}
               </button>
             </div>
 
             {/* Feature pills */}
             <div className="flex flex-wrap gap-2">
-              {['Matching IA','Parches virtuales','Eventos campus','Bienestar 24/7','Álbum de Monas'].map(tag => (
+              {[tr('landing.tags_matching'), tr('landing.tags_patches'), tr('landing.tags_events'), tr('landing.tags_wellness'), tr('landing.tags_album')].map(tag => (
                 <span key={tag} className="px-3 py-1.5 rounded-full text-xs font-medium"
                   style={{ background:'rgba(0,0,0,0.28)', color:'rgba(255,255,255,0.88)', border:'1px solid rgba(255,255,255,0.22)', backdropFilter:'blur(6px)' }}>
                   {tag}
@@ -221,11 +224,11 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                     <div style={{ width:44, height:44, borderRadius:'50%', background:'rgba(255,255,255,0.18)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, color:'white', fontSize:'0.92rem', border:'2px solid rgba(255,255,255,0.28)' }}>CR</div>
                   </div>
                   <div style={{ padding:'11px 15px 15px' }}>
-                    <span style={{ fontSize:'0.58rem', fontWeight:800, color:'#FF6B9D', letterSpacing:'0.07em', textTransform:'uppercase' }}>¡Match!</span>
+                    <span style={{ fontSize:'0.58rem', fontWeight:800, color:'#FF6B9D', letterSpacing:'0.07em', textTransform:'uppercase' }}>{tr('landing.match_title')}</span>
                     <p style={{ fontWeight:700, fontSize:'0.88rem', color: dark ? 'white' : '#1A1829', marginTop:4, marginBottom:2 }}>Camila Rodríguez</p>
                     <p style={{ fontSize:'0.72rem', color: dark ? 'rgba(255,255,255,0.5)' : 'rgba(26,24,41,0.52)', marginBottom:9 }}>Ing. de Sistemas · 7mo sem.</p>
                     <div style={{ background:'rgba(108,99,255,0.15)', borderRadius:8, padding:'4px 9px', display:'inline-flex', gap:4 }}>
-                      <span style={{ fontSize:'0.64rem', color:'#6C63FF', fontWeight:700 }}>96% compatibilidad</span>
+                      <span style={{ fontSize:'0.64rem', color:'#6C63FF', fontWeight:700 }}>{tr('landing.match_compat')}</span>
                     </div>
                   </div>
                 </motion.div>
@@ -243,8 +246,8 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                   style={{ display:'flex', alignItems:'center', gap:11 }}>
                   <div style={{ width:38, height:38, borderRadius:11, background:'rgba(91,200,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.1rem', flexShrink:0 }}>🧘</div>
                   <div>
-                    <p style={{ fontWeight:700, fontSize:'0.78rem', color: dark ? 'white' : '#1A1829', lineHeight:1.2 }}>Momento de pausa</p>
-                    <p style={{ fontSize:'0.64rem', color:'#0A8FCC', fontWeight:600, marginTop:3 }}>Bienestar 24/7</p>
+                    <p style={{ fontWeight:700, fontSize:'0.78rem', color: dark ? 'white' : '#1A1829', lineHeight:1.2 }}>{tr('landing.wellness_pause')}</p>
+                    <p style={{ fontSize:'0.64rem', color:'#0A8FCC', fontWeight:600, marginTop:3 }}>{tr('landing.tags_wellness')}</p>
                   </div>
                 </motion.div>
               </motion.div>
@@ -264,7 +267,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                     <p style={{ fontWeight:700, fontSize:'0.78rem', color: dark ? 'white' : '#1A1829', lineHeight:1.2 }}>Cálculo III Survivors</p>
                     <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:3 }}>
                       <div style={{ width:6, height:6, borderRadius:'50%', background:'#7FE7C4' }} />
-                      <span style={{ fontSize:'0.64rem', color:'#0D9D74', fontWeight:600 }}>7 activos ahora</span>
+                      <span style={{ fontSize:'0.64rem', color:'#0D9D74', fontWeight:600 }}>{tr('landing.parche_active')}</span>
                     </div>
                   </div>
                 </motion.div>
@@ -277,7 +280,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                   border:'1px solid rgba(255,179,71,0.45)',
                   backdropFilter:'blur(12px)' }}>
                 <motion.div animate={{ scale:[1,1.06,1] }} transition={{ duration:2.5, repeat:Infinity, ease:'easeInOut' }}>
-                  <p style={{ fontSize:'0.7rem', fontWeight:800, color:'#C47D00', whiteSpace:'nowrap' }}>+120 XP ganados hoy</p>
+                  <p style={{ fontSize:'0.7rem', fontWeight:800, color:'#C47D00', whiteSpace:'nowrap' }}>{tr('landing.xp_earned')}</p>
                 </motion.div>
               </motion.div>
             </div>
@@ -296,14 +299,14 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                 <motion.div animate={{ y:[0,9,0] }} transition={{ duration:3.5, repeat:Infinity, ease:'easeInOut', delay:0.6 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:10 }}>
                     <div style={{ width:7, height:7, borderRadius:'50%', background:'#FF4D6A', boxShadow:'0 0 8px #FF4D6A' }} />
-                    <span style={{ fontSize:'0.58rem', fontWeight:800, color:'#FF4D6A', textTransform:'uppercase', letterSpacing:'0.09em' }}>En vivo</span>
+                    <span style={{ fontSize:'0.58rem', fontWeight:800, color:'#FF4D6A', textTransform:'uppercase', letterSpacing:'0.09em' }}>{tr('landing.event_live')}</span>
                   </div>
                   <p style={{ fontWeight:700, fontSize:'0.86rem', color: dark ? 'white' : '#1A1829', marginBottom:3 }}>Hackathon ECI 2026</p>
                   <p style={{ fontSize:'0.7rem', color: dark ? 'rgba(255,255,255,0.47)' : 'rgba(26,24,41,0.5)', marginBottom:11 }}>Sáb 20 Jun · Auditorio Ppal.</p>
                   <div style={{ height:4, background: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', borderRadius:2, overflow:'hidden', marginBottom:5 }}>
                     <div style={{ width:'78%', height:'100%', background:'linear-gradient(90deg,#FFB347,#FF6B9D)', borderRadius:2 }} />
                   </div>
-                  <p style={{ fontSize:'0.64rem', color: dark ? 'rgba(255,255,255,0.38)' : 'rgba(26,24,41,0.42)' }}>156 / 200 inscritos</p>
+                  <p style={{ fontSize:'0.64rem', color: dark ? 'rgba(255,255,255,0.38)' : 'rgba(26,24,41,0.42)' }}>{tr('landing.event_registered')}</p>
                 </motion.div>
               </motion.div>
 
@@ -320,10 +323,10 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                   <ImageWithFallback src={monoCoderNewImg} alt="Mona coleccionable" style={{ maxWidth:'70%', maxHeight:'100%', objectFit:'contain' }} />
                 </motion.div>
                 <div style={{ flexShrink:0 }}>
-                  <p style={{ fontWeight:700, fontSize:'0.8rem', color: dark ? 'white' : '#1A1829', lineHeight:1.25 }}>¡Nueva mona desbloqueada!</p>
-                  <p style={{ fontSize:'0.65rem', color: dark ? 'rgba(255,255,255,0.47)' : 'rgba(26,24,41,0.5)', marginTop:3 }}>Álbum de Monas · Edición Coder</p>
+                  <p style={{ fontWeight:700, fontSize:'0.8rem', color: dark ? 'white' : '#1A1829', lineHeight:1.25 }}>{tr('landing.album_new')}</p>
+                  <p style={{ fontSize:'0.65rem', color: dark ? 'rgba(255,255,255,0.47)' : 'rgba(26,24,41,0.5)', marginTop:3 }}>{tr('landing.album_edition')}</p>
                 </div>
-                <span style={{ flexShrink:0, background:'rgba(167,139,250,0.15)', color:'#A78BFA', padding:'3px 10px', borderRadius:20, fontSize:'0.62rem', fontWeight:700 }}>Legendario</span>
+                <span style={{ flexShrink:0, background:'rgba(167,139,250,0.15)', color:'#A78BFA', padding:'3px 10px', borderRadius:20, fontSize:'0.62rem', fontWeight:700 }}>{tr('landing.album_legendary')}</span>
               </motion.div>
             </div>
           </div>
@@ -348,15 +351,15 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
           <motion.div initial={{ opacity:0, y:16 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}
             className="text-center mb-10">
             <p style={{ fontSize:'0.72rem', fontWeight:800, color:'#6C63FF', letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:8 }}>
-              Hecho para la ECI
+              {tr('landing.made_for_eci')}
             </p>
             <h2 style={{ fontWeight:900, fontSize:'clamp(1.6rem,3.2vw,2.4rem)', color:textH, marginBottom:16 }}>
-              Momentos reales de la comunidad
+              {tr('landing.real_moments')}
             </h2>
             <a href="https://www.instagram.com/u_link_" target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all hover:opacity-85"
               style={{ background: 'linear-gradient(135deg, rgba(255,107,157,0.15), rgba(108,99,255,0.15))', border: '1px solid rgba(255,107,157,0.35)', color: '#FF6B9D' }}>
-              Síguenos en Instagram — sé el primero en enterarte de las novedades
+              {tr('landing.follow_ig')}
             </a>
           </motion.div>
 
@@ -367,7 +370,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
             <div className="flex gap-3" style={{ height: 380 }}>
 
               {/* Hero card */}
-              {(() => { const hero = GALLERY[galleryOrder[0]]; return (
+              {(() => { const hero = getGallery(tr)[galleryOrder[0]]; return (
               <motion.div
                 key={hero.label}
                 initial={{ opacity:0, y:22 }} animate={{ opacity:1, y:0 }}
@@ -391,7 +394,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
               {/* Right stack */}
               <div className="flex flex-col gap-3" style={{ flex:1 }}>
                 {[1, 2].map((pos, i) => {
-                  const item = GALLERY[galleryOrder[pos]];
+                  const item = getGallery(tr)[galleryOrder[pos]];
                   return (
                   <motion.div key={item.label}
                     initial={{ opacity:0, y:22 }} animate={{ opacity:1, y:0 }} transition={{ delay: (i+1)*0.09, duration:0.35 }}
@@ -417,7 +420,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
             {/* Row 2: 3 equal cards */}
             <div className="flex gap-3" style={{ height: 210 }}>
               {[3, 4, 5].map((pos, i) => {
-                const item = GALLERY[galleryOrder[pos]];
+                const item = getGallery(tr)[galleryOrder[pos]];
                 return (
                 <motion.div key={item.label}
                   initial={{ opacity:0, y:22 }} animate={{ opacity:1, y:0 }} transition={{ delay: i*0.09 + 0.18, duration:0.35 }}
@@ -442,7 +445,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
 
           {/* ── Mobile 2-col — tap a tile to expand it and reveal more info ── */}
           <div className="md:hidden grid grid-cols-2 gap-3">
-            {GALLERY.map((item, i) => {
+            {getGallery(tr).map((item, i) => {
               const expanded = mobileExpandedIdx === i;
               return (
               <motion.div key={item.label} layout
@@ -482,16 +485,16 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
           <motion.div initial={{ opacity:0 }} whileInView={{ opacity:1 }} viewport={{ once:true }} className="text-center mb-10">
             <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-5 text-sm font-semibold"
               style={{ background:'rgba(108,99,255,0.1)', color:'#6C63FF', border:'1px solid rgba(108,99,255,0.25)' }}>
-              Funcionalidades
+              {tr('landing.nav_features')}
             </span>
             <h2 style={{ fontWeight:900, fontSize:'clamp(1.8rem,4vw,2.8rem)', color:textH, lineHeight:1.15, marginBottom:14 }}>
-              Todo lo que necesitas,<br />
+              {tr('landing.everything_you_need')}<br />
               <span style={{ background:'linear-gradient(135deg,#6C63FF,#7FE7C4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
-                en un solo lugar
+                {tr('landing.in_one_place')}
               </span>
             </h2>
             <p style={{ fontSize:'1.05rem', color:textB, maxWidth:520, margin:'0 auto', lineHeight:1.75 }}>
-              U•link no es otra red social. Es la plataforma que la comunidad ECI siempre necesitó.
+              {tr('landing.not_another_social')}
             </p>
           </motion.div>
 
@@ -514,22 +517,22 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                           style={{ width:'100%', height:'100%', objectFit:'contain' }} />
                       </div>
                       <div>
-                        <span className="text-xs font-bold uppercase tracking-widest mb-1 block" style={{ color:FEATURES[featureIdx].color }}>
-                          Funcionalidad
+                        <span className="text-xs font-bold uppercase tracking-widest mb-1 block" style={{ color:getFeatures(tr)[featureIdx].color }}>
+                          {tr('landing.feature_label')}
                         </span>
                         <h3 style={{ fontWeight:800, fontSize:'1.6rem', color:textH, lineHeight:1.2 }}>
-                          {FEATURES[featureIdx].title}
+                          {getFeatures(tr)[featureIdx].title}
                         </h3>
                       </div>
                     </div>
                     <p style={{ fontSize:'1.08rem', color:textB, lineHeight:1.8, maxWidth:520, margin:'0 auto' }}>
-                      {FEATURES[featureIdx].desc}
+                      {getFeatures(tr)[featureIdx].desc}
                     </p>
                   </div>
                   <div className="mt-6 w-full">
-                    <div className="h-0.5 rounded-full overflow-hidden" style={{ background:`${FEATURES[featureIdx].color}20` }}>
+                    <div className="h-0.5 rounded-full overflow-hidden" style={{ background:`${getFeatures(tr)[featureIdx].color}20` }}>
                       <motion.div key={featureIdx} className="h-full rounded-full"
-                        style={{ background:FEATURES[featureIdx].color }}
+                        style={{ background:getFeatures(tr)[featureIdx].color }}
                         initial={{ width:'0%' }} animate={{ width:'100%' }}
                         transition={{ duration:7, ease:'linear' }} />
                     </div>
@@ -540,7 +543,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
 
             {/* Thumbnail grid */}
             <div className="grid grid-cols-3 lg:grid-cols-2 gap-3 lg:w-52 lg:flex-shrink-0">
-              {FEATURES.map((f,i) => (
+              {getFeatures(tr).map((f,i) => (
                 <button key={f.title} onClick={() => setFeatureIdx(i)}
                   className="rounded-2xl border p-3 text-left transition-all hover:scale-105 relative overflow-hidden"
                   style={{ background:featureIdx===i ? `${f.color}15` : card, borderColor:featureIdx===i ? `${f.color}60` : bord,
@@ -555,9 +558,9 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
             </div>
           </div>
           <div className="flex items-center justify-center gap-2">
-            {FEATURES.map((f,i) => (
+            {getFeatures(tr).map((f,i) => (
               <button key={i} onClick={() => setFeatureIdx(i)} className="rounded-full transition-all"
-                style={{ width:i===featureIdx ? 24 : 8, height:8, background:i===featureIdx ? FEATURES[i].color : `${FEATURES[i].color}40` }} />
+                style={{ width:i===featureIdx ? 24 : 8, height:8, background:i===featureIdx ? getFeatures(tr)[i].color : `${getFeatures(tr)[i].color}40` }} />
             ))}
           </div>
         </div>
@@ -572,10 +575,10 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
           <motion.div initial={{ opacity:0, y:16 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} className="text-center mb-10">
             <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-4 text-sm font-semibold"
               style={{ background:'rgba(127,231,196,0.1)', color:'#7FE7C4', border:'1px solid rgba(127,231,196,0.25)' }}>
-              <Shield size={12} /> Exclusivo para la ECI
+              <Shield size={12} /> {tr('landing.exclusive_eci')}
             </span>
             <h2 style={{ fontWeight:900, fontSize:'clamp(1.6rem,3.2vw,2.4rem)', color:textH }}>
-              Empieza en 3 pasos
+              {tr('landing.start_in_3_steps')}
             </h2>
           </motion.div>
 
@@ -584,7 +587,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
             <div className="hidden lg:block absolute" style={{ top:40, left:'17%', right:'17%', height:2, background:'linear-gradient(90deg,#6C63FF,#7FE7C4,#FFB347)', borderRadius:1, opacity:0.4 }} />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-              {STEPS.map((step,i) => (
+              {getSteps(tr).map((step,i) => (
                 <motion.div key={i}
                   initial={{ opacity:0, y:24 }} whileInView={{ opacity:1, y:0 }}
                   viewport={{ once:true }} transition={{ delay:i*0.14 }}
@@ -605,7 +608,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
           </div>
 
           <div className="flex flex-wrap justify-center gap-3 mt-14">
-            {['Verificación ECI','Tiempo real','IA integrada','Bienestar 24/7','Gamificado'].map(tag => (
+            {[tr('landing.tag_verification'), tr('landing.tag_realtime'), tr('landing.tag_ai'), tr('landing.tags_wellness'), tr('landing.tag_gamified')].map(tag => (
               <span key={tag} className="px-4 py-2 rounded-full text-sm"
                 style={{ background:'rgba(108,99,255,0.08)', color:'#6C63FF', border:'1px solid rgba(108,99,255,0.16)', fontWeight:500 }}>
                 {tag}
@@ -631,16 +634,16 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
             <div className="relative flex flex-col lg:flex-row items-center gap-10 p-12 lg:p-16">
               <div className="flex-1 text-center lg:text-left">
                 <p style={{ fontSize:'0.78rem', color:'rgba(255,255,255,0.58)', fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:12 }}>
-                  ¡Únete gratis hoy!
+                  {tr('landing.join_free_today')}
                 </p>
                 <h2 style={{ fontWeight:900, fontSize:'clamp(1.7rem,3.5vw,2.4rem)', color:'white', lineHeight:1.2, marginBottom:14 }}>
-                  ¿Listo para ser parte de<br />la comunidad ECI?
+                  {tr('landing.ready_to_join')}<br />{tr('landing.ready_to_join_br')}
                 </h2>
                 <p style={{ fontSize:'1rem', color:'rgba(255,255,255,0.72)', lineHeight:1.72, marginBottom:28, maxWidth:420 }}>
-                  En menos de 2 minutos estás registrado y conectando con la comunidad de la Escuela Colombiana de Ingeniería.
+                  {tr('landing.join_desc')}
                 </p>
                 <div className="flex flex-col gap-2.5 mb-8">
-                  {['Totalmente gratuito para estudiantes ECI','Verificación segura con correo institucional','Soporte de bienestar disponible 24/7'].map(item => (
+                  {[tr('landing.check_free'), tr('landing.check_secure'), tr('landing.check_support')].map(item => (
                     <div key={item} className="flex items-center gap-2.5">
                       <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background:'rgba(127,231,196,0.22)' }}>
                         <Check size={11} style={{ color:'#7FE7C4' }} strokeWidth={3} />
@@ -653,7 +656,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                   whileHover={{ scale:1.05, boxShadow:'0 14px 40px rgba(127,231,196,0.52)' }} whileTap={{ scale:0.97 }}
                   className="flex items-center gap-2.5 px-9 py-4 rounded-2xl font-bold text-base"
                   style={{ background:'#7FE7C4', color:'#0F0E1A', boxShadow:'0 6px 24px rgba(127,231,196,0.38)' }}>
-                  Crear mi cuenta gratis <ArrowRight size={18} />
+                  {tr('landing.cta_create_free')} <ArrowRight size={18} />
                 </motion.button>
               </div>
               <div className="flex-shrink-0 relative">
@@ -664,7 +667,7 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
                 <motion.div animate={{ rotate:[-3,3,-3] }} transition={{ duration:3, repeat:Infinity, ease:'easeInOut' }}
                   className="absolute -top-4 -right-4 px-3 py-1.5 rounded-xl text-xs font-bold"
                   style={{ background:'#6C63FF', color:'white', boxShadow:'0 4px 14px rgba(108,99,255,0.42)' }}>
-                  ¡Únete!
+                  {tr('landing.join_now')}
                 </motion.div>
               </div>
             </div>
@@ -679,14 +682,14 @@ export function LandingPage({ onLogin, onRegister, darkMode, setDarkMode }: Land
           <span style={{ fontWeight:900, fontSize:'1rem', background:'linear-gradient(135deg,#6C63FF,#7FE7C4)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>U•link</span>
         </div>
         <p style={{ fontSize:'0.8rem', color:textS }}>
-          U•link © 2026 · Escuela Colombiana de Ingeniería · Solo para la comunidad ECI
+          {tr('landing.footer_copyright')}
         </p>
         <div className="flex items-center justify-center gap-6 mt-4">
           {([
-            { label: 'Términos de uso', type: 'terminos' as const },
-            { label: 'Privacidad', type: 'privacidad' as const },
-            { label: 'Centro de ayuda', type: 'ayuda' as const },
-            { label: 'Contacto', type: 'contacto' as const },
+            { label: tr('landing.footer_terms'), type: 'terminos' as const },
+            { label: tr('landing.footer_privacy'), type: 'privacidad' as const },
+            { label: tr('landing.footer_help'), type: 'ayuda' as const },
+            { label: tr('landing.footer_contact'), type: 'contacto' as const },
           ]).map(l => (
             <button key={l.type} onClick={() => setLegalModal(l.type)} className="text-xs hover:underline transition-all" style={{ color:textS, background:'none', border:'none' }}>{l.label}</button>
           ))}
